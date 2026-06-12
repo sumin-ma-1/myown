@@ -1,0 +1,15 @@
+{
+  "name": "myown",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @myown/database build && pnpm --filter @myown/gateway dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @myown/database db:generate",
+    "db:migrate": "pnpm --filter @myown/database db:migrate",
+    "db:push": "pnpm --filter @myown/database db:push",
+    "bot:profile": "pnpm --filter @myown/gateway bot:profile"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
