@@ -1,0 +1,317 @@
+import type { Task } from "@myown/database";
+import OpenAI from "openai";
+import { config, isLlmEnabled } from "../config.js";
+import type { TaskService } from "../services/task.js";
+import { formatDate, formatDateTime } from "../utils/date.js";
+import {
+  fireAtFromMinutes,
+  isDateOnlyDue,
+  parseAddCommand,
+  parseRemindDateTime,
+  parseRemindPhrase,
+} from "../utils/datetime-parse.js";
+import {
+  type CompleteTaskArgs,
+  type CreateReminderArgs,
+  type CreateTaskArgs,
+  agentTools,
+  resolveDueAt,
+} from "./tools.js";
+
+function formatDueLabel(dueAt: Date): string {
+  return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
+}
+
+export class AgentRuntime {
+  private readonly openai: OpenAI | null;
+
+  constructor(private readonly taskService: TaskService) {
+    if (config.llmBaseUrl) {
+      this.openai = new OpenAI({
+        apiKey: config.openaiApiKey || "ollama",
+        baseURL: config.llmBaseUrl,
+      });
+    } else if (config.openaiApiKey) {
+      this.openai = new OpenAI({ apiKey: config.openaiApiKey });
+    } else {
+      this.openai = null;
+    }
+  }
+
+  async handleMessage(input: {
+    userId: string;
+    telegramUserId: number;
+    text: string;
+    activeTasks: Task[];
+  }): Promise<string> {
+    const commandReply = await this.tryCommand(input);
+    if (commandReply) return commandReply;
+
+    if (!isLlmEnabled() || !this.openai) {
+      return [
+        "자연어 처리를 위해 LLM 설정이 필요합니다.",
+        "(LLM_BASE_URL 원격 Ollama 또는 OPENAI_API_KEY)",
+        "지금은 명령어를 사용해 주세요:",
+        "/list — 업무 목록",
+        "/today — 오늘 마감",
+        "/add <제목> [YYYY-MM-DD] [HH:MM]",
+        "/remind <번호> [YYYY-MM-DD] HH:MM",
+        "/remind <번호> 5분",
+        '/done <번호> — 완료',
+      ].join("\n");
+    }
+
+    try {
+      return await this.runAgent(input);
+    } catch (err) {
+      console.error("[llm] agent error:", err);
+      const hint =
+        err instanceof Error && err.message.includes("timed out")
+          ? "LLM 응답 시간 초과입니다. 더 작은 모델을 쓰거나 /add 명령어를 사용해 주세요."
+          : "LLM 처리 오류입니다. 모델명·터널·Ollama 상태를 확인하거나 /list 등 명령어를 사용해 주세요.";
+      return `⚠️ ${hint}`;
+    }
+  }
+
+  private async llmCall(
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+  ) {
+    const timeout = config.llmTimeoutMs;
+    return Promise.race([
+      this.openai!.chat.completions.create(params),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("LLM request timed out")), timeout),
+      ),
+    ]);
+  }
+
+  private async tryCommand(input: {
+    userId: string;
+    telegramUserId: number;
+    text: string;
+  }): Promise<string | null> {
+    const text = input.text.trim();
+
+    const doneMatch = text.match(/^(?:\/done|완료)\s*(\d+)$/i);
+    if (doneMatch) {
+      const result = await this.taskService.completeByIndex(
+        input.userId,
+        Number(doneMatch[1]),
+      );
+      return result.ok
+        ? `✅ ${result.task.title} 완료 처리했습니다.`
+        : result.message;
+    }
+
+    const naturalDone = text.match(/^(\d+)\s*번?\s*완료/i);
+    if (naturalDone) {
+      const result = await this.taskService.completeByIndex(
+        input.userId,
+        Number(naturalDone[1]),
+      );
+      return result.ok
+        ? `✅ ${result.task.title} 완료 처리했습니다.`
+        : result.message;
+    }
+
+    if (text.startsWith("/add ")) {
+      const parsed = parseAddCommand(text.slice(5).trim());
+      const task = await this.taskService.create({
+        userId: input.userId,
+        telegramUserId: input.telegramUserId,
+        title: parsed.title,
+        dueAt: parsed.dueAt,
+      });
+      const due = task.dueAt ? ` (마감: ${formatDueLabel(task.dueAt)})` : "";
+      return `✅ 업무 등록: ${task.listIndex}. ${task.title}${due}`;
+    }
+
+    const remindMinutesCmd = text.match(/^\/remind\s+(\d+)\s+(\d+)\s*분$/);
+    if (remindMinutesCmd) {
+      return this.replyScheduledReminder(
+        input,
+        Number(remindMinutesCmd[1]),
+        fireAtFromMinutes(Number(remindMinutesCmd[2])),
+      );
+    }
+
+    const remindCmd = text.match(
+      /^\/remind\s+(\d+)\s+(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})$/i,
+    );
+    if (remindCmd) {
+      const fireAt = parseRemindDateTime(remindCmd[2], remindCmd[3]);
+      if (!fireAt) {
+        return "⚠️ 날짜·시간 형식을 확인해 주세요. 예: /remind 1 2026-06-15 14:00";
+      }
+      return this.replyScheduledReminder(input, Number(remindCmd[1]), fireAt);
+    }
+
+    const remindMinutesNatural = text.match(
+      /^(\d+)\s*번?\s*(\d+)\s*분\s*(?:후|뒤|뒤에)?/,
+    );
+    if (remindMinutesNatural) {
+      return this.replyScheduledReminder(
+        input,
+        Number(remindMinutesNatural[1]),
+        fireAtFromMinutes(Number(remindMinutesNatural[2])),
+      );
+    }
+
+    const remindNatural = text.match(/^(\d+)\s*번?\s*(.+알려.*)$/i);
+    if (remindNatural) {
+      const fireAt = parseRemindPhrase(remindNatural[2]);
+      if (!fireAt) {
+        return '⚠️ 시각을 이해하지 못했습니다. 예: "1번 5분 후에 알려줘", "1번 내일 15시에 알려줘"';
+      }
+      return this.replyScheduledReminder(input, Number(remindNatural[1]), fireAt);
+    }
+
+    return null;
+  }
+
+  private async replyScheduledReminder(
+    input: { userId: string; telegramUserId: number },
+    listIndex: number,
+    fireAt: Date,
+  ): Promise<string> {
+    const result = await this.taskService.scheduleReminder(
+      input.userId,
+      input.telegramUserId,
+      listIndex,
+      fireAt,
+    );
+    if (!result.ok) return result.message;
+
+    const msUntil = result.fireAt.getTime() - Date.now();
+    const when =
+      msUntil < 60 * 60 * 1000
+        ? `${Math.max(1, Math.round(msUntil / 60_000))}분 후`
+        : formatDateTime(result.fireAt);
+
+    return `⏰ ${result.task.listIndex}번 "${result.task.title}" — ${when}에 알려드릴게요.`;
+  }
+
+  private async runAgent(input: {
+    userId: string;
+    telegramUserId: number;
+    text: string;
+    activeTasks: Task[];
+  }): Promise<string> {
+    const taskContext = input.activeTasks
+      .map((t) =>
+        `${t.listIndex}. ${t.title}${t.dueAt ? ` (마감 ${formatDueLabel(t.dueAt)})` : ""}`,
+      )
+      .join("\n");
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: [
+          "당신은 개인 업무 비서입니다. 한국어로 답변하세요.",
+          `타임존: ${config.timezone}`,
+          `오늘: ${formatDate(new Date())}`,
+          "활성 업무:",
+          taskContext || "(없음)",
+          "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
+          "특정 시각 알림은 create_reminder 도구를 사용하세요.",
+        ].join("\n"),
+      },
+      { role: "user", content: input.text },
+    ];
+
+    for (let step = 0; step < 5; step++) {
+      const response = await this.llmCall({
+        model: config.llmModel,
+        messages,
+        tools: agentTools,
+        tool_choice: "auto",
+      });
+
+      const choice = response.choices[0]?.message;
+      if (!choice) return "응답을 생성하지 못했습니다.";
+
+      if (!choice.tool_calls?.length) {
+        return choice.content ?? "처리했습니다.";
+      }
+
+      messages.push(choice);
+
+      for (const toolCall of choice.tool_calls) {
+        if (toolCall.type !== "function") continue;
+        const args = JSON.parse(toolCall.function.arguments || "{}");
+        const result = await this.executeTool(
+          toolCall.function.name,
+          args,
+          input.userId,
+          input.telegramUserId,
+        );
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result,
+        });
+      }
+    }
+
+    return "요청 처리 중 단계 제한에 도달했습니다. 다시 시도해 주세요.";
+  }
+
+  private async executeTool(
+    name: string,
+    args: Record<string, unknown>,
+    userId: string,
+    telegramUserId: number,
+  ): Promise<string> {
+    switch (name) {
+      case "create_task": {
+        const a = args as CreateTaskArgs;
+        const dueAt = resolveDueAt(a.due_date, a.due_time);
+        const task = await this.taskService.create({
+          userId,
+          telegramUserId,
+          title: a.title,
+          description: a.description,
+          priority: a.priority,
+          dueAt,
+        });
+        const due = task.dueAt ? `, 마감 ${formatDueLabel(task.dueAt)}` : "";
+        return `등록됨: ${task.listIndex}. ${task.title}${due}`;
+      }
+      case "create_reminder": {
+        const a = args as CreateReminderArgs;
+        const fireAt = a.remind_in_minutes
+          ? fireAtFromMinutes(a.remind_in_minutes)
+          : a.remind_time
+            ? parseRemindDateTime(a.remind_date, a.remind_time)
+            : undefined;
+        if (!fireAt) {
+          return "remind_time(HH:MM) 또는 remind_in_minutes(분) 중 하나가 필요합니다.";
+        }
+        const result = await this.taskService.scheduleReminder(
+          userId,
+          telegramUserId,
+          a.list_index,
+          fireAt,
+        );
+        return result.ok
+          ? `알림 예약: ${formatDateTime(result.fireAt)}`
+          : result.message;
+      }
+      case "complete_task": {
+        const a = args as CompleteTaskArgs;
+        const result = a.list_index
+          ? await this.taskService.completeByIndex(userId, a.list_index)
+          : a.title
+            ? await this.taskService.completeByTitle(userId, a.title)
+            : { ok: false as const, message: "list_index 또는 title이 필요합니다." };
+        return result.ok ? `완료: ${result.task.title}` : result.message;
+      }
+      case "list_tasks":
+        return await this.taskService.listActive(userId);
+      case "list_today_tasks":
+        return await this.taskService.listToday(userId);
+      default:
+        return `알 수 없는 도구: ${name}`;
+    }
+  }
+}
