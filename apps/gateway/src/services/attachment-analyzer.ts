@@ -4,7 +4,7 @@ import { config, isLlmEnabled } from "../config.js";
 import { formatDate, formatDateTime } from "../utils/date.js";
 import { isDateOnlyDue } from "../utils/datetime-parse.js";
 import { resolveDueAt } from "../agent/tools.js";
-import { truncateForLlm } from "./document-extract.js";
+import { compactTextForAnalysis } from "./document-extract.js";
 
 export interface ExtractedTask {
   title: string;
@@ -81,42 +81,46 @@ export class AttachmentAnalyzer {
       throw new Error("문서에서 업무를 추출하려면 LLM 설정이 필요합니다.");
     }
 
-    const body = truncateForLlm(input.text);
+    const body = compactTextForAnalysis(input.text);
+    const model = config.attachmentLlmModel || config.llmModel;
+    const started = Date.now();
+
     const response = await Promise.race([
       this.openai.chat.completions.create({
-        model: config.llmModel,
+        model,
         messages: [
           {
             role: "system",
             content: [
-              "당신은 한국어 공문·업무 문서 분석기입니다.",
-              `오늘 날짜: ${formatDate(new Date())}, 타임존: ${config.timezone}`,
-              "문서에서 사용자가 해야 할 업무를 추출하세요.",
-              "반드시 JSON만 출력하세요. 마크다운 코드블록 없이도 됩니다.",
-              "스키마:",
-              '{"summary":"한 줄 요약","keywords":["키워드"],"tasks":[{"title":"업무 제목","description":"설명","due_date":"YYYY-MM-DD","due_time":"HH:MM","priority":"low|medium|high|urgent","source_quote":"근거 문장"}]}',
-              "마감이 없으면 due_date, due_time을 생략하세요.",
-              "확실하지 않은 업무는 넣지 마세요.",
+              "한국어 공문에서 해야 할 업무만 JSON으로 추출하세요.",
+              `오늘: ${formatDate(new Date())}`,
+              '{"summary":"요약","keywords":[],"tasks":[{"title":"","due_date":"YYYY-MM-DD","priority":"medium","source_quote":""}]}',
+              "확실한 업무만. 마감 없으면 due_date 생략.",
             ].join("\n"),
           },
           {
             role: "user",
             content: [
-              `파일명: ${input.fileName}`,
-              input.userHint ? `사용자 메모: ${input.userHint}` : "",
-              "문서 본문:",
+              `파일: ${input.fileName}`,
+              input.userHint ? `메모: ${input.userHint}` : "",
               body,
             ]
               .filter(Boolean)
               .join("\n\n"),
           },
         ],
-        temperature: 0.2,
+        temperature: 0.1,
+        max_tokens: config.attachmentLlmMaxTokens,
       }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("LLM request timed out")), config.llmTimeoutMs),
+        setTimeout(
+          () => reject(new Error("문서 분석 LLM 시간 초과")),
+          config.attachmentLlmTimeoutMs,
+        ),
       ),
     ]);
+
+    console.log(`[attachment] LLM analyze ${model} ${Date.now() - started}ms`);
 
     const content = response.choices[0]?.message?.content;
     if (!content) {

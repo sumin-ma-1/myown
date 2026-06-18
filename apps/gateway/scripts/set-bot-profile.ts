@@ -13,9 +13,17 @@ if (!token) {
   process.exit(1);
 }
 
-const photoPath = resolve(rootDir, "assets/brand/favicon.png");
+const brandDir = resolve(rootDir, "assets/brand");
+const botProfilePath = resolve(brandDir, "bot-profile.png");
+const faviconPath = resolve(brandDir, "favicon.png");
+const photoPath = existsSync(botProfilePath) ? botProfilePath : faviconPath;
+
 if (!existsSync(photoPath)) {
-  console.error(`로고 파일을 찾을 수 없습니다: ${photoPath}`);
+  console.error(
+    `프로필 이미지를 찾을 수 없습니다.\n` +
+      `  우선: ${botProfilePath}\n` +
+      `  대체: ${faviconPath}`,
+  );
   process.exit(1);
 }
 
@@ -26,4 +34,5 @@ await bot.api.setMyProfilePhoto({
   photo: new InputFile(photoPath),
 });
 
-console.log("✅ 텔레그램 봇 프로필 사진이 업데이트되었습니다.");
+const used = photoPath === botProfilePath ? "bot-profile.png" : "favicon.png (fallback)";
+console.log(`✅ 텔레그램 봇 프로필 사진이 업데이트되었습니다. (${used})`);

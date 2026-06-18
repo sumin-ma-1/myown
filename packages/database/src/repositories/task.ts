@@ -11,7 +11,14 @@ export class TaskRepository {
       .select({ maxIndex: sql<number>`coalesce(max(${tasks.listIndex}), 0)` })
       .from(tasks)
       .where(eq(tasks.userId, userId));
-    return (row?.maxIndex ?? 0) + 1;
+    return Number(row?.maxIndex ?? 0) + 1;
+  }
+
+  /** 여러 업무를 한꺼번에 등록할 때 번호 충돌·문자열 연결 방지 */
+  async reserveListIndexes(userId: string, count: number): Promise<number[]> {
+    if (count <= 0) return [];
+    const start = await this.getNextListIndex(userId);
+    return Array.from({ length: count }, (_, i) => start + i);
   }
 
   async create(input: {
@@ -21,8 +28,9 @@ export class TaskRepository {
     priority?: TaskPriority;
     dueAt?: Date;
     attachmentId?: string;
+    listIndex?: number;
   }): Promise<Task> {
-    const listIndex = await this.getNextListIndex(input.userId);
+    const listIndex = input.listIndex ?? (await this.getNextListIndex(input.userId));
     const [task] = await this.db
       .insert(tasks)
       .values({

@@ -51,7 +51,14 @@ export const config = {
   /** HWP 파서 sidecar URL */
   hwpParserUrl: process.env.HWP_PARSER_URL ?? "http://localhost:8100",
   attachmentMaxBytes: Number(process.env.ATTACHMENT_MAX_MB ?? "20") * 1024 * 1024,
-  attachmentMaxTextChars: Number(process.env.ATTACHMENT_MAX_TEXT_CHARS ?? "12000"),
+  /** DB 저장용 전체 추출 텍스트 상한 */
+  attachmentMaxTextChars: Number(process.env.ATTACHMENT_MAX_TEXT_CHARS ?? "50000"),
+  /** LLM 분석에 보낼 텍스트 상한 (짧을수록 빠름) */
+  attachmentLlmMaxChars: Number(process.env.ATTACHMENT_LLM_MAX_CHARS ?? "6000"),
+  /** 첨부 분석 전용 모델 (미설정 시 LLM_MODEL) */
+  attachmentLlmModel: process.env.ATTACHMENT_LLM_MODEL ?? "",
+  attachmentLlmTimeoutMs: Number(process.env.ATTACHMENT_LLM_TIMEOUT_MS ?? "90000"),
+  attachmentLlmMaxTokens: Number(process.env.ATTACHMENT_LLM_MAX_TOKENS ?? "1200"),
 };
 
 export function isLlmEnabled(): boolean {

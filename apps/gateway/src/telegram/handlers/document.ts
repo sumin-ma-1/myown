@@ -52,6 +52,7 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
 
       const status = await ctx.reply("📎 문서 분석 중...");
       const userHint = ctx.message.caption?.trim() || undefined;
+      const chatId = ctx.chat?.id;
 
       const reply = await app.attachmentService.process({
         userId,
@@ -61,9 +62,17 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
         data,
         telegramFileId: fileId,
         userHint,
+        onProgress: chatId
+          ? async (message) => {
+              try {
+                await ctx.api.editMessageText(chatId, status.message_id, message);
+              } catch {
+                // 동일 메시지 편집 등 무시
+              }
+            }
+          : undefined,
       });
 
-      const chatId = ctx.chat?.id;
       if (chatId) {
         await ctx.api.editMessageText(chatId, status.message_id, reply);
       } else {

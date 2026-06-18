@@ -160,3 +160,35 @@ export function truncateForLlm(text: string, maxChars = config.attachmentMaxText
   if (text.length <= maxChars) return text;
   return `${text.slice(0, maxChars)}\n\n...(이하 ${text.length - maxChars}자 생략)`;
 }
+
+const DEADLINE_LINE_RE =
+  /마감|제출|기한|까지|일자|요청|회신|보고|일정|처리|시행|\d{4}[-./년]\s*\d{1,2}|월\s*\d{1,2}\s*일|D-\d/i;
+
+/** LLM에 보낼 때 본문 앞부분 + 마감·제출 관련 줄만 추려 토큰·시간 절약 */
+export function compactTextForAnalysis(
+  text: string,
+  maxChars = config.attachmentLlmMaxChars,
+): string {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (normalized.length <= maxChars) return normalized;
+
+  const headBudget = Math.floor(maxChars * 0.45);
+  const head = normalized.slice(0, headBudget);
+
+  const seen = new Set<string>();
+  const important: string[] = [];
+  for (const line of normalized.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.length < 4) continue;
+    if (!DEADLINE_LINE_RE.test(trimmed)) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    important.push(trimmed);
+  }
+
+  const tailBudget = maxChars - head.length - 16;
+  const tail = important.join("\n").slice(0, Math.max(0, tailBudget));
+  const compact = tail ? `${head}\n\n...[중략]...\n\n${tail}` : head;
+
+  return compact.slice(0, maxChars);
+}

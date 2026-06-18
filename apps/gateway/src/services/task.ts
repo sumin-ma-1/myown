@@ -11,6 +11,10 @@ export interface CreateTaskInput {
   priority?: TaskPriority;
   dueAt?: Date;
   attachmentId?: string;
+  /** true면 리마인더 예약 생략 (일괄 등록 시) */
+  skipReminders?: boolean;
+  /** 미지정 시 자동 부여 */
+  listIndex?: number;
 }
 
 export class TaskService {
@@ -27,13 +31,24 @@ export class TaskService {
       priority: input.priority,
       dueAt: input.dueAt,
       attachmentId: input.attachmentId,
+      listIndex: input.listIndex,
     });
 
-    if (task.dueAt) {
+    if (task.dueAt && !input.skipReminders) {
       await this.reminders.scheduleForTask(task, input.telegramUserId);
     }
 
     return task;
+  }
+
+  async scheduleRemindersForTask(task: Task, telegramUserId: number): Promise<void> {
+    if (task.dueAt) {
+      await this.reminders.scheduleForTask(task, telegramUserId);
+    }
+  }
+
+  async reserveListIndexes(userId: string, count: number): Promise<number[]> {
+    return this.tasks.reserveListIndexes(userId, count);
   }
 
   async listActive(userId: string): Promise<string> {
