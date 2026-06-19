@@ -130,3 +130,19 @@ export function parseAddCommand(raw: string): ParsedAddCommand {
 
   return { title: raw.trim() };
 }
+
+/** "10분 후 3번 알림", "10분 후에 보고 알림줘" 등 */
+export function parseFlexibleRemindRequest(
+  text: string,
+): { listIndex?: number; minutes: number } | null {
+  if (!/알림|알려|리마인/i.test(text)) return null;
+
+  const minutesMatch = text.match(/(\d+)\s*분\s*(?:후|뒤|뒤에)?/);
+  if (!minutesMatch) return null;
+
+  const taskNumMatch = text.match(/(\d+)\s*번/);
+  return {
+    listIndex: taskNumMatch ? Number(taskNumMatch[1]) : undefined,
+    minutes: Number(minutesMatch[1]),
+  };
+}

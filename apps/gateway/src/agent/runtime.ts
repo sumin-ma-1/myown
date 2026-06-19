@@ -7,6 +7,7 @@ import {
   fireAtFromMinutes,
   isDateOnlyDue,
   parseAddCommand,
+  parseFlexibleRemindRequest,
   parseRemindDateTime,
   parseRemindPhrase,
 } from "../utils/datetime-parse.js";
@@ -89,6 +90,7 @@ export class AgentRuntime {
     userId: string;
     telegramUserId: number;
     text: string;
+    activeTasks: Task[];
   }): Promise<string | null> {
     const text = input.text.trim();
 
@@ -166,6 +168,31 @@ export class AgentRuntime {
       return this.replyScheduledReminder(input, Number(remindNatural[1]), fireAt);
     }
 
+    const flexRemind = parseFlexibleRemindRequest(text);
+    if (flexRemind) {
+      let task =
+        flexRemind.listIndex !== undefined
+          ? await this.taskService.resolveActiveTask(input.userId, flexRemind.listIndex)
+          : await this.taskService.resolveActiveTaskByHint(input.userId, text);
+
+      if (!task && input.activeTasks.length === 1) {
+        task = input.activeTasks[0];
+      }
+
+      if (!task) {
+        const hint = input.activeTasks.length
+          ? `활성 번호: ${input.activeTasks.map((t) => t.listIndex).join(", ")}`
+          : "활성 업무가 없습니다.";
+        return `⚠️ 어떤 업무에 알림을 걸지 확인하지 못했습니다.\n예: "3번 10분 후에 알려줘"\n${hint}`;
+      }
+
+      return this.replyScheduledReminder(
+        input,
+        task.listIndex,
+        fireAtFromMinutes(flexRemind.minutes),
+      );
+    }
+
     return null;
   }
 
@@ -214,6 +241,8 @@ export class AgentRuntime {
           taskContext || "(없음)",
           "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
           "특정 시각 알림은 create_reminder 도구를 사용하세요.",
+          "create_reminder·complete_task의 list_index는 위 활성 목록 번호만 사용하세요. 없는 번호(예: 완료된 1번)는 쓰지 마세요.",
+          "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
         ].join("\n"),
       },
       { role: "user", content: input.text },
@@ -286,6 +315,9 @@ export class AgentRuntime {
             : undefined;
         if (!fireAt) {
           return "remind_time(HH:MM) 또는 remind_in_minutes(분) 중 하나가 필요합니다.";
+        }
+        if (!a.list_index) {
+          return "list_index가 필요합니다. /list 의 활성 번호를 사용하세요.";
         }
         const result = await this.taskService.scheduleReminder(
           userId,

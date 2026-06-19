@@ -63,13 +63,54 @@ export class TaskService {
     return formatTaskList(items, "📅 오늘 마감 업무");
   }
 
+  async getActiveTasks(userId: string): Promise<Task[]> {
+    return this.tasks.listActive(userId);
+  }
+
+  private async activeIndicesHint(userId: string): Promise<string> {
+    const active = await this.tasks.listActive(userId);
+    if (active.length === 0) return "활성 업무가 없습니다. /add 로 등록해 주세요.";
+    return `활성 번호: ${active.map((t) => t.listIndex).join(", ")} (/list)`;
+  }
+
+  /** DB list_index 또는 목록 순서(1=첫 번째 활성 업무) */
+  async resolveActiveTask(userId: string, ref: number): Promise<Task | undefined> {
+    const byIndex = await this.tasks.findByListIndex(userId, ref);
+    if (byIndex) return byIndex;
+
+    const active = await this.tasks.listActive(userId);
+    if (ref >= 1 && ref <= active.length) {
+      return active[ref - 1];
+    }
+    return undefined;
+  }
+
+  async resolveActiveTaskByHint(userId: string, text: string): Promise<Task | undefined> {
+    const active = await this.tasks.listActive(userId);
+    const normalized = text.toLowerCase();
+
+    const matches = active.filter((task) => {
+      const title = task.title.toLowerCase();
+      if (normalized.includes(title)) return true;
+      return title
+        .split(/\s+/)
+        .some((word) => word.length >= 2 && normalized.includes(word));
+    });
+
+    if (matches.length === 1) return matches[0];
+    return undefined;
+  }
+
   async completeByIndex(
     userId: string,
     listIndex: number,
   ): Promise<{ ok: true; task: Task } | { ok: false; message: string }> {
-    const task = await this.tasks.findByListIndex(userId, listIndex);
+    const task = await this.resolveActiveTask(userId, listIndex);
     if (!task) {
-      return { ok: false, message: `${listIndex}번 업무를 찾을 수 없습니다.` };
+      return {
+        ok: false,
+        message: `${listIndex}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
+      };
     }
     return this.complete(userId, task.id);
   }
@@ -115,9 +156,12 @@ export class TaskService {
     listIndex: number,
     fireAt: Date,
   ): Promise<{ ok: true; task: Task; fireAt: Date } | { ok: false; message: string }> {
-    const task = await this.tasks.findByListIndex(userId, listIndex);
+    const task = await this.resolveActiveTask(userId, listIndex);
     if (!task) {
-      return { ok: false, message: `${listIndex}번 업무를 찾을 수 없습니다.` };
+      return {
+        ok: false,
+        message: `${listIndex}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
+      };
     }
 
     try {
