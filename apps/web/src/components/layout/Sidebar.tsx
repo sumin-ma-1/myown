@@ -9,8 +9,17 @@ export function Sidebar() {
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-surface-border bg-white p-4">
       <div className="mb-6">
-        <p className="text-lg font-bold text-slate-900">My Own</p>
-        <p className="text-xs text-slate-500">개인 업무 대시보드</p>
+        <div className="flex items-center gap-2">
+          <img
+            src="/favicon.png"
+            alt=""
+            className="h-8 w-8 shrink-0 rounded-lg"
+            width={32}
+            height={32}
+          />
+          <p className="text-lg font-bold text-slate-900">My Own</p>
+        </div>
+        <p className="mt-1 pl-10 text-xs text-slate-500">개인 업무 대시보드</p>
       </div>
 
       <div className="mb-6">

@@ -293,7 +293,7 @@ export class AgentRuntime {
   ): Promise<string> {
     switch (name) {
       case "create_task": {
-        const a = args as CreateTaskArgs;
+        const a = args as unknown as CreateTaskArgs;
         const dueAt = resolveDueAt(a.due_date, a.due_time);
         const task = await this.taskService.create({
           userId,
@@ -307,7 +307,7 @@ export class AgentRuntime {
         return `등록됨: ${task.listIndex}. ${task.title}${due}`;
       }
       case "create_reminder": {
-        const a = args as CreateReminderArgs;
+        const a = args as unknown as CreateReminderArgs;
         const fireAt = a.remind_in_minutes
           ? fireAtFromMinutes(a.remind_in_minutes)
           : a.remind_time
