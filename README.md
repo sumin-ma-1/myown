@@ -15,6 +15,7 @@
 - 인라인 버튼: 완료, 1시간 후, 상세
 - 첨부파일 분석 (HWP, HWPX, PDF, DOCX, 이미지) → 업무 자동 추출
 - OpenAI / Ollama 연동 시 자연어 처리
+- **웹 대시보드** — 메인 화면, 업무 목록, 달력, D-DAY 설정 (텔레그램과 동일 DB)
 
 ## 사전 요구사항
 
@@ -47,8 +48,18 @@ cp .env.example .env
 | `LLM_BASE_URL` | (선택) Ollama 등 OpenAI 호환 API |
 | `OPENAI_API_KEY` | (선택) OpenAI 또는 Ollama용 더미 값 |
 | `LLM_MODEL` | 사용할 모델명 |
+| `WEB_API_TOKEN` | 웹 대시보드 API 토큰 (`.env`와 `apps/web/.env` 동일 값) |
+| `WEB_API_PORT` | API 포트 (기본 `4000`) |
 
 Telegram user ID: [@userinfobot](https://t.me/userinfobot) 에게 `/start`
+
+웹 대시보드용 환경 변수:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+`apps/web/.env`의 `VITE_API_TOKEN`은 루트 `.env`의 `WEB_API_TOKEN`과 같아야 합니다.
 
 ### 3. 설치 및 DB
 
@@ -62,6 +73,10 @@ pnpm db:push
 ```bash
 pnpm dev
 ```
+
+- **텔레그램 봇** + **Web API** (`http://localhost:4000`) + **대시보드** (`http://localhost:5173`)
+- 봇만 실행: `pnpm dev:bot`
+- 웹만 실행: `pnpm dev:web` (API는 gateway가 떠 있어야 함)
 
 텔레그램에서 봇에게 `/start` 전송.
 
@@ -102,7 +117,10 @@ pnpm dev
 
 ```
 myown/
-├── apps/gateway/          # Telegram 봇, Agent, Reminder Worker
+├── apps/
+│   ├── gateway/           # Telegram 봇, REST API, Reminder Worker
+│   │   └── src/api/       # 웹 대시보드용 HTTP API
+│   └── web/               # React 대시보드 (Vite)
 ├── packages/database/     # Drizzle ORM
 ├── services/hwp-parser/   # HWP 파서 (Python)
 ├── docs/FEATURES.md       # 기능설명서

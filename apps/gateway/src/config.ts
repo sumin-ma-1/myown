@@ -59,6 +59,15 @@ export const config = {
   attachmentLlmModel: process.env.ATTACHMENT_LLM_MODEL ?? "",
   attachmentLlmTimeoutMs: Number(process.env.ATTACHMENT_LLM_TIMEOUT_MS ?? "90000"),
   attachmentLlmMaxTokens: Number(process.env.ATTACHMENT_LLM_MAX_TOKENS ?? "1200"),
+  /** Web dashboard API */
+  webApiPort: Number(process.env.WEB_API_PORT ?? "4000"),
+  webApiToken: process.env.WEB_API_TOKEN ?? "",
+  webUserTelegramId: Number(
+    process.env.WEB_USER_TELEGRAM_ID ??
+      process.env.ALLOWED_TELEGRAM_USER_IDS?.split(",")[0]?.trim() ??
+      "0",
+  ),
+  webCorsOrigin: process.env.WEB_CORS_ORIGIN ?? "http://localhost:5173",
 };
 
 export function isLlmEnabled(): boolean {

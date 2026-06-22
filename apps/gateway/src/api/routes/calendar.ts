@@ -1,0 +1,41 @@
+import { Hono } from "hono";
+import type { ApiEnv } from "../types.js";
+import { apiAuth } from "../middleware/auth.js";
+import { serializeTask } from "../serializers/task.js";
+
+export const calendarRoute = new Hono<ApiEnv>();
+
+calendarRoute.use("*", apiAuth);
+
+calendarRoute.get("/", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const fromRaw = c.req.query("from");
+  const toRaw = c.req.query("to");
+
+  if (!fromRaw || !toRaw) {
+    return c.json({ error: "from and to query params are required (ISO date)" }, 400);
+  }
+
+  const from = new Date(fromRaw);
+  const to = new Date(toRaw);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    return c.json({ error: "invalid date range" }, 400);
+  }
+
+  const user = await app.users.findById(userId);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  const tasks = await app.tasks.listDueInRange(userId, from, to);
+  const items = await Promise.all(
+    tasks.map(async (task) => {
+      const attachment = task.attachmentId
+        ? await app.attachments.findById(userId, task.attachmentId)
+        : undefined;
+      const reminders = await app.reminders.listForTask(task.id);
+      return serializeTask(task, user, attachment, reminders);
+    }),
+  );
+
+  return c.json({ items });
+});

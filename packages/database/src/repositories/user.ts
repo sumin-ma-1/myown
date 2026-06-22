@@ -25,4 +25,26 @@ export class UserRepository {
       .returning();
     return user;
   }
+
+  async findById(id: string): Promise<User | undefined> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user;
+  }
+
+  async findFirst(): Promise<User | undefined> {
+    const [user] = await this.db.select().from(users).limit(1);
+    return user;
+  }
+
+  async updatePreferences(
+    userId: string,
+    preferences: Record<string, unknown>,
+  ): Promise<User | undefined> {
+    const [user] = await this.db
+      .update(users)
+      .set({ preferences, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
 }

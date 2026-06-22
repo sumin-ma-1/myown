@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { reminders } from "../schema.js";
 import type { Reminder } from "../schema.js";
@@ -56,5 +56,13 @@ export class ReminderRepository {
       .select()
       .from(reminders)
       .where(and(eq(reminders.taskId, taskId), eq(reminders.status, "pending")));
+  }
+
+  async listForTask(taskId: string): Promise<Reminder[]> {
+    return this.db
+      .select()
+      .from(reminders)
+      .where(eq(reminders.taskId, taskId))
+      .orderBy(asc(reminders.fireAt));
   }
 }

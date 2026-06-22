@@ -126,4 +126,87 @@ export class TaskRepository {
     return task;
   }
 
+  async listForUser(
+    userId: string,
+    options: {
+      status?: "active" | "completed" | "all";
+      sort?: "priority" | "dueAt" | "listIndex" | "createdAt";
+      limit?: number;
+    } = {},
+  ): Promise<Task[]> {
+    const { status = "active", sort = "listIndex", limit = 100 } = options;
+
+    const statusFilter =
+      status === "all"
+        ? eq(tasks.userId, userId)
+        : and(eq(tasks.userId, userId), eq(tasks.status, status));
+
+    const order =
+      sort === "priority"
+        ? [
+            sql`case ${tasks.priority}
+              when 'urgent' then 0
+              when 'high' then 1
+              when 'medium' then 2
+              else 3 end`,
+            asc(tasks.dueAt),
+          ]
+        : sort === "dueAt"
+          ? [sql`${tasks.dueAt} nulls last`, asc(tasks.listIndex)]
+          : sort === "createdAt"
+            ? [desc(tasks.createdAt)]
+            : [asc(tasks.listIndex)];
+
+    return this.db.select().from(tasks).where(statusFilter).orderBy(...order).limit(limit);
+  }
+
+  async listDueInRange(userId: string, from: Date, to: Date): Promise<Task[]> {
+    return this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          eq(tasks.status, "active"),
+          isNotNull(tasks.dueAt),
+          gte(tasks.dueAt, from),
+          lte(tasks.dueAt, to),
+        ),
+      )
+      .orderBy(asc(tasks.dueAt));
+  }
+
+  async update(
+    userId: string,
+    taskId: string,
+    patch: {
+      title?: string;
+      description?: string | null;
+      priority?: TaskPriority;
+      dueAt?: Date | null;
+      status?: "active" | "completed" | "cancelled";
+    },
+  ): Promise<Task | undefined> {
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (patch.title !== undefined) updates.title = patch.title;
+    if (patch.description !== undefined) updates.description = patch.description;
+    if (patch.priority !== undefined) updates.priority = patch.priority;
+    if (patch.dueAt !== undefined) updates.dueAt = patch.dueAt;
+    if (patch.status !== undefined) {
+      updates.status = patch.status;
+      if (patch.status === "completed") {
+        updates.completedAt = new Date();
+      }
+      if (patch.status === "active") {
+        updates.completedAt = null;
+      }
+    }
+
+    const [task] = await this.db
+      .update(tasks)
+      .set(updates)
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+      .returning();
+    return task;
+  }
 }

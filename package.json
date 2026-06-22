@@ -2,7 +2,9 @@
   "name": "myown",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @myown/database build && pnpm --filter @myown/gateway dev",
+    "dev": "pnpm --filter @myown/database build && pnpm -r --parallel --filter @myown/gateway --filter @myown/web dev",
+    "dev:bot": "pnpm --filter @myown/database build && pnpm --filter @myown/gateway dev",
+    "dev:web": "pnpm --filter @myown/web dev",
     "build": "pnpm -r build",
     "db:generate": "pnpm --filter @myown/database db:generate",
     "db:migrate": "pnpm --filter @myown/database db:migrate",

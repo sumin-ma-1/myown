@@ -1,4 +1,6 @@
+import { serve } from "@hono/node-server";
 import { createRedisConnection, createReminderWorker } from "./services/reminder-queue.js";
+import { createApiApp } from "./api/index.js";
 import { createContext } from "./context.js";
 import { config } from "./config.js";
 import { createBot } from "./telegram/bot.js";
@@ -16,6 +18,15 @@ async function main() {
   worker.on("failed", (job, err) => {
     console.error(`Reminder job failed: ${job?.id}`, err);
   });
+
+  const api = createApiApp(app);
+  serve({ fetch: api.fetch, port: config.webApiPort }, () => {
+    console.log(`Web API: http://localhost:${config.webApiPort}`);
+  });
+
+  if (!config.webApiToken) {
+    console.warn("WARNING: WEB_API_TOKEN is empty. Web API rejects all requests.");
+  }
 
   const shutdown = async () => {
     console.log("Shutting down...");
