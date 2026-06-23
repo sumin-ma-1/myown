@@ -23,7 +23,8 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
           priority: {
             type: "string",
-            enum: ["low", "medium", "high", "urgent"],
+            enum: ["urgent", "high", "medium"],
+            description: "최우선(urgent), 우선(high), 계획(medium). 생략 시 계획",
           },
         },
         required: ["title"],

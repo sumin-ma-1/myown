@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { tasks } from "../schema.js";
 import type { Task, TaskPriority } from "../schema.js";
+import { normalizeTaskPriority } from "../priority.js";
 
 export class TaskRepository {
   constructor(private readonly db: Database) {}
@@ -37,7 +38,7 @@ export class TaskRepository {
         userId: input.userId,
         title: input.title,
         description: input.description,
-        priority: input.priority ?? "medium",
+        priority: normalizeTaskPriority(input.priority),
         dueAt: input.dueAt,
         attachmentId: input.attachmentId,
         listIndex,
@@ -147,8 +148,7 @@ export class TaskRepository {
             sql`case ${tasks.priority}
               when 'urgent' then 0
               when 'high' then 1
-              when 'medium' then 2
-              else 3 end`,
+              else 2 end`,
             asc(tasks.dueAt),
           ]
         : sort === "dueAt"
@@ -190,7 +190,7 @@ export class TaskRepository {
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (patch.title !== undefined) updates.title = patch.title;
     if (patch.description !== undefined) updates.description = patch.description;
-    if (patch.priority !== undefined) updates.priority = patch.priority;
+    if (patch.priority !== undefined) updates.priority = normalizeTaskPriority(patch.priority);
     if (patch.dueAt !== undefined) updates.dueAt = patch.dueAt;
     if (patch.status !== undefined) {
       updates.status = patch.status;

@@ -1,4 +1,4 @@
-import type { ReminderDto, SettingsDto, TaskDto } from "./types";
+import type { IntegrationDto, ReminderDto, SettingsDto, TaskDto } from "./types";
 
 const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
 
@@ -56,6 +56,8 @@ export const api = {
     request<{ items: ReminderDto[] }>(`/api/tasks/${taskId}/reminders`),
 
   getSettings: () => request<SettingsDto>("/api/settings"),
+
+  listIntegrations: () => request<{ items: IntegrationDto[] }>("/api/integrations"),
 
   updateSettings: (body: {
     notification?: Partial<SettingsDto["notification"]>;

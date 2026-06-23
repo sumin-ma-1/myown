@@ -7,10 +7,15 @@ function formatDueAt(dueAt: Date): string {
 }
 
 const priorityEmoji: Record<Task["priority"], string> = {
-  low: "🟢",
-  medium: "🟡",
-  high: "🟠",
   urgent: "🔴",
+  high: "🟠",
+  medium: "🟢",
+};
+
+const priorityLabelKo: Record<Task["priority"], string> = {
+  urgent: "최우선",
+  high: "우선",
+  medium: "계획",
 };
 
 export function formatTaskLine(task: Task): string {
@@ -32,7 +37,7 @@ export function formatTaskDetail(task: Task): string {
   const parts = [
     `📌 ${task.title}`,
     task.description ? `📝 ${task.description}` : null,
-    `우선순위: ${task.priority}`,
+    `우선순위: ${priorityLabelKo[task.priority]}`,
     task.dueAt ? `마감: ${formatDueAt(task.dueAt)}` : "마감: 없음",
     `번호: ${task.listIndex}`,
   ].filter(Boolean);

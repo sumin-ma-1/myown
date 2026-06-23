@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import type { TaskPriority } from "@myown/database";
+import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
 import type { ApiEnv, TaskWorkflowStatus, UserPreferences } from "../types.js";
 import { serializeTask } from "../serializers/task.js";
 import { apiAuth } from "../middleware/auth.js";
 
-const PRIORITIES = new Set<TaskPriority>(["low", "medium", "high", "urgent"]);
+const PRIORITIES = new Set<TaskPriority>(TASK_PRIORITIES);
 const WORKFLOW = new Set<TaskWorkflowStatus>(["planned", "in_progress"]);
 
 async function serializeTaskById(

@@ -20,10 +20,6 @@ settingsRoute.get("/", async (c) => {
       ddayOffsets: prefs.notification?.ddayOffsets ?? [3, 1, 0],
       reminderHour: prefs.notification?.reminderHour ?? config.reminderHour,
     },
-    integrations: {
-      telegram: { connected: true, userId: user.telegramUserId },
-      kakaotalk: { connected: false },
-    },
   });
 });
 

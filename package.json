@@ -9,6 +9,7 @@
     "db:generate": "pnpm --filter @myown/database db:generate",
     "db:migrate": "pnpm --filter @myown/database db:migrate",
     "db:push": "pnpm --filter @myown/database db:push",
+    "db:migrate-priority": "pnpm --filter @myown/database db:migrate-priority",
     "bot:profile": "pnpm --filter @myown/gateway bot:profile"
   },
   "engines": {

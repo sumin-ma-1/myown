@@ -95,6 +95,7 @@ export class AttachmentAnalyzer {
               "한국어 공문에서 해야 할 업무만 JSON으로 추출하세요.",
               `오늘: ${formatDate(new Date())}`,
               '{"summary":"요약","keywords":[],"tasks":[{"title":"","due_date":"YYYY-MM-DD","priority":"medium","source_quote":""}]}',
+              "priority: urgent=최우선, high=우선, medium=계획",
               "확실한 업무만. 마감 없으면 due_date 생략.",
             ].join("\n"),
           },

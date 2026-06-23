@@ -5,7 +5,7 @@ import { api } from "@/api/client";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
 import { StatusSelect } from "@/components/tasks/StatusSelect";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import { PRIORITY_ORDER } from "@/lib/priority";
+import { PRIORITY_OPTIONS } from "@/lib/priority";
 
 function ReminderPanel({ taskId }: { taskId: string }) {
   const { data, isLoading } = useQuery({
@@ -125,9 +125,9 @@ export function TaskTable({ tasks, sort, onSortChange }: TaskTableProps) {
                         })
                       }
                     >
-                      {PRIORITY_ORDER.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
+                      {PRIORITY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
                         </option>
                       ))}
                     </select>

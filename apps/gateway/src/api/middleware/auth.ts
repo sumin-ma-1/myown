@@ -16,6 +16,7 @@ export const apiAuth = createMiddleware<ApiEnv>(async (c, next) => {
   }
 
   const user = await c.var.app.users.upsert(telegramId, config.timezone);
+  await c.var.app.channelConnections.ensureTelegram(user.id, telegramId);
   c.set("userId", user.id);
   await next();
 });

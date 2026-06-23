@@ -1,4 +1,4 @@
-export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type TaskPriority = "urgent" | "high" | "medium";
 export type TaskStatus = "active" | "completed" | "cancelled";
 export type WorkflowStatus = "planned" | "in_progress";
 
@@ -40,8 +40,19 @@ export interface SettingsDto {
     ddayOffsets: number[];
     reminderHour: number;
   };
-  integrations: {
-    telegram: { connected: boolean; userId: number };
-    kakaotalk: { connected: boolean };
-  };
+}
+
+export type IntegrationStatus = "connected" | "disconnected" | "error" | "unavailable";
+export type ChannelProvider = "telegram" | "kakao" | "slack";
+
+export interface IntegrationDto {
+  provider: ChannelProvider;
+  name: string;
+  description: string;
+  available: boolean;
+  status: IntegrationStatus;
+  connectionId: string | null;
+  displayName: string | null;
+  externalId: string | null;
+  connectedAt: string | null;
 }
