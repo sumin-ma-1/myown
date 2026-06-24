@@ -1,5 +1,6 @@
 export * from "./schema.js";
 export * from "./client.js";
+export * from "./connection-privacy.js";
 export * from "./priority.js";
 export * from "./repositories/user.js";
 export * from "./repositories/task.js";

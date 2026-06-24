@@ -53,6 +53,5 @@ export interface IntegrationDto {
   status: IntegrationStatus;
   connectionId: string | null;
   displayName: string | null;
-  externalId: string | null;
   connectedAt: string | null;
 }

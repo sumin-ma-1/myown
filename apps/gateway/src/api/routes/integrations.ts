@@ -16,10 +16,7 @@ async function syncTelegramConnection(c: {
   const user = await app.users.findById(userId);
   if (!user) return;
 
-  const displayName = user.telegramUserId
-    ? `Telegram ${user.telegramUserId}`
-    : undefined;
-  await app.channelConnections.ensureTelegram(user.id, user.telegramUserId, displayName);
+  await app.channelConnections.ensureTelegram(user.id, user.telegramUserId);
 }
 
 integrationsRoute.get("/", async (c) => {

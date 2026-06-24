@@ -1,4 +1,5 @@
 import type { ChannelConnection, ChannelProvider } from "@myown/database";
+import { sanitizeConnectionDisplayName } from "./privacy.js";
 
 export interface IntegrationCatalogItem {
   provider: ChannelProvider;
@@ -35,9 +36,26 @@ export interface IntegrationDto {
   available: boolean;
   status: "connected" | "disconnected" | "error" | "unavailable";
   connectionId: string | null;
+  /** 사람이 읽을 수 있는 이름만 (숫자 ID 미포함) */
   displayName: string | null;
-  externalId: string | null;
   connectedAt: string | null;
+}
+
+function toPublicDto(
+  item: IntegrationCatalogItem,
+  conn: ChannelConnection | undefined,
+  status: IntegrationDto["status"],
+): IntegrationDto {
+  return {
+    provider: item.provider,
+    name: item.name,
+    description: item.description,
+    available: item.available,
+    status,
+    connectionId: conn?.id ?? null,
+    displayName: sanitizeConnectionDisplayName(conn?.displayName ?? null),
+    connectedAt: conn?.connectedAt?.toISOString() ?? null,
+  };
 }
 
 export function buildIntegrationList(
@@ -49,43 +67,17 @@ export function buildIntegrationList(
     const conn = byProvider.get(item.provider);
 
     if (!item.available) {
-      return {
-        provider: item.provider,
-        name: item.name,
-        description: item.description,
-        available: false,
-        status: "unavailable" as const,
-        connectionId: null,
-        displayName: null,
-        externalId: null,
-        connectedAt: null,
-      };
+      return toPublicDto(item, undefined, "unavailable");
     }
 
     if (!conn || conn.status !== "connected") {
-      return {
-        provider: item.provider,
-        name: item.name,
-        description: item.description,
-        available: true,
-        status: conn?.status === "error" ? ("error" as const) : ("disconnected" as const),
-        connectionId: conn?.id ?? null,
-        displayName: conn?.displayName ?? null,
-        externalId: conn?.externalId ?? null,
-        connectedAt: conn?.connectedAt?.toISOString() ?? null,
-      };
+      return toPublicDto(
+        item,
+        conn,
+        conn?.status === "error" ? "error" : "disconnected",
+      );
     }
 
-    return {
-      provider: item.provider,
-      name: item.name,
-      description: item.description,
-      available: true,
-      status: "connected" as const,
-      connectionId: conn.id,
-      displayName: conn.displayName,
-      externalId: conn.externalId,
-      connectedAt: conn.connectedAt.toISOString(),
-    };
+    return toPublicDto(item, conn, "connected");
   });
 }
