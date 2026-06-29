@@ -20,7 +20,7 @@ export function Sidebar() {
           />
           <p className="text-lg font-bold text-slate-900">My Own</p>
         </div>
-        <p className="mt-1 pl-10 text-xs text-slate-500">개인 업무 대시보드</p>
+        <p className="mt-1 pl-10 text-xs text-slate-500">개인 업무 관리 플랫폼</p>
       </div>
 
       <IntegrationsPanel />

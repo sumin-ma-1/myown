@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
@@ -6,13 +6,10 @@ import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { DdaySettingsCard } from "@/components/dashboard/DdaySettingsCard";
 import { DueTodayCard, InProgressCard } from "@/components/dashboard/SummaryCards";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
-import { endOfMonth, startOfMonth } from "@/lib/dates";
 
 export function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
-  const monthStart = useMemo(() => startOfMonth(new Date()), []);
-  const monthEnd = useMemo(() => endOfMonth(new Date()), []);
 
   const { data: todayData, isLoading: todayLoading } = useQuery({
     queryKey: ["tasks-today"],
@@ -22,12 +19,6 @@ export function DashboardPage() {
   const { data: activeData, isLoading: activeLoading } = useQuery({
     queryKey: ["tasks", "active"],
     queryFn: () => api.listTasks({ status: "active", sort: "priority" }),
-  });
-
-  const { data: calendarData } = useQuery({
-    queryKey: ["calendar", monthStart.toISOString()],
-    queryFn: () =>
-      api.listCalendarTasks(monthStart.toISOString(), monthEnd.toISOString()),
   });
 
   const openCreate = () => {
@@ -46,7 +37,6 @@ export function DashboardPage() {
 
   const today = todayData?.items ?? [];
   const active = activeData?.items ?? [];
-  const calendar = calendarData?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -70,7 +60,7 @@ export function DashboardPage() {
         <DdaySettingsCard />
       </div>
 
-      <CalendarPanel tasks={calendar} onTaskClick={openEdit} />
+      <CalendarPanel onTaskClick={openEdit} />
 
       <TaskFormModal
         open={modalOpen}
