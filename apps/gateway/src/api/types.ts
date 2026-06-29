@@ -15,4 +15,11 @@ export interface UserPreferences {
     reminderHour?: number;
   };
   taskWorkflow?: Record<string, TaskWorkflowStatus>;
+  taskReminderRules?: Record<string, ExtraReminderRule[]>;
+  taskReminderSkipDefaults?: Record<string, boolean>;
+}
+
+export interface ExtraReminderRule {
+  daysBefore?: number;
+  hoursBefore?: number;
 }

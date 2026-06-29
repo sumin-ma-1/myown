@@ -51,6 +51,10 @@ export class TaskService {
     }
   }
 
+  async linkAttachment(userId: string, taskId: string, attachmentId: string): Promise<void> {
+    await this.tasks.update(userId, taskId, { attachmentId });
+  }
+
   async reserveListIndexes(userId: string, count: number): Promise<number[]> {
     return this.tasks.reserveListIndexes(userId, count);
   }

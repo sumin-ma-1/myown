@@ -1,10 +1,16 @@
 import { Hono } from "hono";
 import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
-import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
-import type { ApiEnv, TaskWorkflowStatus, UserPreferences } from "../types.js";
+import { endOfDayInTimezone, startOfDayInTimezone, atHourOnDate, addDays } from "../../utils/date.js";
+import {
+  getTaskReminderConfig,
+  saveTaskReminderConfig,
+} from "../helpers/task-reminders.js";
+import type { ApiEnv, ExtraReminderRule, TaskWorkflowStatus, UserPreferences } from "../types.js";
 import { serializeTask } from "../serializers/task.js";
 import { apiAuth } from "../middleware/auth.js";
+import { buildReminderFireTimes } from "../../services/reminder-schedule.js";
+import { config } from "../../config.js";
 
 const PRIORITIES = new Set<TaskPriority>(TASK_PRIORITIES);
 const WORKFLOW = new Set<TaskWorkflowStatus>(["planned", "in_progress"]);
@@ -25,6 +31,20 @@ async function serializeTaskById(
     : undefined;
   const reminders = await app.reminders.listForTask(taskId);
   return serializeTask(task, user, attachment, reminders);
+}
+
+function parseExtraRules(raw?: ExtraReminderRule[]): ExtraReminderRule[] {
+  if (!raw?.length) return [];
+  return raw
+    .map((r) => ({
+      daysBefore: r.daysBefore !== undefined ? Number(r.daysBefore) : undefined,
+      hoursBefore: r.hoursBefore !== undefined ? Number(r.hoursBefore) : undefined,
+    }))
+    .filter(
+      (r) =>
+        (r.daysBefore !== undefined && r.daysBefore >= 0) ||
+        (r.hoursBefore !== undefined && r.hoursBefore > 0),
+    );
 }
 
 export const tasksRoute = new Hono<ApiEnv>();
@@ -82,6 +102,43 @@ tasksRoute.get("/today", async (c) => {
   return c.json({ items });
 });
 
+tasksRoute.get("/:id", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const taskId = c.req.param("id");
+
+  const item = await serializeTaskById(app, userId, taskId);
+  if (!item) return c.json({ error: "Task not found" }, 404);
+
+  const user = await app.users.findById(userId);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  const reminderConfig = getTaskReminderConfig(user, taskId);
+  const prefs = (user.preferences ?? {}) as UserPreferences;
+  const ddayOffsets = prefs.notification?.ddayOffsets ?? [3, 1, 0];
+  const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
+
+  let defaultPreview: string[] = [];
+  if (item.dueAt && reminderConfig.useDefaultReminders) {
+    const fireTimes = buildReminderFireTimes(new Date(item.dueAt), {
+      ddayOffsets,
+      reminderHour,
+      extraRules: [],
+    });
+    defaultPreview = fireTimes.map((d) => d.toISOString());
+  }
+
+  return c.json({
+    item,
+    reminderConfig: {
+      ...reminderConfig,
+      defaultPreview,
+      ddayOffsets,
+      reminderHour,
+    },
+  });
+});
+
 tasksRoute.post("/", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
@@ -90,6 +147,9 @@ tasksRoute.post("/", async (c) => {
     description?: string;
     priority?: TaskPriority;
     dueAt?: string;
+    workflowStatus?: TaskWorkflowStatus;
+    useDefaultReminders?: boolean;
+    extraReminders?: ExtraReminderRule[];
   }>();
 
   if (!body.title?.trim()) {
@@ -97,6 +157,9 @@ tasksRoute.post("/", async (c) => {
   }
   if (body.priority && !PRIORITIES.has(body.priority)) {
     return c.json({ error: "invalid priority" }, 400);
+  }
+  if (body.workflowStatus && !WORKFLOW.has(body.workflowStatus)) {
+    return c.json({ error: "invalid workflowStatus" }, 400);
   }
 
   const task = await app.tasks.create({
@@ -107,15 +170,38 @@ tasksRoute.post("/", async (c) => {
     dueAt: body.dueAt ? new Date(body.dueAt) : undefined,
   });
 
-  const user = await app.users.findById(userId);
+  let user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
+
+  if (body.workflowStatus) {
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    const taskWorkflow = { ...(prefs.taskWorkflow ?? {}), [task.id]: body.workflowStatus };
+    user =
+      (await app.users.updatePreferences(userId, { ...prefs, taskWorkflow })) ?? user;
+  }
+
+  const extraRules = parseExtraRules(body.extraReminders);
+  const useDefaults = body.useDefaultReminders ?? true;
+
+  if (extraRules.length > 0 || !useDefaults) {
+    user = await saveTaskReminderConfig(
+      (id, prefs) => app.users.updatePreferences(id, prefs),
+      user,
+      task.id,
+      { useDefaultReminders: useDefaults, extraRules },
+    );
+  }
 
   const telegramId = user.telegramUserId;
   if (task.dueAt) {
-    await app.reminderService.scheduleForTask(task, telegramId);
+    await app.reminderService.scheduleForTask(task, telegramId, user, {
+      useDefaults,
+      extraRules,
+    });
   }
 
-  return c.json({ item: serializeTask(task, user, undefined, []) }, 201);
+  const item = await serializeTaskById(app, userId, task.id);
+  return c.json({ item }, 201);
 });
 
 tasksRoute.patch("/:id", async (c) => {
@@ -124,10 +210,14 @@ tasksRoute.patch("/:id", async (c) => {
   const taskId = c.req.param("id");
   const body = await c.req.json<{
     title?: string;
+    description?: string | null;
     priority?: TaskPriority;
     dueAt?: string | null;
     status?: "active" | "completed" | "cancelled";
     workflowStatus?: TaskWorkflowStatus;
+    useDefaultReminders?: boolean;
+    extraReminders?: ExtraReminderRule[];
+    rescheduleReminders?: boolean;
   }>();
 
   const existing = await app.tasks.findById(userId, taskId);
@@ -140,16 +230,42 @@ tasksRoute.patch("/:id", async (c) => {
     return c.json({ error: "invalid workflowStatus" }, 400);
   }
 
+  let user = await app.users.findById(userId);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
   if (body.workflowStatus) {
-    const user = await app.users.findById(userId);
-    if (!user) return c.json({ error: "User not found" }, 404);
     const prefs = (user.preferences ?? {}) as UserPreferences;
     const taskWorkflow = { ...(prefs.taskWorkflow ?? {}), [taskId]: body.workflowStatus };
-    await app.users.updatePreferences(userId, { ...prefs, taskWorkflow });
+    user =
+      (await app.users.updatePreferences(userId, { ...prefs, taskWorkflow })) ?? user;
+  }
+
+  const dueAtChanged =
+    body.dueAt !== undefined &&
+    (body.dueAt === null
+      ? existing.dueAt !== null
+      : new Date(body.dueAt).getTime() !== existing.dueAt?.getTime());
+
+  const extraRules =
+    body.extraReminders !== undefined ? parseExtraRules(body.extraReminders) : undefined;
+  const reminderConfigChanged =
+    body.useDefaultReminders !== undefined || extraRules !== undefined;
+
+  if (reminderConfigChanged) {
+    user = await saveTaskReminderConfig(
+      (id, prefs) => app.users.updatePreferences(id, prefs),
+      user,
+      taskId,
+      {
+        useDefaultReminders: body.useDefaultReminders,
+        extraRules,
+      },
+    );
   }
 
   const task = await app.tasks.update(userId, taskId, {
     title: body.title?.trim(),
+    description: body.description,
     priority: body.priority,
     dueAt: body.dueAt === null ? null : body.dueAt ? new Date(body.dueAt) : undefined,
     status: body.status,
@@ -158,6 +274,17 @@ tasksRoute.patch("/:id", async (c) => {
   if (!task) return c.json({ error: "Task not found" }, 404);
 
   if (body.status === "completed") {
+    await app.reminderService.cancelForTask(taskId);
+  } else if (
+    task.dueAt &&
+    (dueAtChanged || reminderConfigChanged || body.rescheduleReminders)
+  ) {
+    const config = getTaskReminderConfig(user, taskId);
+    await app.reminderService.rescheduleForTask(task, user.telegramUserId, user, {
+      useDefaults: config.useDefaultReminders,
+      extraRules: config.extraRules,
+    });
+  } else if (dueAtChanged && !task.dueAt) {
     await app.reminderService.cancelForTask(taskId);
   }
 
@@ -184,4 +311,76 @@ tasksRoute.get("/:id/reminders", async (c) => {
       sentAt: r.sentAt?.toISOString() ?? null,
     })),
   });
+});
+
+tasksRoute.post("/:id/reminders", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const taskId = c.req.param("id");
+  const body = await c.req.json<{
+    fireAt?: string;
+    daysBefore?: number;
+    hoursBefore?: number;
+  }>();
+
+  const task = await app.tasks.findById(userId, taskId);
+  if (!task) return c.json({ error: "Task not found" }, 404);
+  if (!task.dueAt) return c.json({ error: "Task has no due date" }, 400);
+
+  const user = await app.users.findById(userId);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  let fireAt: Date;
+  if (body.fireAt) {
+    fireAt = new Date(body.fireAt);
+  } else if (body.daysBefore !== undefined) {
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
+    fireAt = atHourOnDate(addDays(task.dueAt, -body.daysBefore), reminderHour);
+  } else if (body.hoursBefore !== undefined && body.hoursBefore > 0) {
+    fireAt = new Date(task.dueAt.getTime() - body.hoursBefore * 60 * 60 * 1000);
+  } else {
+    return c.json({ error: "fireAt, daysBefore, or hoursBefore required" }, 400);
+  }
+
+  try {
+    const scheduledAt = await app.reminderService.scheduleAt(
+      task,
+      user.telegramUserId,
+      fireAt,
+    );
+    return c.json({ fireAt: scheduledAt.toISOString() }, 201);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to schedule reminder";
+    return c.json({ error: message }, 400);
+  }
+});
+
+tasksRoute.post("/:id/attachment", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const taskId = c.req.param("id");
+
+  const task = await app.tasks.findById(userId, taskId);
+  if (!task) return c.json({ error: "Task not found" }, 404);
+
+  const body = await c.req.parseBody();
+  const file = body.file;
+  if (!file || typeof file === "string") {
+    return c.json({ error: "file is required" }, 400);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const result = await app.attachmentService.attachToTask({
+    userId,
+    taskId,
+    fileName: file.name,
+    mimeType: file.type || undefined,
+    data: buffer,
+  });
+
+  if (!result.ok) return c.json({ error: result.message }, 400);
+
+  const item = await serializeTaskById(app, userId, taskId);
+  return c.json({ item, fileName: result.fileName });
 });

@@ -1,5 +1,6 @@
 import type { TaskDto } from "@/api/types";
 import { PrioritySelect } from "@/components/tasks/PrioritySelect";
+import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { ReminderBell } from "@/components/tasks/ReminderBell";
 import { StatusSelect } from "@/components/tasks/StatusSelect";
 import { formatDate, formatDateTime } from "@/lib/dates";
@@ -10,9 +11,10 @@ interface TaskTableProps {
   onSortChange: (sort: string) => void;
   /** 완료·전체 탭에서 완료일 열 표시 */
   showCompletedAt?: boolean;
+  onTaskClick?: (task: TaskDto) => void;
 }
 
-export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false }: TaskTableProps) {
+export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false, onTaskClick }: TaskTableProps) {
   const colCount = showCompletedAt ? 8 : 7;
 
   return (
@@ -56,12 +58,27 @@ export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false }
               </tr>
             ) : (
               tasks.map((task) => (
-                <tr key={task.id} className="border-t border-slate-100 hover:bg-slate-50/80">
+                <tr
+                  key={task.id}
+                  className={`border-t border-slate-100 hover:bg-slate-50/80 ${
+                    onTaskClick ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => onTaskClick?.(task)}
+                >
                   <td className="px-4 py-3">
                     <span className="font-medium text-slate-800">{task.title}</span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {task.attachment?.fileName ?? "-"}
+                  <td className="px-4 py-3 text-slate-600" onClick={(e) => e.stopPropagation()}>
+                    {task.attachment ? (
+                      <AttachmentDownload
+                        attachmentId={task.attachment.id}
+                        fileName={task.attachment.fileName}
+                        status={task.attachment.status}
+                        className="text-left text-brand hover:underline"
+                      />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{formatDate(task.createdAt)}</td>
                   <td className="px-4 py-3 text-slate-600">
@@ -74,13 +91,13 @@ export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false }
                         : "-"}
                     </td>
                   )}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <StatusSelect task={task} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <PrioritySelect task={task} />
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <ReminderBell
                       taskId={task.id}
                       pendingCount={task.reminderSummary.pending}

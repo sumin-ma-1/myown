@@ -50,7 +50,7 @@ export function DdaySettingsCard() {
         {offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ")} 알림
       </p>
       <p className="mt-1 text-xs text-slate-400">
-        (저장된 설정, 실제 스케줄러 연동은 다음 단계)
+        새 업무 등록 시 기본 알림으로 적용됩니다.
       </p>
 
       {open && (

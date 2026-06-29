@@ -42,6 +42,19 @@ export interface SettingsDto {
   };
 }
 
+export interface ExtraReminderRule {
+  daysBefore?: number;
+  hoursBefore?: number;
+}
+
+export interface TaskReminderConfigDto {
+  useDefaultReminders: boolean;
+  extraRules: ExtraReminderRule[];
+  defaultPreview: string[];
+  ddayOffsets: number[];
+  reminderHour: number;
+}
+
 export type IntegrationStatus = "connected" | "disconnected" | "error" | "unavailable";
 export type ChannelProvider = "telegram" | "kakao" | "slack";
 

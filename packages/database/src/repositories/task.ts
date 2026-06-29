@@ -185,6 +185,7 @@ export class TaskRepository {
       priority?: TaskPriority;
       dueAt?: Date | null;
       status?: "active" | "completed" | "cancelled";
+      attachmentId?: string | null;
     },
   ): Promise<Task | undefined> {
     const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -192,6 +193,7 @@ export class TaskRepository {
     if (patch.description !== undefined) updates.description = patch.description;
     if (patch.priority !== undefined) updates.priority = normalizeTaskPriority(patch.priority);
     if (patch.dueAt !== undefined) updates.dueAt = patch.dueAt;
+    if (patch.attachmentId !== undefined) updates.attachmentId = patch.attachmentId;
     if (patch.status !== undefined) {
       updates.status = patch.status;
       if (patch.status === "completed") {

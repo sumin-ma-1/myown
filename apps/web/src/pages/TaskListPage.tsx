@@ -1,16 +1,30 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import type { TaskDto } from "@/api/types";
+import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { TaskTable } from "@/components/tasks/TaskTable";
 
 export function TaskListPage() {
   const [sort, setSort] = useState("priority");
   const [status, setStatus] = useState("active");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tasks", status, sort],
     queryFn: () => api.listTasks({ status, sort }),
   });
+
+  const openCreate = () => {
+    setEditingTaskId(undefined);
+    setModalOpen(true);
+  };
+
+  const openEdit = (task: TaskDto) => {
+    setEditingTaskId(task.id);
+    setModalOpen(true);
+  };
 
   if (isLoading) return <p className="text-slate-500">불러오는 중…</p>;
   if (error) {
@@ -23,11 +37,20 @@ export function TaskListPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">등록 업무 목록</h1>
-        <p className="text-sm text-slate-500">
-          등록한 업무와 첨부·알림 상태를 관리합니다.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">등록 업무 목록</h1>
+          <p className="text-sm text-slate-500">
+            등록한 업무와 첨부·알림 상태를 관리합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
+          onClick={openCreate}
+        >
+          새 업무 등록
+        </button>
       </header>
 
       <div className="flex gap-2 text-sm">
@@ -54,6 +77,14 @@ export function TaskListPage() {
         sort={sort}
         onSortChange={setSort}
         showCompletedAt={status !== "active"}
+        onTaskClick={openEdit}
+      />
+
+      <TaskFormModal
+        open={modalOpen}
+        mode={editingTaskId ? "edit" : "create"}
+        taskId={editingTaskId}
+        onClose={() => setModalOpen(false)}
       />
     </div>
   );

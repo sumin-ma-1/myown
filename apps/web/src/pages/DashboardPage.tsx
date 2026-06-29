@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { DdaySettingsCard } from "@/components/dashboard/DdaySettingsCard";
 import { DueTodayCard, InProgressCard } from "@/components/dashboard/SummaryCards";
+import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { endOfMonth, startOfMonth } from "@/lib/dates";
 
 export function DashboardPage() {
-  const queryClient = useQueryClient();
-  const [newTitle, setNewTitle] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
   const monthEnd = useMemo(() => endOfMonth(new Date()), []);
 
@@ -28,16 +28,6 @@ export function DashboardPage() {
       api.listCalendarTasks(monthStart.toISOString(), monthEnd.toISOString()),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (title: string) => api.createTask({ title }),
-    onSuccess: () => {
-      setNewTitle("");
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
-      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
-    },
-  });
-
   if (todayLoading || activeLoading) {
     return <p className="text-slate-500">불러오는 중…</p>;
   }
@@ -53,27 +43,13 @@ export function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900">메인 화면</h1>
           <p className="text-sm text-slate-500">오늘의 업무와 일정을 한눈에 확인합니다.</p>
         </div>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (newTitle.trim()) createMutation.mutate(newTitle.trim());
-          }}
+        <button
+          type="button"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
+          onClick={() => setModalOpen(true)}
         >
-          <input
-            className="rounded-lg border border-surface-border px-3 py-2 text-sm"
-            placeholder="새 업무 등록"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
-            disabled={createMutation.isPending}
-          >
-            추가
-          </button>
-        </form>
+          새 업무 등록
+        </button>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -83,6 +59,8 @@ export function DashboardPage() {
       </div>
 
       <CalendarPanel tasks={calendar} />
+
+      <TaskFormModal open={modalOpen} mode="create" onClose={() => setModalOpen(false)} />
     </div>
   );
 }

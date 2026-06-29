@@ -204,4 +204,33 @@ export class AttachmentService {
   getAbsolutePath(storagePath: string): string {
     return join(config.attachmentStorageDir, storagePath);
   }
+
+  async attachToTask(input: {
+    userId: string;
+    taskId: string;
+    fileName: string;
+    mimeType?: string;
+    data: Buffer;
+  }): Promise<{ ok: true; fileName: string } | { ok: false; message: string }> {
+    if (!this.isSupported(input.fileName)) {
+      return { ok: false, message: "지원하지 않는 파일 형식입니다." };
+    }
+    if (input.data.length > config.attachmentMaxBytes) {
+      const mb = Math.round(config.attachmentMaxBytes / (1024 * 1024));
+      return { ok: false, message: `파일이 너무 큽니다. 최대 ${mb}MB까지 지원합니다.` };
+    }
+
+    const storagePath = await saveAttachmentFile(input.userId, input.fileName, input.data);
+    const attachment = await this.attachments.create({
+      userId: input.userId,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      fileSize: input.data.length,
+      storagePath,
+      status: "ready",
+    });
+
+    await this.taskService.linkAttachment(input.userId, input.taskId, attachment.id);
+    return { ok: true, fileName: input.fileName };
+  }
 }

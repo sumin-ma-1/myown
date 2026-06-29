@@ -7,6 +7,8 @@ import { tasksRoute } from "./routes/tasks.js";
 import { calendarRoute } from "./routes/calendar.js";
 import { settingsRoute } from "./routes/settings.js";
 import { integrationsRoute } from "./routes/integrations.js";
+import { remindersRoute } from "./routes/reminders.js";
+import { attachmentsRoute } from "./routes/attachments.js";
 
 export function createApiApp(appContext: AppContext) {
   const app = new Hono<ApiEnv>();
@@ -27,6 +29,8 @@ export function createApiApp(appContext: AppContext) {
   app.get("/api/health", (c) => c.json({ ok: true }));
 
   app.route("/api/tasks", tasksRoute);
+  app.route("/api/reminders", remindersRoute);
+  app.route("/api/attachments", attachmentsRoute);
   app.route("/api/calendar", calendarRoute);
   app.route("/api/settings", settingsRoute);
   app.route("/api/integrations", integrationsRoute);
