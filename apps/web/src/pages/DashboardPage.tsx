@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import type { TaskDto } from "@/api/types";
 import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { DdaySettingsCard } from "@/components/dashboard/DdaySettingsCard";
 import { DueTodayCard, InProgressCard } from "@/components/dashboard/SummaryCards";
@@ -9,6 +10,7 @@ import { endOfMonth, startOfMonth } from "@/lib/dates";
 
 export function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
   const monthEnd = useMemo(() => endOfMonth(new Date()), []);
 
@@ -28,6 +30,16 @@ export function DashboardPage() {
       api.listCalendarTasks(monthStart.toISOString(), monthEnd.toISOString()),
   });
 
+  const openCreate = () => {
+    setEditingTaskId(undefined);
+    setModalOpen(true);
+  };
+
+  const openEdit = (task: TaskDto) => {
+    setEditingTaskId(task.id);
+    setModalOpen(true);
+  };
+
   if (todayLoading || activeLoading) {
     return <p className="text-slate-500">불러오는 중…</p>;
   }
@@ -46,21 +58,26 @@ export function DashboardPage() {
         <button
           type="button"
           className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
-          onClick={() => setModalOpen(true)}
+          onClick={openCreate}
         >
           새 업무 등록
         </button>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <DueTodayCard tasks={today} />
-        <InProgressCard tasks={active} />
+        <DueTodayCard tasks={today} onTaskClick={openEdit} />
+        <InProgressCard tasks={active} onTaskClick={openEdit} />
         <DdaySettingsCard />
       </div>
 
-      <CalendarPanel tasks={calendar} />
+      <CalendarPanel tasks={calendar} onTaskClick={openEdit} />
 
-      <TaskFormModal open={modalOpen} mode="create" onClose={() => setModalOpen(false)} />
+      <TaskFormModal
+        open={modalOpen}
+        mode={editingTaskId ? "edit" : "create"}
+        taskId={editingTaskId}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }

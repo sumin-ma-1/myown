@@ -26,7 +26,13 @@ function buildMonthGrid(cursor: Date): Date[] {
   return days;
 }
 
-export function CalendarPanel({ tasks }: { tasks: TaskDto[] }) {
+export function CalendarPanel({
+  tasks,
+  onTaskClick,
+}: {
+  tasks: TaskDto[];
+  onTaskClick?: (task: TaskDto) => void;
+}) {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>("month");
 
@@ -107,16 +113,26 @@ export function CalendarPanel({ tasks }: { tasks: TaskDto[] }) {
               >
                 <div className="mb-1 text-[11px] font-medium">{day.getDate()}</div>
                 {dayTasks.slice(0, 2).map((t) => (
-                  <div
+                  <button
                     key={t.id}
-                    className="truncate rounded bg-brand-muted px-1 text-[10px] text-brand"
+                    type="button"
+                    className="block w-full truncate rounded bg-brand-muted px-1 text-left text-[10px] text-brand hover:bg-brand/10"
                     title={t.title}
+                    onClick={() => onTaskClick?.(t)}
                   >
                     {t.title}
-                  </div>
+                  </button>
                 ))}
                 {dayTasks.length > 2 && (
-                  <div className="text-[10px] text-slate-500">+{dayTasks.length - 2}</div>
+                  <div
+                    className="text-[10px] text-slate-500"
+                    title={dayTasks
+                      .slice(2)
+                      .map((t) => t.title)
+                      .join(", ")}
+                  >
+                    +{dayTasks.length - 2}
+                  </div>
                 )}
               </div>
             );
@@ -143,11 +159,17 @@ export function CalendarPanel({ tasks }: { tasks: TaskDto[] }) {
                 ) : (
                   <ul className="space-y-1">
                     {dayTasks.map((t) => (
-                      <li key={t.id} className="flex justify-between text-xs">
-                        <span className="truncate">{t.title}</span>
-                        {t.dday !== null && (
-                          <span className="shrink-0 text-brand">{formatDday(t.dday)}</span>
-                        )}
+                      <li key={t.id}>
+                        <button
+                          type="button"
+                          className="flex w-full justify-between text-left text-xs hover:text-brand"
+                          onClick={() => onTaskClick?.(t)}
+                        >
+                          <span className="truncate">{t.title}</span>
+                          {t.dday !== null && (
+                            <span className="shrink-0 text-brand">{formatDday(t.dday)}</span>
+                          )}
+                        </button>
                       </li>
                     ))}
                   </ul>
