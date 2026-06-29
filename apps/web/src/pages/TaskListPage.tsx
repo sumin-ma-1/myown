@@ -26,13 +26,13 @@ export function TaskListPage() {
       <header>
         <h1 className="text-2xl font-bold text-slate-900">등록 업무 목록</h1>
         <p className="text-sm text-slate-500">
-          텔레그램에서 등록한 업무와 첨부·알림 상태를 관리합니다.
+          등록한 업무와 첨부·알림 상태를 관리합니다.
         </p>
       </header>
 
       <div className="flex gap-2 text-sm">
         {[
-          { value: "active", label: "진행 중" },
+          { value: "active", label: "진행" },
           { value: "completed", label: "완료" },
           { value: "all", label: "전체" },
         ].map((opt) => (
@@ -49,7 +49,12 @@ export function TaskListPage() {
         ))}
       </div>
 
-      <TaskTable tasks={data?.items ?? []} sort={sort} onSortChange={setSort} />
+      <TaskTable
+        tasks={data?.items ?? []}
+        sort={sort}
+        onSortChange={setSort}
+        showCompletedAt={status !== "active"}
+      />
     </div>
   );
 }

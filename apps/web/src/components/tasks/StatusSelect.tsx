@@ -1,6 +1,7 @@
 import type { TaskDto } from "@/api/types";
 import { api } from "@/api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { statusClass, type WorkflowUiStatus } from "@/lib/status";
 
 const OPTIONS = [
   { value: "planned", label: "예정" },
@@ -10,7 +11,8 @@ const OPTIONS = [
 
 export function StatusSelect({ task }: { task: TaskDto }) {
   const queryClient = useQueryClient();
-  const value = task.status === "completed" ? "completed" : task.workflowStatus;
+  const value: WorkflowUiStatus =
+    task.status === "completed" ? "completed" : task.workflowStatus;
 
   const mutation = useMutation({
     mutationFn: async (next: string) => {
@@ -33,7 +35,7 @@ export function StatusSelect({ task }: { task: TaskDto }) {
 
   return (
     <select
-      className="rounded-md border border-surface-border bg-white px-2 py-1 text-xs"
+      className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${statusClass(value)}`}
       value={value}
       disabled={mutation.isPending}
       onChange={(e) => mutation.mutate(e.target.value)}
