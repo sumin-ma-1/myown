@@ -6,6 +6,7 @@ import {
   getTaskReminderConfig,
   saveTaskReminderConfig,
 } from "../helpers/task-reminders.js";
+import { loadTaskAttachments } from "../helpers/load-task-attachments.js";
 import type { ApiEnv, ExtraReminderRule, TaskWorkflowStatus, UserPreferences } from "../types.js";
 import { serializeTask } from "../serializers/task.js";
 import { apiAuth } from "../middleware/auth.js";
@@ -26,11 +27,9 @@ async function serializeTaskById(
   const user = await app.users.findById(userId);
   if (!user) return null;
 
-  const attachment = task.attachmentId
-    ? await app.attachments.findById(userId, task.attachmentId)
-    : undefined;
+  const attachments = await loadTaskAttachments(app, userId, task);
   const reminders = await app.reminders.listForTask(taskId);
-  return serializeTask(task, user, attachment, reminders);
+  return serializeTask(task, user, attachments, reminders);
 }
 
 function parseExtraRules(raw?: ExtraReminderRule[]): ExtraReminderRule[] {
@@ -68,11 +67,9 @@ tasksRoute.get("/", async (c) => {
 
   const items = await Promise.all(
     tasks.map(async (task) => {
-      const attachment = task.attachmentId
-        ? await app.attachments.findById(userId, task.attachmentId)
-        : undefined;
+      const attachments = await loadTaskAttachments(app, userId, task);
       const reminders = await app.reminders.listForTask(task.id);
-      return serializeTask(task, user, attachment, reminders);
+      return serializeTask(task, user, attachments, reminders);
     }),
   );
 
@@ -91,11 +88,9 @@ tasksRoute.get("/today", async (c) => {
 
   const items = await Promise.all(
     tasks.map(async (task) => {
-      const attachment = task.attachmentId
-        ? await app.attachments.findById(userId, task.attachmentId)
-        : undefined;
+      const attachments = await loadTaskAttachments(app, userId, task);
       const reminders = await app.reminders.listForTask(task.id);
-      return serializeTask(task, user, attachment, reminders);
+      return serializeTask(task, user, attachments, reminders);
     }),
   );
 
@@ -294,6 +289,39 @@ tasksRoute.patch("/:id", async (c) => {
   return c.json({ item });
 });
 
+tasksRoute.delete("/:id", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const taskId = c.req.param("id");
+
+  const task = await app.tasks.findById(userId, taskId);
+  if (!task) return c.json({ error: "Task not found" }, 404);
+
+  await app.reminderService.cancelForTask(taskId);
+
+  const user = await app.users.findById(userId);
+  if (user) {
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    const taskWorkflow = { ...(prefs.taskWorkflow ?? {}) };
+    const taskReminderRules = { ...(prefs.taskReminderRules ?? {}) };
+    const taskReminderSkipDefaults = { ...(prefs.taskReminderSkipDefaults ?? {}) };
+    delete taskWorkflow[taskId];
+    delete taskReminderRules[taskId];
+    delete taskReminderSkipDefaults[taskId];
+    await app.users.updatePreferences(userId, {
+      ...prefs,
+      taskWorkflow,
+      taskReminderRules,
+      taskReminderSkipDefaults,
+    });
+  }
+
+  const deleted = await app.tasks.delete(userId, taskId);
+  if (!deleted) return c.json({ error: "Task not found" }, 404);
+
+  return c.json({ ok: true });
+});
+
 tasksRoute.get("/:id/reminders", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
@@ -365,22 +393,62 @@ tasksRoute.post("/:id/attachment", async (c) => {
   if (!task) return c.json({ error: "Task not found" }, 404);
 
   const body = await c.req.parseBody();
-  const file = body.file;
-  if (!file || typeof file === "string") {
+  const raw = body.file ?? body.files;
+  const fileList = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter(
+    (f): f is File => typeof f !== "string",
+  );
+
+  if (fileList.length === 0) {
     return c.json({ error: "file is required" }, 400);
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const result = await app.attachmentService.attachToTask({
-    userId,
-    taskId,
-    fileName: file.name,
-    mimeType: file.type || undefined,
-    data: buffer,
-  });
-
-  if (!result.ok) return c.json({ error: result.message }, 400);
+  const uploaded: string[] = [];
+  for (const file of fileList) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await app.attachmentService.attachToTask({
+      userId,
+      taskId,
+      fileName: file.name,
+      mimeType: file.type || undefined,
+      data: buffer,
+    });
+    if (!result.ok) return c.json({ error: result.message }, 400);
+    uploaded.push(result.fileName);
+  }
 
   const item = await serializeTaskById(app, userId, taskId);
-  return c.json({ item, fileName: result.fileName });
+  return c.json({ item, fileNames: uploaded });
+});
+
+tasksRoute.delete("/:id/attachments/:attachmentId", async (c) => {
+  const userId = c.get("userId");
+  const app = c.get("app");
+  const taskId = c.req.param("id");
+  const attachmentId = c.req.param("attachmentId");
+
+  const task = await app.tasks.findById(userId, taskId);
+  if (!task) return c.json({ error: "Task not found" }, 404);
+
+  const attachment = await app.attachments.findById(userId, attachmentId);
+  if (!attachment) return c.json({ error: "Attachment not found" }, 404);
+
+  const unlinked = await app.taskAttachments.unlink(taskId, attachmentId);
+  const isLegacyOnly = !unlinked && task.attachmentId === attachmentId;
+
+  if (!unlinked && !isLegacyOnly) {
+    return c.json({ error: "Attachment not linked to task" }, 404);
+  }
+
+  if (isLegacyOnly) {
+    await app.tasks.update(userId, taskId, { attachmentId: null });
+  } else if (task.attachmentId === attachmentId) {
+    const remaining = await app.taskAttachments.listForTask(userId, taskId);
+    const nextPrimary = remaining[0]?.id ?? null;
+    await app.tasks.update(userId, taskId, { attachmentId: nextPrimary });
+  }
+
+  const item = await serializeTaskById(app, userId, taskId);
+  if (!item) return c.json({ error: "Task not found" }, 404);
+
+  return c.json({ item });
 });

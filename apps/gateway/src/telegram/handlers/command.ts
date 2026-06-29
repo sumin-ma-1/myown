@@ -30,8 +30,10 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
         '"내일 오후 3시까지 보고서 작성해줘"',
         "",
         "첨부파일 (HWP, HWPX, PDF, DOCX, 이미지):",
-        "파일을 보내고 캡션으로 메모를 남기면 업무를 자동 추출합니다.",
-        "HWP는 hwp-parser 서비스가 필요합니다 (docker compose up hwp-parser).",
+        "· 파일+캡션: 한 번에 업무 등록",
+        "· 파일만 → 제목·메모 추가 후 [등록 완료]",
+        "· [등록 취소]로 초안·세션 종료",
+        "· [답장하기]로 이어서 입력",
       ].join("\n"),
     );
   });

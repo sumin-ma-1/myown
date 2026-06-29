@@ -16,12 +16,13 @@ export class UserRepository {
   }
 
   async upsert(telegramUserId: number, timezone = "Asia/Seoul"): Promise<User> {
-    const existing = await this.findByTelegramId(telegramUserId);
-    if (existing) return existing;
-
     const [user] = await this.db
       .insert(users)
       .values({ telegramUserId, timezone })
+      .onConflictDoUpdate({
+        target: users.telegramUserId,
+        set: { updatedAt: new Date() },
+      })
       .returning();
     return user;
   }

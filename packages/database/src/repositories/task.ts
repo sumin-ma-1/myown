@@ -211,4 +211,12 @@ export class TaskRepository {
       .returning();
     return task;
   }
+
+  async delete(userId: string, taskId: string): Promise<boolean> {
+    const result = await this.db
+      .delete(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+      .returning({ id: tasks.id });
+    return result.length > 0;
+  }
 }

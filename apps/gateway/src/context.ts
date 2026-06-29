@@ -2,6 +2,7 @@ import {
   AttachmentRepository,
   ChannelConnectionRepository,
   ReminderRepository,
+  TaskAttachmentRepository,
   TaskRepository,
   UserRepository,
   getDb,
@@ -20,6 +21,7 @@ export interface AppContext {
   tasks: TaskRepository;
   reminders: ReminderRepository;
   attachments: AttachmentRepository;
+  taskAttachments: TaskAttachmentRepository;
   channelConnections: ChannelConnectionRepository;
   taskService: TaskService;
   attachmentService: AttachmentService;
@@ -35,11 +37,12 @@ export function createContext(redis: IORedis): AppContext {
   const tasks = new TaskRepository(db);
   const reminders = new ReminderRepository(db);
   const attachments = new AttachmentRepository(db);
+  const taskAttachments = new TaskAttachmentRepository(db);
   const channelConnections = new ChannelConnectionRepository(db);
   const reminderQueue = createReminderQueue(redis);
   const reminderService = new ReminderService(reminders, reminderQueue);
-  const taskService = new TaskService(tasks, reminderService);
-  const attachmentService = new AttachmentService(attachments, taskService);
+  const taskService = new TaskService(tasks, reminderService, taskAttachments);
+  const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);
   const agent = new AgentRuntime(taskService);
 
   return {
@@ -47,6 +50,7 @@ export function createContext(redis: IORedis): AppContext {
     tasks,
     reminders,
     attachments,
+    taskAttachments,
     channelConnections,
     taskService,
     attachmentService,

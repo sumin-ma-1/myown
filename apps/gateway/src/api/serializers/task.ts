@@ -1,6 +1,12 @@
 import type { Attachment, Reminder, Task, User } from "@myown/database";
 import type { TaskWorkflowStatus, UserPreferences } from "../types.js";
 
+export interface AttachmentDto {
+  id: string;
+  fileName: string;
+  status: Attachment["status"];
+}
+
 export interface TaskDto {
   id: string;
   listIndex: number;
@@ -13,17 +19,23 @@ export interface TaskDto {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  attachment: {
-    id: string;
-    fileName: string;
-    status: Attachment["status"];
-  } | null;
+  attachments: AttachmentDto[];
+  /** @deprecated 첫 번째 첨부 (하위 호환) */
+  attachment: AttachmentDto | null;
   reminderSummary: {
     pending: number;
     sent: number;
     nextFireAt: string | null;
   };
   dday: number | null;
+}
+
+function toAttachmentDto(attachment: Attachment): AttachmentDto {
+  return {
+    id: attachment.id,
+    fileName: attachment.fileName,
+    status: attachment.status,
+  };
 }
 
 function getWorkflowStatus(
@@ -38,7 +50,7 @@ function getWorkflowStatus(
 export function serializeTask(
   task: Task,
   user: User,
-  attachment?: Attachment,
+  attachments: Attachment[] = [],
   reminders: Reminder[] = [],
 ): TaskDto {
   const pending = reminders.filter((r) => r.status === "pending");
@@ -54,6 +66,8 @@ export function serializeTask(
     dday = Math.round((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
   }
 
+  const attachmentDtos = attachments.map(toAttachmentDto);
+
   return {
     id: task.id,
     listIndex: task.listIndex,
@@ -66,9 +80,8 @@ export function serializeTask(
     completedAt: task.completedAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
-    attachment: attachment
-      ? { id: attachment.id, fileName: attachment.fileName, status: attachment.status }
-      : null,
+    attachments: attachmentDtos,
+    attachment: attachmentDtos[0] ?? null,
     reminderSummary: {
       pending: pending.length,
       sent: sent.length,

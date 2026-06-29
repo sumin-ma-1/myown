@@ -10,12 +10,14 @@ const priorityEmoji: Record<Task["priority"], string> = {
   urgent: "🔴",
   high: "🟠",
   medium: "🟢",
+  low: "🟢",
 };
 
 const priorityLabelKo: Record<Task["priority"], string> = {
   urgent: "최우선",
   high: "우선",
   medium: "계획",
+  low: "계획",
 };
 
 export function formatTaskLine(task: Task, displayOrder: number): string {

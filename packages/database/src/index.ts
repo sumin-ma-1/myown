@@ -6,4 +6,5 @@ export * from "./repositories/user.js";
 export * from "./repositories/task.js";
 export * from "./repositories/reminder.js";
 export * from "./repositories/attachment.js";
+export * from "./repositories/task-attachment.js";
 export * from "./repositories/channel-connection.js";

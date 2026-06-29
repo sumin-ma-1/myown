@@ -1,6 +1,17 @@
+import { randomUUID } from "node:crypto";
 import type { Bot } from "grammy";
 import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
+import {
+  clearCompose,
+  composeContinueKeyboard,
+  COMPOSE_HINT_REPLY,
+  setCompose,
+  getCompose,
+  isReplyToComposeAnchor,
+} from "../compose-session.js";
+import { titleFromFileName } from "../../services/attachment.js";
+import { draftFromMemo, formatDraftSummary, mergeFileIntoComposeTask } from "../helpers/compose-merge.js";
 
 async function downloadTelegramFile(
   ctx: BotContext,
@@ -24,7 +35,10 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
   bot.on(["message:document", "message:photo"], async (ctx) => {
     const userId = ctx.session.userId;
     const telegramUserId = ctx.from?.id;
-    if (!userId || !telegramUserId) return;
+    if (!userId || !telegramUserId) {
+      await ctx.reply("⚠️ 사용자 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
 
     try {
       await ctx.replyWithChatAction("upload_document");
@@ -50,39 +64,97 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
         return;
       }
 
-      const status = await ctx.reply("📎 문서 분석 중...");
       const userHint = ctx.message.caption?.trim() || undefined;
-      const chatId = ctx.chat?.id;
 
-      const reply = await app.attachmentService.process({
-        userId,
-        telegramUserId,
+      const merged = await mergeFileIntoComposeTask(app, ctx, userId, {
         fileName,
         mimeType,
         data,
         telegramFileId: fileId,
-        userHint,
-        onProgress: chatId
-          ? async (message) => {
-              try {
-                await ctx.api.editMessageText(chatId, status.message_id, message);
-              } catch {
-                // 동일 메시지 편집 등 무시
-              }
-            }
-          : undefined,
+      });
+      if (merged.ok) {
+        await ctx.reply(
+          [
+            "✅ 첨부를 추가했습니다.",
+            `📎 ${merged.fileName}`,
+            `제목: ${merged.title}`,
+            "",
+            "[등록 완료]를 눌러 업무를 등록해 주세요.",
+          ].join("\n"),
+        );
+        return;
+      }
+      if (merged.message !== "not_anchor" && merged.message !== "no_compose") {
+        await ctx.reply(`⚠️ ${merged.message}`);
+        return;
+      }
+
+      if (getCompose(ctx.session) && !isReplyToComposeAnchor(ctx, ctx.session)) {
+        await ctx.reply(
+          "⚠️ [답장하기]를 누르거나 안내 메시지에 답장해서 첨부해 주세요.",
+        );
+        return;
+      }
+
+      clearCompose(ctx.session);
+
+      const status = await ctx.reply("📎 첨부 저장 중...");
+      const chatId = ctx.chat?.id;
+
+      const saved = await app.attachmentService.saveOnly({
+        userId,
+        fileName,
+        mimeType,
+        data,
+        telegramFileId: fileId,
       });
 
+      if (!saved.ok) {
+        if (chatId) {
+          await ctx.api.editMessageText(chatId, status.message_id, saved.message);
+        } else {
+          await ctx.reply(saved.message);
+        }
+        return;
+      }
+
+      let draft = {
+        attachmentIds: [saved.attachmentId],
+        title: titleFromFileName(fileName),
+      };
+      if (userHint) {
+        draft = await draftFromMemo(app, draft, userHint);
+      }
+
+      const composeKey = randomUUID();
+      const lines = userHint
+        ? formatDraftSummary(draft)
+        : ["파일을 받았습니다.", `📎 ${saved.fileName}`, "", COMPOSE_HINT_REPLY].join("\n");
+
       if (chatId) {
-        await ctx.api.editMessageText(chatId, status.message_id, reply);
+        await ctx.api.editMessageText(chatId, status.message_id, lines, {
+          reply_markup: composeContinueKeyboard(composeKey),
+        });
+        setCompose(ctx.session, {
+          composeKey,
+          mode: "awaiting_text",
+          anchorMessageId: status.message_id,
+          draft,
+        });
       } else {
-        await ctx.reply(reply);
+        const sent = await ctx.reply(lines, {
+          reply_markup: composeContinueKeyboard(composeKey),
+        });
+        setCompose(ctx.session, {
+          composeKey,
+          mode: "awaiting_text",
+          anchorMessageId: sent.message_id,
+          draft,
+        });
       }
     } catch (err) {
       console.error("[document] handler error:", err);
-      await ctx.reply(
-        "⚠️ 첨부파일 처리 중 오류가 발생했습니다.\n터미널 로그와 hwp-parser 실행 여부를 확인해 주세요.",
-      );
+      await ctx.reply("⚠️ 첨부파일 저장 중 오류가 발생했습니다.");
     }
   });
 }

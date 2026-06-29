@@ -2,6 +2,12 @@ export type TaskPriority = "urgent" | "high" | "medium";
 export type TaskStatus = "active" | "completed" | "cancelled";
 export type WorkflowStatus = "planned" | "in_progress";
 
+export interface AttachmentDto {
+  id: string;
+  fileName: string;
+  status: string;
+}
+
 export interface TaskDto {
   id: string;
   listIndex: number;
@@ -14,11 +20,9 @@ export interface TaskDto {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  attachment: {
-    id: string;
-    fileName: string;
-    status: string;
-  } | null;
+  attachments: AttachmentDto[];
+  /** 첫 번째 첨부 (하위 호환) */
+  attachment: AttachmentDto | null;
   reminderSummary: {
     pending: number;
     sent: number;

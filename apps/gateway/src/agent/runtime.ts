@@ -1,4 +1,4 @@
-import type { Task } from "@myown/database";
+import type { Task, TaskPriority } from "@myown/database";
 import OpenAI from "openai";
 import { config, isLlmEnabled } from "../config.js";
 import type { TaskService } from "../services/task.js";
@@ -19,9 +19,20 @@ import {
   agentTools,
   resolveDueAt,
 } from "./tools.js";
+import {
+  type ComposeMemoArgs,
+  composeMemoTool,
+} from "./compose-memo.js";
 
 function formatDueLabel(dueAt: Date): string {
   return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
+}
+
+export interface ComposeMemoContext {
+  title: string;
+  description?: string | null;
+  dueAt?: Date | null;
+  priority: TaskPriority;
 }
 
 export class AgentRuntime {
@@ -85,6 +96,97 @@ export class AgentRuntime {
         setTimeout(() => reject(new Error("LLM request timed out")), timeout),
       ),
     ]);
+  }
+
+  /** 첨부 업무 compose 답장 메모 → 제목·설명·마감·우선순위 추출 */
+  async parseComposeMemo(
+    context: {
+      title: string;
+      description?: string | null;
+      dueAt?: Date | null;
+      priority: TaskPriority;
+    },
+    memo: string,
+  ): Promise<
+    | {
+        ok: true;
+        patch: {
+          title: string;
+          description?: string | null;
+          priority?: TaskPriority;
+          dueAt?: Date | null;
+        };
+      }
+    | { ok: false; message: string }
+  > {
+    if (!isLlmEnabled() || !this.openai) {
+      return { ok: false, message: "llm_disabled" };
+    }
+
+    const currentDue = context.dueAt ? formatDueLabel(context.dueAt) : "없음";
+
+    try {
+      const response = await this.llmCall({
+        model: config.llmModel,
+        messages: [
+          {
+            role: "system",
+            content: [
+              "사용자가 첨부 파일과 함께 등록 중인 업무에 메모를 남겼습니다.",
+              "메모에서 제목, 설명, 마감일·시각, 우선순위를 추출해 fill_task_from_memo를 한 번 호출하세요.",
+              `타임존: ${config.timezone}`,
+              `오늘: ${formatDate(new Date())}`,
+              `현재 제목: ${context.title}`,
+              `현재 설명: ${context.description ?? "(없음)"}`,
+              `현재 마감: ${currentDue}`,
+              `현재 우선순위: ${context.priority}`,
+              "마감·우선순위가 메모에 없으면 해당 필드는 생략하세요.",
+              "제목은 메모 의도에 맞게 간결하게 정리하세요.",
+            ].join("\n"),
+          },
+          { role: "user", content: memo },
+        ],
+        tools: [composeMemoTool],
+        tool_choice: { type: "function", function: { name: "fill_task_from_memo" } },
+      });
+
+      const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+      if (!toolCall || toolCall.type !== "function") {
+        return { ok: false, message: "메모를 이해하지 못했습니다." };
+      }
+
+      const args = JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs;
+      const title = args.title?.trim();
+      if (!title) {
+        return { ok: false, message: "제목을 추출하지 못했습니다." };
+      }
+
+      const patch: {
+        title: string;
+        description?: string | null;
+        priority?: TaskPriority;
+        dueAt?: Date | null;
+      } = { title };
+
+      if (args.description !== undefined) {
+        patch.description = args.description.trim() || null;
+      }
+      if (args.priority) {
+        patch.priority = args.priority;
+      }
+      if (args.due_date?.trim()) {
+        patch.dueAt = resolveDueAt(args.due_date, args.due_time) ?? null;
+      }
+
+      return { ok: true, patch };
+    } catch (err) {
+      console.error("[llm] compose memo error:", err);
+      const message =
+        err instanceof Error && err.message.includes("timed out")
+          ? "메모 분석 시간이 초과되었습니다."
+          : "메모 분석 중 오류가 발생했습니다.";
+      return { ok: false, message };
+    }
   }
 
   private async tryCommand(input: {
@@ -265,6 +367,7 @@ export class AgentRuntime {
           "특정 시각 알림은 create_reminder 도구를 사용하세요.",
           "create_reminder·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
+          "마크다운 문법(** · * · # · ` 등)을 쓰지 말고, 줄바꿈만 쓰는 평문으로 답하세요.",
         ].join("\n"),
       },
       { role: "user", content: input.text },

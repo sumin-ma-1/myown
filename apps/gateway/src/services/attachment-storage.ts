@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { config } from "../config.js";
@@ -14,6 +14,15 @@ export async function saveAttachmentFile(
   await mkdir(dirname(absolute), { recursive: true });
   await writeFile(absolute, data);
   return relative;
+}
+
+export async function deleteAttachmentFile(storagePath: string): Promise<void> {
+  const absolute = join(config.attachmentStorageDir, storagePath);
+  try {
+    await unlink(absolute);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
 }
 
 export function detectDocumentKind(

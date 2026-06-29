@@ -77,14 +77,23 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  uploadAttachment: (taskId: string, file: File) => {
+  deleteTask: (id: string) =>
+    request<{ ok: boolean }>(`/api/tasks/${id}`, { method: "DELETE" }),
+
+  uploadAttachment: (taskId: string, files: File | File[]) => {
+    const list = Array.isArray(files) ? files : [files];
     const form = new FormData();
-    form.append("file", file);
-    return request<{ item: TaskDto; fileName: string }>(`/api/tasks/${taskId}/attachment`, {
+    for (const file of list) form.append("file", file);
+    return request<{ item: TaskDto; fileNames: string[] }>(`/api/tasks/${taskId}/attachment`, {
       method: "POST",
       body: form,
     });
   },
+
+  removeAttachment: (taskId: string, attachmentId: string) =>
+    request<{ item: TaskDto }>(`/api/tasks/${taskId}/attachments/${attachmentId}`, {
+      method: "DELETE",
+    }),
 
   listReminders: (taskId: string) =>
     request<{ items: ReminderDto[] }>(`/api/tasks/${taskId}/reminders`),

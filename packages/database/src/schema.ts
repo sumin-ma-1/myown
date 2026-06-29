@@ -20,6 +20,7 @@ export const taskPriorityEnum = pgEnum("task_priority", [
   "urgent",
   "high",
   "medium",
+  "low", // deprecated — DB 호환용, 앱에서는 medium으로 정규화
 ]);
 
 export const reminderStatusEnum = pgEnum("reminder_status", [
@@ -101,6 +102,24 @@ export const attachments = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("attachments_user_id_idx").on(table.userId)],
+);
+
+export const taskAttachments = pgTable(
+  "task_attachments",
+  {
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    attachmentId: uuid("attachment_id")
+      .notNull()
+      .references(() => attachments.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("task_attachments_task_attachment_uidx").on(table.taskId, table.attachmentId),
+    index("task_attachments_task_id_idx").on(table.taskId),
+    index("task_attachments_attachment_id_idx").on(table.attachmentId),
+  ],
 );
 
 export const tasks = pgTable(

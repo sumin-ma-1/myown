@@ -1,4 +1,4 @@
-import type { Task, TaskPriority, TaskRepository } from "@myown/database";
+import type { Task, TaskPriority, TaskAttachmentRepository, TaskRepository } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../utils/date.js";
 import { formatTaskDetail, formatTaskList } from "../utils/format.js";
 import {
@@ -25,6 +25,7 @@ export class TaskService {
   constructor(
     private readonly tasks: TaskRepository,
     private readonly reminders: ReminderService,
+    private readonly taskAttachments: TaskAttachmentRepository,
   ) {}
 
   async create(input: CreateTaskInput): Promise<Task> {
@@ -42,6 +43,10 @@ export class TaskService {
       await this.reminders.scheduleForTask(task, input.telegramUserId);
     }
 
+    if (input.attachmentId) {
+      await this.taskAttachments.link(task.id, input.attachmentId);
+    }
+
     return task;
   }
 
@@ -52,7 +57,11 @@ export class TaskService {
   }
 
   async linkAttachment(userId: string, taskId: string, attachmentId: string): Promise<void> {
-    await this.tasks.update(userId, taskId, { attachmentId });
+    await this.taskAttachments.link(taskId, attachmentId);
+    const task = await this.tasks.findById(userId, taskId);
+    if (task && !task.attachmentId) {
+      await this.tasks.update(userId, taskId, { attachmentId });
+    }
   }
 
   async reserveListIndexes(userId: string, count: number): Promise<number[]> {

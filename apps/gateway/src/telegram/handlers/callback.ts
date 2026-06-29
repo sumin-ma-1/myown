@@ -1,8 +1,15 @@
 import { InlineKeyboard, type Bot } from "grammy";
 import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
+import {
+  clearCompose,
+  requestComposeReply,
+  resolveCompose,
+  setCompose,
+} from "../compose-session.js";
+import { cancelComposeRegistration } from "../helpers/compose-cancel.js";
+import { finalizeComposeRegistration } from "../helpers/compose-finalize.js";
 import { formatDateTime } from "../../utils/date.js";
-import { formatTaskDetail } from "../../utils/format.js";
 
 export function taskActionKeyboard(taskId: string) {
   return new InlineKeyboard()
@@ -57,6 +64,93 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
     await ctx.answerCallbackQuery();
     if (detail) {
       await ctx.reply(detail, { reply_markup: taskActionKeyboard(taskId) });
+    }
+  });
+
+  bot.callbackQuery(/^compose:reply:(.+)$/, async (ctx) => {
+    const composeKey = ctx.match[1];
+    const compose = resolveCompose(ctx.session, composeKey);
+
+    if (!compose) {
+      await ctx.answerCallbackQuery({
+        text: "이어쓰기가 종료되었습니다. 파일이나 메시지를 다시 보내주세요.",
+        show_alert: true,
+      });
+      return;
+    }
+
+    await ctx.answerCallbackQuery();
+    const promptMessageId = await requestComposeReply(ctx, compose);
+    if (promptMessageId) {
+      setCompose(ctx.session, { ...compose, promptMessageId });
+    }
+  });
+
+  bot.callbackQuery(/^compose:register:(.+)$/, async (ctx) => {
+    const userId = ctx.session.userId;
+    const telegramUserId = ctx.from?.id;
+    if (!userId || !telegramUserId) return;
+
+    const composeKey = ctx.match[1];
+    const compose = resolveCompose(ctx.session, composeKey);
+
+    if (!compose) {
+      await ctx.answerCallbackQuery({
+        text: "등록 대기가 만료되었습니다. 파일을 다시 보내주세요.",
+        show_alert: true,
+      });
+      return;
+    }
+
+    const result = await finalizeComposeRegistration(app, {
+      userId,
+      telegramUserId,
+      compose,
+    });
+
+    if (!result.ok) {
+      await ctx.answerCallbackQuery({ text: result.message, show_alert: true });
+      return;
+    }
+
+    clearCompose(ctx.session);
+    await ctx.answerCallbackQuery("업무를 등록했습니다.");
+    try {
+      await ctx.editMessageText(result.summary);
+    } catch {
+      await ctx.reply(result.summary);
+    }
+  });
+
+  bot.callbackQuery(/^compose:cancel:(.+)$/, async (ctx) => {
+    const userId = ctx.session.userId;
+    if (!userId) return;
+
+    const composeKey = ctx.match[1];
+    const compose = resolveCompose(ctx.session, composeKey);
+
+    if (!compose) {
+      await ctx.answerCallbackQuery({
+        text: "이미 종료되었거나 권한이 없습니다.",
+        show_alert: true,
+      });
+      return;
+    }
+
+    try {
+      await cancelComposeRegistration(app, userId, ctx.session, compose);
+      await ctx.answerCallbackQuery("등록을 취소했습니다.");
+      try {
+        await ctx.editMessageText("등록을 취소했습니다.");
+      } catch {
+        await ctx.reply("등록을 취소했습니다.");
+      }
+    } catch (err) {
+      console.error("[compose] cancel failed:", err);
+      await ctx.answerCallbackQuery({
+        text: "취소 처리 중 오류가 발생했습니다.",
+        show_alert: true,
+      });
     }
   });
 }

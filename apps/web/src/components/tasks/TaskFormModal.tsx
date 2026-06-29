@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { ExtraReminderRule, TaskDto } from "@/api/types";
@@ -59,6 +59,11 @@ function rowsToRules(rows: ExtraRuleRow[]): ExtraReminderRule[] {
     );
 }
 
+interface PendingFile {
+  key: string;
+  file: File;
+}
+
 interface TaskFormModalProps {
   open: boolean;
   mode: "create" | "edit";
@@ -76,8 +81,24 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   const [workflowStatus, setWorkflowStatus] = useState<TaskDto["workflowStatus"]>("planned");
   const [useDefaultReminders, setUseDefaultReminders] = useState(true);
   const [extraRows, setExtraRows] = useState<ExtraRuleRow[]>([emptyRule()]);
-  const [file, setFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addPendingFiles = (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setPendingFiles((prev) => [
+      ...prev,
+      ...list.map((file) => ({ key: crypto.randomUUID(), file })),
+    ]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (key: string) => {
+    setPendingFiles((prev) => prev.filter((p) => p.key !== key));
+  };
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
@@ -100,7 +121,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setFile(null);
+    setPendingFiles([]);
+    setRemovedAttachmentIds([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     if (mode === "create") {
       setTitle("");
@@ -156,8 +179,14 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
         saved = res.item;
       }
 
-      if (file) {
-        await api.uploadAttachment(saved.id, file);
+      if (pendingFiles.length > 0) {
+        await api.uploadAttachment(
+          saved.id,
+          pendingFiles.map((p) => p.file),
+        );
+      }
+      for (const attachmentId of removedAttachmentIds) {
+        await api.removeAttachment(saved.id, attachmentId);
       }
       return saved;
     },
@@ -184,9 +213,24 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: () => api.deleteTask(taskId!),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      onClose();
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "삭제에 실패했습니다.");
+    },
+  });
+
   const offsets = settings?.notification.ddayOffsets ?? [3, 1, 0];
   const offsetLabel = offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
 
+  const existingAttachments =
+    taskData?.item.attachments.filter((a) => !removedAttachmentIds.includes(a.id)) ?? [];
   const isLoading = mode === "edit" && taskLoading;
 
   return (
@@ -285,24 +329,85 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
               <div>
                 <label className="block text-xs font-medium text-slate-600">첨부 파일</label>
-                {mode === "edit" && taskData?.item.attachment && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    {" "}
-                    <AttachmentDownload
-                      attachmentId={taskData.item.attachment.id}
-                      fileName={taskData.item.attachment.fileName}
-                      status={taskData.item.attachment.status}
-                    />
-                  </p>
+                {(existingAttachments.length > 0 || pendingFiles.length > 0) && (
+                  <ul className="mt-2 space-y-2">
+                    {existingAttachments.map((attachment) => (
+                      <li
+                        key={attachment.id}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          <AttachmentDownload
+                            attachmentId={attachment.id}
+                            fileName={attachment.fileName}
+                            status={attachment.status}
+                          />
+                        </span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-xs text-red-600 hover:text-red-700"
+                          onClick={() =>
+                            setRemovedAttachmentIds((prev) => [...prev, attachment.id])
+                          }
+                        >
+                          삭제
+                        </button>
+                      </li>
+                    ))}
+                    {removedAttachmentIds.map((id) => {
+                      const removed = taskData?.item.attachments.find((a) => a.id === id);
+                      if (!removed) return null;
+                      return (
+                        <li
+                          key={`removed-${id}`}
+                          className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-3 py-2"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-400 line-through">
+                            {removed.fileName}
+                          </span>
+                          <span className="shrink-0 text-xs text-amber-600">저장 시 삭제</span>
+                          <button
+                            type="button"
+                            className="shrink-0 text-xs text-slate-600 hover:text-slate-800"
+                            onClick={() =>
+                              setRemovedAttachmentIds((prev) => prev.filter((x) => x !== id))
+                            }
+                          >
+                            취소
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {pendingFiles.map((pending) => (
+                      <li
+                        key={pending.key}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                          {pending.file.name}
+                          <span className="ml-1 text-xs text-slate-400">(새 파일)</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-xs text-red-600 hover:text-red-700"
+                          onClick={() => removePendingFile(pending.key)}
+                        >
+                          삭제
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 <input
+                  ref={fileInputRef}
                   type="file"
+                  multiple
                   className="mt-1 w-full text-sm"
                   accept=".hwp,.hwpx,.pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => addPendingFiles(e.target.files ?? [])}
                 />
                 <p className="mt-1 text-xs text-slate-400">
-                  HWP, PDF, DOCX, TXT, 이미지 등 지원
+                  여러 파일 선택 가능 · HWP, PDF, DOCX, TXT, 이미지 등 지원
                 </p>
               </div>
             </section>
@@ -430,21 +535,41 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-            <button
-              type="button"
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
-              onClick={onClose}
-            >
-              닫기
-            </button>
-            <button
-              type="submit"
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending ? "저장 중…" : mode === "create" ? "등록" : "저장"}
-            </button>
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+            {mode === "edit" ? (
+              <button
+                type="button"
+                className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+                disabled={deleteTaskMutation.isPending || saveMutation.isPending}
+                onClick={() => {
+                  if (!taskId) return;
+                  const name = title.trim() || "이 업무";
+                  if (window.confirm(`「${name}」을(를) 삭제할까요?\n예약된 알림도 함께 취소됩니다.`)) {
+                    deleteTaskMutation.mutate();
+                  }
+                }}
+              >
+                {deleteTaskMutation.isPending ? "삭제 중…" : "업무 삭제"}
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
+                onClick={onClose}
+              >
+                닫기
+              </button>
+              <button
+                type="submit"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                disabled={saveMutation.isPending || deleteTaskMutation.isPending}
+              >
+                {saveMutation.isPending ? "저장 중…" : mode === "create" ? "등록" : "저장"}
+              </button>
+            </div>
           </div>
         </form>
       )}

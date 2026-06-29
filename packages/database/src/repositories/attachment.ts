@@ -66,4 +66,12 @@ export class AttachmentRepository {
       .orderBy(desc(attachments.createdAt))
       .limit(limit);
   }
+
+  async delete(userId: string, id: string): Promise<boolean> {
+    const deleted = await this.db
+      .delete(attachments)
+      .where(and(eq(attachments.id, id), eq(attachments.userId, userId)))
+      .returning({ id: attachments.id });
+    return deleted.length > 0;
+  }
 }

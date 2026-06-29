@@ -3,7 +3,7 @@ import { PrioritySelect } from "@/components/tasks/PrioritySelect";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { ReminderBell } from "@/components/tasks/ReminderBell";
 import { StatusSelect } from "@/components/tasks/StatusSelect";
-import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatDateTime } from "@/lib/dates";
 
 interface TaskTableProps {
   tasks: TaskDto[];
@@ -69,18 +69,29 @@ export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false, 
                     <span className="font-medium text-slate-800">{task.title}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-600" onClick={(e) => e.stopPropagation()}>
-                    {task.attachment ? (
-                      <AttachmentDownload
-                        attachmentId={task.attachment.id}
-                        fileName={task.attachment.fileName}
-                        status={task.attachment.status}
-                        className="text-left text-brand hover:underline"
-                      />
-                    ) : (
+                    {task.attachments.length === 0 ? (
                       "-"
+                    ) : (
+                      <div className="space-y-1">
+                        {task.attachments.slice(0, 2).map((attachment) => (
+                          <div key={attachment.id}>
+                            <AttachmentDownload
+                              attachmentId={attachment.id}
+                              fileName={attachment.fileName}
+                              status={attachment.status}
+                              className="text-left text-brand hover:underline"
+                            />
+                          </div>
+                        ))}
+                        {task.attachments.length > 2 && (
+                          <span className="text-xs text-slate-500">
+                            외 {task.attachments.length - 2}건
+                          </span>
+                        )}
+                      </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{formatDate(task.createdAt)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDateTime(task.createdAt)}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {task.dueAt ? formatDateTime(task.dueAt) : "-"}
                   </td>

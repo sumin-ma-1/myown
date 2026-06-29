@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { ApiEnv } from "../types.js";
 import { apiAuth } from "../middleware/auth.js";
 import { serializeTask } from "../serializers/task.js";
+import { loadTaskAttachments } from "../helpers/load-task-attachments.js";
 
 export const calendarRoute = new Hono<ApiEnv>();
 
@@ -29,11 +30,9 @@ calendarRoute.get("/", async (c) => {
   const tasks = await app.tasks.listDueInRange(userId, from, to);
   const items = await Promise.all(
     tasks.map(async (task) => {
-      const attachment = task.attachmentId
-        ? await app.attachments.findById(userId, task.attachmentId)
-        : undefined;
+      const attachments = await loadTaskAttachments(app, userId, task);
       const reminders = await app.reminders.listForTask(task.id);
-      return serializeTask(task, user, attachment, reminders);
+      return serializeTask(task, user, attachments, reminders);
     }),
   );
 
