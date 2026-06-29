@@ -18,19 +18,19 @@ const priorityLabelKo: Record<Task["priority"], string> = {
   medium: "계획",
 };
 
-export function formatTaskLine(task: Task): string {
+export function formatTaskLine(task: Task, displayOrder: number): string {
   const due = task.dueAt
     ? ` | 마감: ${formatDueAt(task.dueAt)} (D${daysUntil(task.dueAt) >= 0 ? "-" : "+"}${Math.abs(daysUntil(task.dueAt))})`
     : "";
-  return `${task.listIndex}. ${priorityEmoji[task.priority]} ${task.title}${due}`;
+  return `${displayOrder}. ${priorityEmoji[task.priority]} ${task.title}${due}`;
 }
 
 export function formatTaskList(tasks: Task[], title: string): string {
   if (tasks.length === 0) {
     return `${title}\n\n등록된 업무가 없습니다.`;
   }
-  const lines = tasks.map(formatTaskLine);
-  return `${title}\n\n${lines.join("\n")}\n\n완료: /done <번호> 또는 "N번 완료"`;
+  const lines = tasks.map((task, index) => formatTaskLine(task, index + 1));
+  return `${title}\n\n${lines.join("\n")}\n\n완료: /done <번호> 또는 "N번 완료" (번호는 위 목록 순서)`;
 }
 
 export function formatTaskDetail(task: Task): string {
@@ -39,7 +39,6 @@ export function formatTaskDetail(task: Task): string {
     task.description ? `📝 ${task.description}` : null,
     `우선순위: ${priorityLabelKo[task.priority]}`,
     task.dueAt ? `마감: ${formatDueAt(task.dueAt)}` : "마감: 없음",
-    `번호: ${task.listIndex}`,
   ].filter(Boolean);
   return parts.join("\n");
 }

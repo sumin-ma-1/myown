@@ -99,9 +99,7 @@ export function TaskTable({ tasks, sort, onSortChange }: TaskTableProps) {
               tasks.map((task) => (
                 <tr key={task.id} className="border-t border-slate-100 hover:bg-slate-50/80">
                   <td className="px-4 py-3">
-                    <span className="font-medium text-slate-800">
-                      {task.listIndex}. {task.title}
-                    </span>
+                    <span className="font-medium text-slate-800">{task.title}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {task.attachment?.fileName ?? "-"}

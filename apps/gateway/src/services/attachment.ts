@@ -2,6 +2,7 @@ import type { AttachmentRepository } from "@myown/database";
 import { join } from "node:path";
 import { config } from "../config.js";
 import type { TaskService } from "./task.js";
+import { displayOrderOf } from "../utils/task-display-order.js";
 import {
   AttachmentAnalyzer,
   type DocumentAnalysis,
@@ -100,7 +101,7 @@ export class AttachmentService {
       }
 
       let analysis: DocumentAnalysis = { summary: "", keywords: [], tasks: [] };
-      let createdTasks: Array<{ listIndex: number; title: string; dueAt?: Date }> = [];
+      let createdTasks: Array<{ displayOrder: number; title: string; dueAt?: Date }> = [];
       const llmSkipped = !this.analyzer.isEnabled();
 
       if (this.analyzer.isEnabled()) {
@@ -159,11 +160,14 @@ export class AttachmentService {
             ),
         );
 
-        createdTasks = created.map((c) => ({
-          listIndex: c.listIndex,
-          title: c.title,
-          dueAt: c.dueAt,
-        }));
+        const active = await this.taskService.getActiveTasks(input.userId);
+        createdTasks = created
+          .map((c) => ({
+            displayOrder: displayOrderOf(active, c.task.id) ?? 0,
+            title: c.title,
+            dueAt: c.dueAt,
+          }))
+          .filter((c) => c.displayOrder > 0);
       }
 
       await this.attachments.update(attachment.id, input.userId, {

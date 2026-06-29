@@ -39,7 +39,7 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          list_index: { type: "number", description: "업무 목록 번호" },
+          list_index: { type: "number", description: "/list 활성 목록 순번 (1=첫 줄)" },
           remind_date: {
             type: "string",
             description: "알림 날짜 YYYY-MM-DD. 생략 시 오늘",
@@ -65,7 +65,7 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          list_index: { type: "number", description: "업무 목록 번호" },
+          list_index: { type: "number", description: "/list 활성 목록 순번 (1=첫 줄)" },
           title: { type: "string", description: "제목 일부로 검색" },
         },
       },

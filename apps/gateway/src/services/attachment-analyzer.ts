@@ -135,7 +135,7 @@ export class AttachmentAnalyzer {
 export function formatAnalysisReply(input: {
   fileName: string;
   analysis: DocumentAnalysis;
-  createdTasks: Array<{ listIndex: number; title: string; dueAt?: Date }>;
+  createdTasks: Array<{ displayOrder: number; title: string; dueAt?: Date }>;
   textPreview?: string;
   llmSkipped?: boolean;
 }): string {
@@ -149,7 +149,7 @@ export function formatAnalysisReply(input: {
     lines.push("", `✅ ${input.createdTasks.length}건의 업무를 등록했습니다:`);
     for (const task of input.createdTasks) {
       const due = task.dueAt ? ` (${formatDueLabel(task.dueAt)})` : "";
-      lines.push(`${task.listIndex}. ${task.title}${due}`);
+      lines.push(`${task.displayOrder}. ${task.title}${due}`);
     }
   } else if (input.llmSkipped) {
     lines.push(

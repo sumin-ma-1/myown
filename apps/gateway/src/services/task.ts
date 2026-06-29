@@ -1,6 +1,10 @@
 import type { Task, TaskPriority, TaskRepository } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../utils/date.js";
 import { formatTaskDetail, formatTaskList } from "../utils/format.js";
+import {
+  formatActiveTasksHint,
+  resolveByDisplayOrder,
+} from "../utils/task-display-order.js";
 import type { ReminderService } from "./reminder.js";
 
 export interface CreateTaskInput {
@@ -69,20 +73,13 @@ export class TaskService {
 
   private async activeIndicesHint(userId: string): Promise<string> {
     const active = await this.tasks.listActive(userId);
-    if (active.length === 0) return "활성 업무가 없습니다. /add 로 등록해 주세요.";
-    return `활성 번호: ${active.map((t) => t.listIndex).join(", ")} (/list)`;
+    return formatActiveTasksHint(active);
   }
 
-  /** DB list_index 또는 목록 순서(1=첫 번째 활성 업무) */
-  async resolveActiveTask(userId: string, ref: number): Promise<Task | undefined> {
-    const byIndex = await this.tasks.findByListIndex(userId, ref);
-    if (byIndex) return byIndex;
-
+  /** 활성 목록 표시 순번(1=첫 줄). list_index(DB)와 무관 */
+  async resolveActiveTask(userId: string, displayOrder: number): Promise<Task | undefined> {
     const active = await this.tasks.listActive(userId);
-    if (ref >= 1 && ref <= active.length) {
-      return active[ref - 1];
-    }
-    return undefined;
+    return resolveByDisplayOrder(active, displayOrder);
   }
 
   async resolveActiveTaskByHint(userId: string, text: string): Promise<Task | undefined> {
@@ -103,13 +100,13 @@ export class TaskService {
 
   async completeByIndex(
     userId: string,
-    listIndex: number,
+    displayOrder: number,
   ): Promise<{ ok: true; task: Task } | { ok: false; message: string }> {
-    const task = await this.resolveActiveTask(userId, listIndex);
+    const task = await this.resolveActiveTask(userId, displayOrder);
     if (!task) {
       return {
         ok: false,
-        message: `${listIndex}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
+        message: `${displayOrder}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
       };
     }
     return this.complete(userId, task.id);
@@ -153,15 +150,27 @@ export class TaskService {
   async scheduleReminder(
     userId: string,
     telegramUserId: number,
-    listIndex: number,
+    displayOrder: number,
     fireAt: Date,
   ): Promise<{ ok: true; task: Task; fireAt: Date } | { ok: false; message: string }> {
-    const task = await this.resolveActiveTask(userId, listIndex);
+    const task = await this.resolveActiveTask(userId, displayOrder);
     if (!task) {
       return {
         ok: false,
-        message: `${listIndex}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
+        message: `${displayOrder}번 업무를 찾을 수 없습니다.\n${await this.activeIndicesHint(userId)}`,
       };
+    }
+    return this.scheduleReminderForTask(userId, telegramUserId, task, fireAt);
+  }
+
+  async scheduleReminderForTask(
+    userId: string,
+    telegramUserId: number,
+    task: Task,
+    fireAt: Date,
+  ): Promise<{ ok: true; task: Task; fireAt: Date } | { ok: false; message: string }> {
+    if (task.status !== "active" || task.userId !== userId) {
+      return { ok: false, message: "업무를 찾을 수 없거나 이미 완료되었습니다." };
     }
 
     try {

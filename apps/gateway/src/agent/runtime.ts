@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { config, isLlmEnabled } from "../config.js";
 import type { TaskService } from "../services/task.js";
 import { formatDate, formatDateTime } from "../utils/date.js";
+import { displayOrderOf, formatActiveTasksHint } from "../utils/task-display-order.js";
 import {
   fireAtFromMinutes,
   isDateOnlyDue,
@@ -125,7 +126,7 @@ export class AgentRuntime {
         dueAt: parsed.dueAt,
       });
       const due = task.dueAt ? ` (마감: ${formatDueLabel(task.dueAt)})` : "";
-      return `✅ 업무 등록: ${task.listIndex}. ${task.title}${due}`;
+      return `✅ 업무 등록: ${task.title}${due}`;
     }
 
     const remindMinutesCmd = text.match(/^\/remind\s+(\d+)\s+(\d+)\s*분$/);
@@ -180,42 +181,63 @@ export class AgentRuntime {
       }
 
       if (!task) {
-        const hint = input.activeTasks.length
-          ? `활성 번호: ${input.activeTasks.map((t) => t.listIndex).join(", ")}`
-          : "활성 업무가 없습니다.";
+        const hint = formatActiveTasksHint(input.activeTasks);
         return `⚠️ 어떤 업무에 알림을 걸지 확인하지 못했습니다.\n예: "3번 10분 후에 알려줘"\n${hint}`;
       }
 
-      return this.replyScheduledReminder(
-        input,
-        task.listIndex,
-        fireAtFromMinutes(flexRemind.minutes),
-      );
+      return this.replyScheduledReminderForTask(input, task, fireAtFromMinutes(flexRemind.minutes));
     }
 
     return null;
   }
 
-  private async replyScheduledReminder(
-    input: { userId: string; telegramUserId: number },
-    listIndex: number,
+  private async replyScheduledReminderForTask(
+    input: { userId: string; telegramUserId: number; activeTasks?: Task[] },
+    task: Task,
     fireAt: Date,
   ): Promise<string> {
-    const result = await this.taskService.scheduleReminder(
+    const result = await this.taskService.scheduleReminderForTask(
       input.userId,
       input.telegramUserId,
-      listIndex,
+      task,
       fireAt,
     );
     if (!result.ok) return result.message;
 
+    const active = input.activeTasks ?? (await this.taskService.getActiveTasks(input.userId));
+    const order = displayOrderOf(active, task.id);
     const msUntil = result.fireAt.getTime() - Date.now();
     const when =
       msUntil < 60 * 60 * 1000
         ? `${Math.max(1, Math.round(msUntil / 60_000))}분 후`
         : formatDateTime(result.fireAt);
 
-    return `⏰ ${result.task.listIndex}번 "${result.task.title}" — ${when}에 알려드릴게요.`;
+    const label = order ? `${order}번 ` : "";
+    return `⏰ ${label}"${result.task.title}" — ${when}에 알려드릴게요.`;
+  }
+
+  private async replyScheduledReminder(
+    input: { userId: string; telegramUserId: number },
+    displayOrder: number,
+    fireAt: Date,
+  ): Promise<string> {
+    const result = await this.taskService.scheduleReminder(
+      input.userId,
+      input.telegramUserId,
+      displayOrder,
+      fireAt,
+    );
+    if (!result.ok) return result.message;
+
+    const active = await this.taskService.getActiveTasks(input.userId);
+    const order = displayOrderOf(active, result.task.id) ?? displayOrder;
+    const msUntil = result.fireAt.getTime() - Date.now();
+    const when =
+      msUntil < 60 * 60 * 1000
+        ? `${Math.max(1, Math.round(msUntil / 60_000))}분 후`
+        : formatDateTime(result.fireAt);
+
+    return `⏰ ${order}번 "${result.task.title}" — ${when}에 알려드릴게요.`;
   }
 
   private async runAgent(input: {
@@ -225,8 +247,8 @@ export class AgentRuntime {
     activeTasks: Task[];
   }): Promise<string> {
     const taskContext = input.activeTasks
-      .map((t) =>
-        `${t.listIndex}. ${t.title}${t.dueAt ? ` (마감 ${formatDueLabel(t.dueAt)})` : ""}`,
+      .map((t, i) =>
+        `${i + 1}. ${t.title}${t.dueAt ? ` (마감 ${formatDueLabel(t.dueAt)})` : ""}`,
       )
       .join("\n");
 
@@ -241,7 +263,7 @@ export class AgentRuntime {
           taskContext || "(없음)",
           "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
           "특정 시각 알림은 create_reminder 도구를 사용하세요.",
-          "create_reminder·complete_task의 list_index는 위 활성 목록 번호만 사용하세요. 없는 번호(예: 완료된 1번)는 쓰지 마세요.",
+          "create_reminder·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
         ].join("\n"),
       },
@@ -304,7 +326,7 @@ export class AgentRuntime {
           dueAt,
         });
         const due = task.dueAt ? `, 마감 ${formatDueLabel(task.dueAt)}` : "";
-        return `등록됨: ${task.listIndex}. ${task.title}${due}`;
+        return `등록됨: ${task.title}${due}`;
       }
       case "create_reminder": {
         const a = args as unknown as CreateReminderArgs;
