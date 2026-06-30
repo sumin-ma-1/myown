@@ -11,7 +11,7 @@ async function main() {
   const app = createContext(redis);
   const bot = createBot(app);
 
-  const worker = createReminderWorker(redis, async (job) => {
+  const worker = createReminderWorker(async (job) => {
     await handleReminderJob(bot, app, job);
   });
 

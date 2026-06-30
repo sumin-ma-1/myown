@@ -2,12 +2,13 @@ import type { Bot } from "grammy";
 import type { Job } from "bullmq";
 import type { AppContext } from "../context.js";
 import type { ReminderJobData } from "../services/reminder-queue.js";
+import type { BotContext } from "../telegram/bot.js";
 import { sendReminderMessage } from "../telegram/handlers/callback.js";
 import { formatDate, formatDateTime } from "../utils/date.js";
 import { isDateOnlyDue } from "../utils/datetime-parse.js";
 
 export async function handleReminderJob(
-  bot: Bot,
+  bot: Bot<BotContext>,
   app: AppContext,
   job: Job<ReminderJobData>,
 ): Promise<void> {

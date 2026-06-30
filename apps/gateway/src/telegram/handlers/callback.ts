@@ -156,7 +156,7 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
 }
 
 export async function sendReminderMessage(
-  bot: Bot,
+  bot: Bot<BotContext>,
   telegramUserId: number,
   title: string,
   dueLabel: string,

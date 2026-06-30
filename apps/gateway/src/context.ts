@@ -8,7 +8,7 @@ import {
   getDb,
 } from "@myown/database";
 import type { Queue } from "bullmq";
-import type IORedis from "ioredis";
+import type { Redis } from "ioredis";
 import { AgentRuntime } from "./agent/runtime.js";
 import { config } from "./config.js";
 import { AttachmentService } from "./services/attachment.js";
@@ -28,10 +28,10 @@ export interface AppContext {
   reminderService: ReminderService;
   agent: AgentRuntime;
   reminderQueue: Queue<ReminderJobData>;
-  redis: IORedis;
+  redis: Redis;
 }
 
-export function createContext(redis: IORedis): AppContext {
+export function createContext(redis: Redis): AppContext {
   const db = getDb(config.databaseUrl);
   const users = new UserRepository(db);
   const tasks = new TaskRepository(db);
@@ -39,7 +39,7 @@ export function createContext(redis: IORedis): AppContext {
   const attachments = new AttachmentRepository(db);
   const taskAttachments = new TaskAttachmentRepository(db);
   const channelConnections = new ChannelConnectionRepository(db);
-  const reminderQueue = createReminderQueue(redis);
+  const reminderQueue = createReminderQueue();
   const reminderService = new ReminderService(reminders, reminderQueue);
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
   const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);

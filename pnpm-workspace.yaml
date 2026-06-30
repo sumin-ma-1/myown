@@ -4,3 +4,5 @@ packages:
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
+overrides:
+  ioredis: 5.10.1
