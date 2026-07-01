@@ -8,25 +8,34 @@ export const integrationsRoute = new Hono<ApiEnv>();
 
 integrationsRoute.use("*", apiAuth);
 
-async function syncTelegramConnection(c: {
-  get: (key: "userId" | "app") => string | ApiEnv["Variables"]["app"];
-}) {
-  const userId = c.get("userId") as string;
-  const app = c.get("app") as ApiEnv["Variables"]["app"];
-  const user = await app.users.findById(userId);
-  if (!user) return;
-
-  await app.channelConnections.ensureTelegram(user.id, user.telegramUserId);
-}
-
 integrationsRoute.get("/", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
 
-  await syncTelegramConnection(c);
+  if (!userId) {
+    return c.json({ items: buildIntegrationList([]) });
+  }
 
   const connections = await app.channelConnections.listByUserId(userId);
   return c.json({ items: buildIntegrationList(connections) });
+});
+
+integrationsRoute.post("/telegram/link", async (c) => {
+  const app = c.get("app");
+  try {
+    const link = await app.telegramLink.createLink();
+    return c.json(link);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "연결 링크를 만들지 못했습니다.";
+    return c.json({ error: message }, 500);
+  }
+});
+
+integrationsRoute.get("/telegram/link/:token", async (c) => {
+  const app = c.get("app");
+  const token = c.req.param("token");
+  const status = await app.telegramLink.getLinkStatus(token);
+  return c.json(status);
 });
 
 integrationsRoute.post("/:provider/sync", async (c) => {
@@ -35,6 +44,9 @@ integrationsRoute.post("/:provider/sync", async (c) => {
   const app = c.get("app");
 
   if (provider === "telegram") {
+    if (!userId) {
+      return c.json({ items: buildIntegrationList([]) });
+    }
     const user = await app.users.findById(userId);
     if (!user) return c.json({ error: "User not found" }, 404);
     await app.channelConnections.ensureTelegram(user.id, user.telegramUserId);
@@ -50,9 +62,13 @@ integrationsRoute.post("/:provider/disconnect", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
 
+  if (!userId) {
+    return c.json({ error: "연동된 사용자가 없습니다." }, 400);
+  }
+
   if (provider === "telegram") {
     return c.json(
-      { error: "Telegram은 현재 주요 입력 채널이라 웹에서 연결 해제할 수 없습니다." },
+      { error: "Telegram은 주요 입력 채널이라 웹에서 연결 해제할 수 없습니다." },
       400,
     );
   }

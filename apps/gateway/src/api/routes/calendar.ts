@@ -24,6 +24,8 @@ calendarRoute.get("/", async (c) => {
     return c.json({ error: "invalid date range" }, 400);
   }
 
+  if (!userId) return c.json({ items: [] });
+
   const user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 

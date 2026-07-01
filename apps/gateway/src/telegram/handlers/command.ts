@@ -1,9 +1,38 @@
 import type { Bot } from "grammy";
 import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
+import { telegramDisplayName } from "../../integrations/privacy.js";
 
 export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
   bot.command("start", async (ctx) => {
+    const payload = ctx.match?.trim();
+    if (payload?.startsWith("link_")) {
+      const token = payload.slice(5);
+      const telegramUserId = ctx.from?.id;
+      if (!telegramUserId) return;
+
+      const result = await app.telegramLink.completeLink(
+        token,
+        telegramUserId,
+        telegramDisplayName(ctx.from),
+      );
+
+      if (result.ok) {
+        await ctx.reply(
+          [
+            "✅ 웹 대시보드와 Telegram이 연결되었습니다.",
+            "",
+            "이제 봇으로 업무를 등록하고 알림을 받을 수 있습니다.",
+            "/list — 활성 업무 목록",
+          ].join("\n"),
+        );
+        return;
+      }
+
+      await ctx.reply(`⚠️ ${result.message}`);
+      return;
+    }
+
     await ctx.reply(
       [
         "안녕하세요, MyOwn 업무 관리 개인 비서 봇입니다.",

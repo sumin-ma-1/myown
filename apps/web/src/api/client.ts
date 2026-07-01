@@ -5,6 +5,8 @@ import type {
   SettingsDto,
   TaskDto,
   TaskReminderConfigDto,
+  TelegramLinkDto,
+  TelegramLinkStatus,
 } from "./types";
 
 const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
@@ -121,6 +123,19 @@ export const api = {
   getSettings: () => request<SettingsDto>("/api/settings"),
 
   listIntegrations: () => request<{ items: IntegrationDto[] }>("/api/integrations"),
+
+  startTelegramLink: () =>
+    request<TelegramLinkDto>("/api/integrations/telegram/link", { method: "POST" }),
+
+  getTelegramLinkStatus: (token: string) =>
+    request<{ status: TelegramLinkStatus; userId?: string }>(
+      `/api/integrations/telegram/link/${encodeURIComponent(token)}`,
+    ),
+
+  syncIntegration: (provider: IntegrationDto["provider"]) =>
+    request<{ items: IntegrationDto[] }>(`/api/integrations/${provider}/sync`, {
+      method: "POST",
+    }),
 
   updateSettings: (body: {
     notification?: Partial<SettingsDto["notification"]>;

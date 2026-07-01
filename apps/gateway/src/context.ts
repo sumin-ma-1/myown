@@ -15,6 +15,7 @@ import { AttachmentService } from "./services/attachment.js";
 import { type ReminderJobData, createReminderQueue } from "./services/reminder-queue.js";
 import { ReminderService } from "./services/reminder.js";
 import { TaskService } from "./services/task.js";
+import { TelegramLinkService } from "./services/telegram-link.js";
 
 export interface AppContext {
   users: UserRepository;
@@ -29,6 +30,7 @@ export interface AppContext {
   agent: AgentRuntime;
   reminderQueue: Queue<ReminderJobData>;
   redis: Redis;
+  telegramLink: TelegramLinkService;
 }
 
 export function createContext(redis: Redis): AppContext {
@@ -44,6 +46,7 @@ export function createContext(redis: Redis): AppContext {
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
   const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);
   const agent = new AgentRuntime(taskService);
+  const telegramLink = new TelegramLinkService(redis, users, channelConnections);
 
   return {
     users,
@@ -58,5 +61,6 @@ export function createContext(redis: Redis): AppContext {
     agent,
     reminderQueue,
     redis,
+    telegramLink,
   };
 }

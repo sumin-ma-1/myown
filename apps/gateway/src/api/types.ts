@@ -3,7 +3,7 @@ import type { AppContext } from "../context.js";
 export type ApiEnv = {
   Variables: {
     app: AppContext;
-    userId: string;
+    userId: string | null;
   };
 };
 

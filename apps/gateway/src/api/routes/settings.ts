@@ -10,6 +10,16 @@ settingsRoute.use("*", apiAuth);
 settingsRoute.get("/", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
+  if (!userId) {
+    return c.json({
+      timezone: config.timezone,
+      notification: {
+        ddayOffsets: [3, 1, 0],
+        reminderHour: config.reminderHour,
+      },
+    });
+  }
+
   const user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 
@@ -26,6 +36,10 @@ settingsRoute.get("/", async (c) => {
 settingsRoute.patch("/", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
+  if (!userId) {
+    return c.json({ error: "Telegram 연동 후 설정을 변경할 수 있습니다." }, 400);
+  }
+
   const body = await c.req.json<{
     notification?: {
       ddayOffsets?: number[];

@@ -32,6 +32,9 @@ export function Sidebar() {
         <NavLink to="/tasks" className={linkClass}>
           등록 업무 목록
         </NavLink>
+        <NavLink to="/integrations" className={linkClass}>
+          연동 APP
+        </NavLink>
       </nav>
     </aside>
   );

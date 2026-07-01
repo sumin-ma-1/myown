@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { ExtraReminderRule, UserPreferences } from "../types.js";
 import type { ApiEnv } from "../types.js";
+import { requireLinkedUser } from "../helpers/linked-user.js";
 import { apiAuth } from "../middleware/auth.js";
 
 export const remindersRoute = new Hono<ApiEnv>();
@@ -8,7 +9,8 @@ export const remindersRoute = new Hono<ApiEnv>();
 remindersRoute.use("*", apiAuth);
 
 remindersRoute.delete("/:id", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const reminderId = c.req.param("id");
 

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { IntegrationDto, IntegrationStatus } from "@/api/types";
@@ -57,11 +58,17 @@ export function IntegrationsPanel() {
     queryFn: api.listIntegrations,
   });
 
+  const telegram = data?.items.find((i) => i.provider === "telegram");
+  const needsLink = telegram?.status === "disconnected";
+
   return (
     <div className="mb-6">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <Link
+        to="/integrations"
+        className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:text-brand"
+      >
         연동 APP
-      </p>
+      </Link>
       {isLoading && <p className="text-xs text-slate-500">불러오는 중…</p>}
       {error && (
         <p className="text-xs text-red-600">
@@ -69,11 +76,21 @@ export function IntegrationsPanel() {
         </p>
       )}
       {data && (
-        <ul className="space-y-1">
-          {data.items.map((item) => (
-            <IntegrationRow key={item.provider} item={item} />
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-1">
+            {data.items.map((item) => (
+              <IntegrationRow key={item.provider} item={item} />
+            ))}
+          </ul>
+          {needsLink && (
+            <Link
+              to="/integrations"
+              className="mt-2 block rounded-lg bg-brand-muted px-3 py-2 text-center text-xs font-medium text-brand hover:opacity-90"
+            >
+              Telegram 연결하기
+            </Link>
+          )}
+        </>
       )}
     </div>
   );

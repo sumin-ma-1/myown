@@ -12,6 +12,7 @@ import { serializeTask } from "../serializers/task.js";
 import { apiAuth } from "../middleware/auth.js";
 import { buildReminderFireTimes } from "../../services/reminder-schedule.js";
 import { config } from "../../config.js";
+import { requireLinkedUser } from "../helpers/linked-user.js";
 
 const PRIORITIES = new Set<TaskPriority>(TASK_PRIORITIES);
 const WORKFLOW = new Set<TaskWorkflowStatus>(["planned", "in_progress"]);
@@ -53,6 +54,8 @@ tasksRoute.use("*", apiAuth);
 tasksRoute.get("/", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
+  if (!userId) return c.json({ items: [] });
+
   const sort = c.req.query("sort") ?? "listIndex";
   const status = (c.req.query("status") ?? "active") as "active" | "completed" | "all";
 
@@ -79,6 +82,8 @@ tasksRoute.get("/", async (c) => {
 tasksRoute.get("/today", async (c) => {
   const userId = c.get("userId");
   const app = c.get("app");
+  if (!userId) return c.json({ items: [] });
+
   const user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 
@@ -98,7 +103,8 @@ tasksRoute.get("/today", async (c) => {
 });
 
 tasksRoute.get("/:id", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
 
@@ -135,7 +141,8 @@ tasksRoute.get("/:id", async (c) => {
 });
 
 tasksRoute.post("/", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const body = await c.req.json<{
     title?: string;
@@ -200,7 +207,8 @@ tasksRoute.post("/", async (c) => {
 });
 
 tasksRoute.patch("/:id", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
   const body = await c.req.json<{
@@ -290,7 +298,8 @@ tasksRoute.patch("/:id", async (c) => {
 });
 
 tasksRoute.delete("/:id", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
 
@@ -323,7 +332,8 @@ tasksRoute.delete("/:id", async (c) => {
 });
 
 tasksRoute.get("/:id/reminders", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
 
@@ -342,7 +352,8 @@ tasksRoute.get("/:id/reminders", async (c) => {
 });
 
 tasksRoute.post("/:id/reminders", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
   const body = await c.req.json<{
@@ -385,7 +396,8 @@ tasksRoute.post("/:id/reminders", async (c) => {
 });
 
 tasksRoute.post("/:id/attachment", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
 
@@ -421,7 +433,8 @@ tasksRoute.post("/:id/attachment", async (c) => {
 });
 
 tasksRoute.delete("/:id/attachments/:attachmentId", async (c) => {
-  const userId = c.get("userId");
+  const userId = requireLinkedUser(c);
+  if (userId instanceof Response) return userId;
   const app = c.get("app");
   const taskId = c.req.param("id");
   const attachmentId = c.req.param("attachmentId");

@@ -72,3 +72,11 @@ export interface IntegrationDto {
   displayName: string | null;
   connectedAt: string | null;
 }
+
+export interface TelegramLinkDto {
+  token: string;
+  botUrl: string;
+  expiresIn: number;
+}
+
+export type TelegramLinkStatus = "pending" | "completed" | "expired" | "invalid";

@@ -42,7 +42,7 @@ cp .env.example .env
 | 변수 | 설명 |
 |------|------|
 | `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather)에서 발급 |
-| `ALLOWED_TELEGRAM_USER_IDS` | 본인 Telegram user ID (쉼표 구분) |
+| `ALLOWED_TELEGRAM_USER_IDS` | (선택) 추가 허용 ID. 비우면 웹 **연동 APP**에서 Telegram 연결 |
 | `DATABASE_URL` | 기본 `postgresql://myown:myown@localhost:5433/myown` |
 | `REDIS_URL` | 기본 `redis://localhost:6379` |
 | `LLM_BASE_URL` | (선택) Ollama 등 OpenAI 호환 API |
@@ -50,8 +50,6 @@ cp .env.example .env
 | `LLM_MODEL` | 사용할 모델명 |
 | `WEB_API_TOKEN` | 웹 대시보드 API 토큰 (`.env`와 `apps/web/.env` 동일 값) |
 | `WEB_API_PORT` | API 포트 (기본 `4000`) |
-
-Telegram user ID: [@userinfobot](https://t.me/userinfobot) 에게 `/start`
 
 웹 대시보드용 환경 변수:
 
@@ -78,7 +76,11 @@ pnpm dev
 - 봇만 실행: `pnpm dev:bot`
 - 웹만 실행: `pnpm dev:web` (API는 gateway가 떠 있어야 함)
 
-텔레그램에서 봇에게 `/start` 전송.
+### 5. Telegram 연동
+
+1. 대시보드 (`http://localhost:5173`) → **연동 APP**
+2. **Telegram 연결** → 열리는 봇에서 **시작(Start)**
+3. 웹에「연결됨」이 보이면 봇 사용 가능 (ID 조회·`.env` 수정 불필요)
 
 ## 명령어
 

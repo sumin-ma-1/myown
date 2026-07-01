@@ -10,13 +10,16 @@ export const apiAuth = createMiddleware<ApiEnv>(async (c, next) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const telegramId = config.webUserTelegramId;
-  if (!telegramId || Number.isNaN(telegramId)) {
-    return c.json({ error: "WEB_USER_TELEGRAM_ID is not configured" }, 503);
+  const user = await c.var.app.users.findFirst();
+  if (user) {
+    c.set("userId", user.id);
+  } else {
+    c.set("userId", null);
   }
 
-  const user = await c.var.app.users.upsert(telegramId, config.timezone);
-  await c.var.app.channelConnections.ensureTelegram(user.id, telegramId);
-  c.set("userId", user.id);
   await next();
 });
+
+export function requireUserId(c: { get: (key: "userId") => string | null }): string | null {
+  return c.get("userId");
+}

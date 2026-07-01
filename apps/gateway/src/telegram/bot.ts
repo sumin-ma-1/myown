@@ -1,8 +1,7 @@
 import { Bot, type Context, session, type SessionFlavor } from "grammy";
 import type { AppContext } from "../context.js";
 import { config } from "../config.js";
-import { telegramDisplayName } from "../integrations/privacy.js";
-import { authMiddleware } from "./middleware/auth.js";
+import { createAuthMiddleware } from "./middleware/auth.js";
 import { registerCallbackHandlers } from "./handlers/callback.js";
 import { registerCommandHandlers } from "./handlers/command.js";
 import { registerDocumentHandlers } from "./handlers/document.js";
@@ -46,7 +45,7 @@ export function createBot(ctx: AppContext) {
       },
     }),
   );
-  bot.use(authMiddleware);
+  bot.use(createAuthMiddleware(ctx));
 
   bot.use(async (grammyCtx, next) => {
     const telegramUserId = grammyCtx.from?.id;
@@ -57,8 +56,6 @@ export function createBot(ctx: AppContext) {
 
     try {
       const user = await ctx.users.upsert(telegramUserId, config.timezone);
-      const displayName = telegramDisplayName(grammyCtx.from);
-      await ctx.channelConnections.ensureTelegram(user.id, telegramUserId, displayName);
       grammyCtx.session.userId = user.id;
       await next();
     } catch (err) {

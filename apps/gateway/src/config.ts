@@ -23,7 +23,9 @@ function parseAllowedUserIds(raw: string): Set<number> {
 }
 
 if (process.env.ALLOWED_TELEGRAM_USER_IDS?.trim() === "") {
-  console.warn("WARNING: ALLOWED_TELEGRAM_USER_IDS is empty. No one can use the bot.");
+  console.info(
+    "INFO: ALLOWED_TELEGRAM_USER_IDS is empty — Telegram 접근은 웹 연동 또는 DB 등록 사용자만 허용됩니다.",
+  );
 }
 
 export const config = {
