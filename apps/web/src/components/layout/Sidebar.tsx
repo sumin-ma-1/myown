@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { IntegrationsPanel } from "@/components/integrations/IntegrationsPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `block rounded-lg px-3 py-2 text-sm transition ${
@@ -7,6 +8,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export function Sidebar() {
+  const { me, isAdmin, logout } = useAuth();
+
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-surface-border bg-white p-4">
       <div className="mb-6">
@@ -21,6 +24,9 @@ export function Sidebar() {
           <p className="text-lg font-bold text-slate-900">My Own</p>
         </div>
         <p className="mt-1 pl-10 text-xs text-slate-500">개인 업무 관리 플랫폼</p>
+        {me?.account?.email && (
+          <p className="mt-2 truncate pl-10 text-xs text-slate-400">{me.account.email}</p>
+        )}
       </div>
 
       <IntegrationsPanel />
@@ -35,7 +41,20 @@ export function Sidebar() {
         <NavLink to="/integrations" className={linkClass}>
           연동 APP
         </NavLink>
+        {isAdmin && (
+          <NavLink to="/admin" className={linkClass}>
+            관리자
+          </NavLink>
+        )}
       </nav>
+
+      <button
+        type="button"
+        onClick={() => void logout()}
+        className="mt-4 rounded-lg px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-100"
+      >
+        로그아웃
+      </button>
     </aside>
   );
 }

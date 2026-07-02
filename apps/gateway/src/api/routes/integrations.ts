@@ -1,29 +1,26 @@
 import { Hono } from "hono";
 import type { ChannelProvider } from "@myown/database";
 import type { ApiEnv } from "../types.js";
-import { apiAuth } from "../middleware/auth.js";
+import { requireAppUser } from "../middleware/session.js";
 import { buildIntegrationList } from "../../integrations/catalog.js";
 
 export const integrationsRoute = new Hono<ApiEnv>();
 
-integrationsRoute.use("*", apiAuth);
+integrationsRoute.use("*", requireAppUser);
 
 integrationsRoute.get("/", async (c) => {
-  const userId = c.get("userId");
+  const userId = c.get("userId")!;
   const app = c.get("app");
-
-  if (!userId) {
-    return c.json({ items: buildIntegrationList([]) });
-  }
-
   const connections = await app.channelConnections.listByUserId(userId);
   return c.json({ items: buildIntegrationList(connections) });
 });
 
 integrationsRoute.post("/telegram/link", async (c) => {
   const app = c.get("app");
+  const userId = c.get("userId")!;
+  const webAccountId = c.get("webAccountId")!;
   try {
-    const link = await app.telegramLink.createLink();
+    const link = await app.telegramLink.createLink(webAccountId, userId);
     return c.json(link);
   } catch (err) {
     const message = err instanceof Error ? err.message : "연결 링크를 만들지 못했습니다.";
@@ -44,13 +41,13 @@ integrationsRoute.post("/:provider/sync", async (c) => {
   const app = c.get("app");
 
   if (provider === "telegram") {
-    if (!userId) {
-      return c.json({ items: buildIntegrationList([]) });
-    }
-    const user = await app.users.findById(userId);
+    const user = await app.users.findById(userId!);
     if (!user) return c.json({ error: "User not found" }, 404);
+    if (!user.telegramUserId) {
+      return c.json({ error: "Telegram이 아직 연결되지 않았습니다." }, 400);
+    }
     await app.channelConnections.ensureTelegram(user.id, user.telegramUserId);
-    const connections = await app.channelConnections.listByUserId(userId);
+    const connections = await app.channelConnections.listByUserId(userId!);
     return c.json({ items: buildIntegrationList(connections) });
   }
 

@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import type { ApiEnv } from "../types.js";
-import { apiAuth } from "../middleware/auth.js";
+import { requireAppUser } from "../middleware/session.js";
 import { serializeTask } from "../serializers/task.js";
 import { loadTaskAttachments } from "../helpers/load-task-attachments.js";
 
 export const calendarRoute = new Hono<ApiEnv>();
 
-calendarRoute.use("*", apiAuth);
+calendarRoute.use("*", requireAppUser);
 
 calendarRoute.get("/", async (c) => {
   const userId = c.get("userId");

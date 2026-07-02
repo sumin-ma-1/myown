@@ -9,7 +9,7 @@ import {
 import { loadTaskAttachments } from "../helpers/load-task-attachments.js";
 import type { ApiEnv, ExtraReminderRule, TaskWorkflowStatus, UserPreferences } from "../types.js";
 import { serializeTask } from "../serializers/task.js";
-import { apiAuth } from "../middleware/auth.js";
+import { requireAppUser } from "../middleware/session.js";
 import { buildReminderFireTimes } from "../../services/reminder-schedule.js";
 import { config } from "../../config.js";
 import { requireLinkedUser } from "../helpers/linked-user.js";
@@ -49,7 +49,7 @@ function parseExtraRules(raw?: ExtraReminderRule[]): ExtraReminderRule[] {
 
 export const tasksRoute = new Hono<ApiEnv>();
 
-tasksRoute.use("*", apiAuth);
+tasksRoute.use("*", requireAppUser);
 
 tasksRoute.get("/", async (c) => {
   const userId = c.get("userId");
@@ -195,7 +195,7 @@ tasksRoute.post("/", async (c) => {
   }
 
   const telegramId = user.telegramUserId;
-  if (task.dueAt) {
+  if (task.dueAt && telegramId != null) {
     await app.reminderService.scheduleForTask(task, telegramId, user, {
       useDefaults,
       extraRules,
@@ -280,6 +280,7 @@ tasksRoute.patch("/:id", async (c) => {
     await app.reminderService.cancelForTask(taskId);
   } else if (
     task.dueAt &&
+    user.telegramUserId != null &&
     (dueAtChanged || reminderConfigChanged || body.rescheduleReminders)
   ) {
     const config = getTaskReminderConfig(user, taskId);
@@ -380,6 +381,10 @@ tasksRoute.post("/:id/reminders", async (c) => {
     fireAt = new Date(task.dueAt.getTime() - body.hoursBefore * 60 * 60 * 1000);
   } else {
     return c.json({ error: "fireAt, daysBefore, or hoursBefore required" }, 400);
+  }
+
+  if (user.telegramUserId == null) {
+    return c.json({ error: "Telegram 연동 후 알림을 설정할 수 있습니다." }, 400);
   }
 
   try {

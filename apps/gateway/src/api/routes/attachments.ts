@@ -2,11 +2,11 @@ import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import type { ApiEnv } from "../types.js";
 import { requireLinkedUser } from "../helpers/linked-user.js";
-import { apiAuth } from "../middleware/auth.js";
+import { requireAppUser } from "../middleware/session.js";
 
 export const attachmentsRoute = new Hono<ApiEnv>();
 
-attachmentsRoute.use("*", apiAuth);
+attachmentsRoute.use("*", requireAppUser);
 
 attachmentsRoute.get("/:id/download", async (c) => {
   const userId = requireLinkedUser(c);

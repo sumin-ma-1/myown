@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import type { ApiEnv, UserPreferences } from "../types.js";
-import { apiAuth } from "../middleware/auth.js";
+import { requireAppUser } from "../middleware/session.js";
 import { config } from "../../config.js";
 
 export const settingsRoute = new Hono<ApiEnv>();
 
-settingsRoute.use("*", apiAuth);
+settingsRoute.use("*", requireAppUser);
 
 settingsRoute.get("/", async (c) => {
   const userId = c.get("userId");

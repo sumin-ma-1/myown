@@ -22,6 +22,15 @@ function parseAllowedUserIds(raw: string): Set<number> {
   );
 }
 
+function parseEmailList(raw: string): Set<string> {
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
 if (process.env.ALLOWED_TELEGRAM_USER_IDS?.trim() === "") {
   console.info(
     "INFO: ALLOWED_TELEGRAM_USER_IDS is empty — Telegram 접근은 웹 연동 또는 DB 등록 사용자만 허용됩니다.",
@@ -63,14 +72,20 @@ export const config = {
   attachmentLlmMaxTokens: Number(process.env.ATTACHMENT_LLM_MAX_TOKENS ?? "1200"),
   /** Web dashboard API */
   webApiPort: Number(process.env.WEB_API_PORT ?? "4000"),
-  webApiToken: process.env.WEB_API_TOKEN ?? "",
-  webUserTelegramId: Number(
-    process.env.WEB_USER_TELEGRAM_ID ??
-      process.env.ALLOWED_TELEGRAM_USER_IDS?.split(",")[0]?.trim() ??
-      "0",
-  ),
   webCorsOrigin: process.env.WEB_CORS_ORIGIN ?? "http://localhost:5173",
+  webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:5173",
+  sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? "30"),
+  adminEmails: parseEmailList(process.env.ADMIN_EMAILS ?? ""),
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  googleRedirectUri:
+    process.env.GOOGLE_REDIRECT_URI ??
+    `${process.env.WEB_APP_URL ?? "http://localhost:5173"}/api/auth/google/callback`,
 };
+
+export function isGoogleAuthEnabled(): boolean {
+  return Boolean(config.googleClientId && config.googleClientSecret);
+}
 
 export function isLlmEnabled(): boolean {
   return Boolean(config.llmBaseUrl || config.openaiApiKey);
@@ -79,4 +94,9 @@ export function isLlmEnabled(): boolean {
 export function isUserAllowed(telegramUserId: number): boolean {
   if (config.allowedTelegramUserIds.size === 0) return false;
   return config.allowedTelegramUserIds.has(telegramUserId);
+}
+
+export function isAdminEmail(email: string): boolean {
+  if (config.adminEmails.size === 0) return false;
+  return config.adminEmails.has(email.trim().toLowerCase());
 }

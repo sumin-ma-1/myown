@@ -8,7 +8,8 @@ const LINK_TTL_SEC = 900;
 
 interface LinkRecord {
   status: "pending" | "completed";
-  userId?: string;
+  webAccountId: string;
+  userId: string;
   telegramUserId?: number;
 }
 
@@ -21,9 +22,12 @@ export class TelegramLinkService {
     private readonly channelConnections: ChannelConnectionRepository,
   ) {}
 
-  async createLink(): Promise<{ token: string; botUrl: string; expiresIn: number }> {
+  async createLink(
+    webAccountId: string,
+    userId: string,
+  ): Promise<{ token: string; botUrl: string; expiresIn: number }> {
     const token = randomBytes(16).toString("hex");
-    const record: LinkRecord = { status: "pending" };
+    const record: LinkRecord = { status: "pending", webAccountId, userId };
     await this.redis.setex(`${LINK_PREFIX}${token}`, LINK_TTL_SEC, JSON.stringify(record));
 
     const username = await this.getBotUsername();
@@ -81,25 +85,43 @@ export class TelegramLinkService {
       return { ok: false, message: "이미 사용된 연결 링크입니다." };
     }
 
-    const existing = await this.users.findFirst();
-    if (existing && existing.telegramUserId !== telegramUserId) {
+    const existingTg = await this.users.findByTelegramId(telegramUserId);
+    if (existingTg && existingTg.id !== record.userId) {
+      return {
+        ok: false,
+        message: "이 Telegram 계정은 다른 사용자에 이미 연결되어 있습니다.",
+      };
+    }
+
+    const user = await this.users.findById(record.userId);
+    if (!user || user.webAccountId !== record.webAccountId) {
+      return { ok: false, message: "연결 대상 사용자를 찾을 수 없습니다." };
+    }
+
+    if (user.telegramUserId && user.telegramUserId !== telegramUserId) {
       return {
         ok: false,
         message: "이미 다른 Telegram 계정이 연결되어 있습니다.",
       };
     }
 
-    const user = await this.users.upsert(telegramUserId, config.timezone);
-    await this.channelConnections.ensureTelegram(user.id, telegramUserId, displayName);
+    const linked = user.telegramUserId
+      ? user
+      : await this.users.linkTelegram(user.id, telegramUserId);
+    if (!linked) {
+      return { ok: false, message: "Telegram 연결에 실패했습니다." };
+    }
+
+    await this.channelConnections.ensureTelegram(linked.id, telegramUserId, displayName);
 
     const completed: LinkRecord = {
+      ...record,
       status: "completed",
-      userId: user.id,
       telegramUserId,
     };
     await this.redis.setex(key, 300, JSON.stringify(completed));
 
-    return { ok: true, userId: user.id };
+    return { ok: true, userId: linked.id };
   }
 
   private async getBotUsername(): Promise<string> {

@@ -80,3 +80,53 @@ export interface TelegramLinkDto {
 }
 
 export type TelegramLinkStatus = "pending" | "completed" | "expired" | "invalid";
+
+export interface AuthMeDto {
+  authenticated: boolean;
+  account?: {
+    id: string;
+    email: string;
+    displayName: string | null;
+    role: "user" | "admin";
+    lastLoginAt: string | null;
+    createdAt: string;
+  };
+  userId?: string | null;
+  telegramConnected?: boolean;
+}
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: "user" | "admin";
+  createdAt: string;
+  lastLoginAt: string | null;
+  inviteCode: string | null;
+  telegramConnected: boolean;
+  telegramDisplayName: string | null;
+  userId: string | null;
+  activeTaskCount: number;
+}
+
+export interface AdminInviteDto {
+  id: string;
+  code: string;
+  allowedEmail: string;
+  note: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  usedAt: string | null;
+  usedByEmail: string | null;
+  createdByEmail: string | null;
+  status: "available" | "used" | "expired";
+}
+
+export interface AdminActivityDto {
+  id: string;
+  eventType: "signup" | "login";
+  email: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}

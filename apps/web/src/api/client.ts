@@ -1,4 +1,8 @@
 import type {
+  AdminActivityDto,
+  AdminInviteDto,
+  AdminUserDto,
+  AuthMeDto,
   ExtraReminderRule,
   IntegrationDto,
   ReminderDto,
@@ -9,15 +13,12 @@ import type {
   TelegramLinkStatus,
 } from "./types";
 
-const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${API_TOKEN}`);
   const isFormData = init?.body instanceof FormData;
   if (init?.body && !isFormData) headers.set("Content-Type", "application/json");
 
-  const res = await fetch(path, { ...init, headers });
+  const res = await fetch(path, { ...init, headers, credentials: "include" });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Request failed: ${res.status}`);
@@ -27,6 +28,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<{ ok: boolean }>("/api/health"),
+
+  getMe: () => request<AuthMeDto>("/api/auth/me"),
+
+  validateInvite: (code: string) =>
+    request<{ ok: true; allowedEmail: string; code: string }>(
+      `/api/auth/invite/validate?code=${encodeURIComponent(code)}`,
+    ),
+
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
 
   listTasks: (params?: { sort?: string; status?: string }) => {
     const q = new URLSearchParams();
@@ -105,7 +115,7 @@ export const api = {
 
   downloadAttachment: async (attachmentId: string, fileName: string) => {
     const res = await fetch(`/api/attachments/${attachmentId}/download`, {
-      headers: { Authorization: `Bearer ${API_TOKEN}` },
+      credentials: "include",
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -144,4 +154,16 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+
+  adminListUsers: () => request<{ items: AdminUserDto[] }>("/api/admin/users"),
+
+  adminListInvites: () => request<{ items: AdminInviteDto[] }>("/api/admin/invites"),
+
+  adminCreateInvite: (body: { allowedEmail: string; note?: string; expiresInDays?: number }) =>
+    request<{ item: AdminInviteDto & { signupUrl: string } }>("/api/admin/invites", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  adminListActivity: () => request<{ items: AdminActivityDto[] }>("/api/admin/activity"),
 };

@@ -24,10 +24,6 @@ async function main() {
     console.log(`Web API: http://localhost:${config.webApiPort}`);
   });
 
-  if (!config.webApiToken) {
-    console.warn("WARNING: WEB_API_TOKEN is empty. Web API rejects all requests.");
-  }
-
   const shutdown = async () => {
     console.log("Shutting down...");
     await worker.close();
@@ -49,7 +45,7 @@ async function main() {
         port: config.webhookPort,
         path,
       },
-    });
+    } as Parameters<typeof bot.start>[0]);
     console.log(`Webhook mode: ${config.webhookUrl}${path}`);
   } else {
     await bot.api.deleteWebhook();

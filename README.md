@@ -16,6 +16,7 @@
 - 첨부파일 분석 (HWP, HWPX, PDF, DOCX, 이미지) → 업무 자동 추출
 - OpenAI / Ollama 연동 시 자연어 처리
 - **웹 대시보드** — 메인 화면, 업무 목록, 달력, D-DAY 설정 (텔레그램과 동일 DB)
+- **클로즈드 베타** — Google 로그인, 이메일 전용 초대코드, 관리자 UI
 
 ## 사전 요구사항
 
@@ -48,16 +49,12 @@ cp .env.example .env
 | `LLM_BASE_URL` | (선택) Ollama 등 OpenAI 호환 API |
 | `OPENAI_API_KEY` | (선택) OpenAI 또는 Ollama용 더미 값 |
 | `LLM_MODEL` | 사용할 모델명 |
-| `WEB_API_TOKEN` | 웹 대시보드 API 토큰 (`.env`와 `apps/web/.env` 동일 값) |
+| `WEB_APP_URL` | 웹 앱 URL (기본 `http://localhost:5173`) |
+| `GOOGLE_CLIENT_ID` | Google OAuth 클라이언트 ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 클라이언트 시크릿 |
+| `GOOGLE_REDIRECT_URI` | `http://localhost:5173/api/auth/google/callback` |
+| `ADMIN_EMAILS` | 관리자 Google 이메일. 초대코드 없이 가입·`/admin` |
 | `WEB_API_PORT` | API 포트 (기본 `4000`) |
-
-웹 대시보드용 환경 변수:
-
-```bash
-cp apps/web/.env.example apps/web/.env
-```
-
-`apps/web/.env`의 `VITE_API_TOKEN`은 루트 `.env`의 `WEB_API_TOKEN`과 같아야 합니다.
 
 ### 3. 설치 및 DB
 
@@ -76,9 +73,23 @@ pnpm dev
 - 봇만 실행: `pnpm dev:bot`
 - 웹만 실행: `pnpm dev:web` (API는 gateway가 떠 있어야 함)
 
-### 5. Telegram 연동
+### 5. Google OAuth 설정
 
-1. 대시보드 (`http://localhost:5173`) → **연동 APP**
+1. [Google Cloud Console](https://console.cloud.google.com/) → API 및 서비스 → 사용자 인증 정보
+2. **OAuth 2.0 클라이언트 ID** (웹 애플리케이션) 생성
+3. **승인된 리디렉션 URI**: `http://localhost:5173/api/auth/google/callback`
+4. `.env`에 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` 입력
+
+### 6. 관리자·베타 가입
+
+1. `.env`에 `ADMIN_EMAILS=본인@gmail.com` (Google 계정 이메일)
+2. `http://localhost:5173/signup` → **초대코드 없이 Google 가입** (관리자)
+3. 사이드바 **관리자** → **초대코드**에서 `user@example.com` 전용 코드 발급
+4. 지인에게 가입 링크 전달 → 초대코드 입력 → **해당 Google 계정**으로만 가입 가능
+
+### 7. Telegram 연동
+
+1. 로그인 후 대시보드 (`http://localhost:5173`) → **연동 APP**
 2. **Telegram 연결** → 열리는 봇에서 **시작(Start)**
 3. 웹에「연결됨」이 보이면 봇 사용 가능 (ID 조회·`.env` 수정 불필요)
 

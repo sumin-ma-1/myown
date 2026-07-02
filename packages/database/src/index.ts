@@ -8,3 +8,7 @@ export * from "./repositories/reminder.js";
 export * from "./repositories/attachment.js";
 export * from "./repositories/task-attachment.js";
 export * from "./repositories/channel-connection.js";
+export * from "./repositories/web-account.js";
+export * from "./repositories/invite-code.js";
+export * from "./repositories/session.js";
+export * from "./repositories/login-event.js";

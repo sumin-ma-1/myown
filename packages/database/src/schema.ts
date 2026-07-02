@@ -48,9 +48,75 @@ export const channelConnectionStatusEnum = pgEnum("channel_connection_status", [
   "error",
 ]);
 
+export const accountRoleEnum = pgEnum("account_role", ["user", "admin"]);
+
+export const loginEventTypeEnum = pgEnum("login_event_type", ["signup", "login"]);
+
+export const webAccounts = pgTable("web_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  displayName: text("display_name"),
+  role: accountRoleEnum("role").notNull().default("user"),
+  inviteCodeId: uuid("invite_code_id"),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const inviteCodes = pgTable(
+  "invite_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    allowedEmail: text("allowed_email").notNull(),
+    note: text("note"),
+    createdByAccountId: uuid("created_by_account_id").references(() => webAccounts.id, {
+      onDelete: "set null",
+    }),
+    usedByAccountId: uuid("used_by_account_id").references(() => webAccounts.id, {
+      onDelete: "set null",
+    }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("invite_codes_used_by_idx").on(table.usedByAccountId)],
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    webAccountId: uuid("web_account_id")
+      .notNull()
+      .references(() => webAccounts.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("sessions_account_id_idx").on(table.webAccountId)],
+);
+
+export const loginEvents = pgTable(
+  "login_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    webAccountId: uuid("web_account_id")
+      .notNull()
+      .references(() => webAccounts.id, { onDelete: "cascade" }),
+    eventType: loginEventTypeEnum("event_type").notNull(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("login_events_account_id_idx").on(table.webAccountId)],
+);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  telegramUserId: bigint("telegram_user_id", { mode: "number" }).notNull().unique(),
+  webAccountId: uuid("web_account_id")
+    .references(() => webAccounts.id, { onDelete: "cascade" })
+    .unique(),
+  telegramUserId: bigint("telegram_user_id", { mode: "number" }).unique(),
   timezone: text("timezone").notNull().default("Asia/Seoul"),
   preferences: jsonb("preferences").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -187,3 +253,11 @@ export type NewAttachment = typeof attachments.$inferInsert;
 export type AttachmentStatus = (typeof attachmentStatusEnum.enumValues)[number];
 export type ChannelConnection = typeof channelConnections.$inferSelect;
 export type NewChannelConnection = typeof channelConnections.$inferInsert;
+export type WebAccount = typeof webAccounts.$inferSelect;
+export type NewWebAccount = typeof webAccounts.$inferInsert;
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type NewInviteCode = typeof inviteCodes.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
+export type LoginEvent = typeof loginEvents.$inferSelect;
+export type AccountRole = (typeof accountRoleEnum.enumValues)[number];
+export type LoginEventType = (typeof loginEventTypeEnum.enumValues)[number];

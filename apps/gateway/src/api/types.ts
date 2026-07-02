@@ -4,6 +4,9 @@ export type ApiEnv = {
   Variables: {
     app: AppContext;
     userId: string | null;
+    webAccountId: string | null;
+    isAdmin: boolean;
+    email: string | null;
   };
 };
 

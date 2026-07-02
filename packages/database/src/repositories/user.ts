@@ -15,14 +15,46 @@ export class UserRepository {
     return user;
   }
 
+  async findByWebAccountId(webAccountId: string): Promise<User | undefined> {
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.webAccountId, webAccountId))
+      .limit(1);
+    return user;
+  }
+
   async upsert(telegramUserId: number, timezone = "Asia/Seoul"): Promise<User> {
+    const existing = await this.findByTelegramId(telegramUserId);
+    if (existing) {
+      const [user] = await this.db
+        .update(users)
+        .set({ updatedAt: new Date() })
+        .where(eq(users.id, existing.id))
+        .returning();
+      return user;
+    }
+
     const [user] = await this.db
       .insert(users)
       .values({ telegramUserId, timezone })
-      .onConflictDoUpdate({
-        target: users.telegramUserId,
-        set: { updatedAt: new Date() },
-      })
+      .returning();
+    return user;
+  }
+
+  async createForWebAccount(webAccountId: string, timezone = "Asia/Seoul"): Promise<User> {
+    const [user] = await this.db
+      .insert(users)
+      .values({ webAccountId, timezone })
+      .returning();
+    return user;
+  }
+
+  async linkTelegram(userId: string, telegramUserId: number): Promise<User | undefined> {
+    const [user] = await this.db
+      .update(users)
+      .set({ telegramUserId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }
