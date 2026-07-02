@@ -93,6 +93,61 @@ pnpm dev
 2. **Telegram 연결** → 열리는 봇에서 **시작(Start)**
 3. 웹에「연결됨」이 보이면 봇 사용 가능 (ID 조회·`.env` 수정 불필요)
 
+### 8. 사용자에게 공유 (Cloudflare Tunnel, 무료)
+
+**임시 공개 URL**로 접속합니다. 모든 설명들은 이 깃을 클론하여 본인을 관리자로, 서비스를 새로 운영하고 싶을 때 해당합니다. 만약, 셀프 호스팅(LLM, DB 모두 로컬에서 가동)을 원하시면 커밋ID: 5b9358734c11883651cd5f5b702ab41fe36b3752 로 사용하시면 됩니다. 단, 연구개발 부분은 반영되어 있지 않습니다.
+
+#### 8.1 cloudflared 설치 (최초 1회)
+
+```bash
+winget install Cloudflare.cloudflared
+```
+
+#### 8.2 실행 (터미널 2개)
+
+```bash
+# 터미널 1
+pnpm dev
+
+# 터미널 2
+pnpm tunnel
+```
+
+`pnpm tunnel` 출력에 `https://xxxx.trycloudflare.com` 같은 주소가 나옵니다. **이 URL을 복사**합니다.
+
+#### 8.3 `.env` 수정 후 gateway 재시작
+
+터널 URL을 `https://YOUR-TUNNEL.trycloudflare.com` 라고 할 때:
+
+```env
+WEB_APP_URL=https://YOUR-TUNNEL.trycloudflare.com
+WEB_CORS_ORIGIN=https://YOUR-TUNNEL.trycloudflare.com
+GOOGLE_REDIRECT_URI=https://YOUR-TUNNEL.trycloudflare.com/api/auth/google/callback
+```
+
+`pnpm dev`를 **한 번 재시작**합니다.
+
+> 터널을 끄고 다시 켜면 URL이 **바뀝니다**. 바뀔 때마다 위 3줄 + Google Console URI를 다시 맞춰 주세요.
+
+#### 8.4 Google Cloud Console
+
+[사용자 인증 정보](https://console.cloud.google.com/apis/credentials) → OAuth 클라이언트 → **승인된 리디렉션 URI**에 **추가**:
+
+```text
+https://YOUR-TUNNEL.trycloudflare.com/api/auth/google/callback
+```
+
+(`localhost` URI는 그대로 두어도 됩니다.)
+
+#### 8.5 사용자에게 줄 것
+
+1. 터널 URL (`https://YOUR-TUNNEL.trycloudflare.com`)
+2. **관리자** → 초대코드 발급 (사용자 Gmail 전용)
+3. Google OAuth가 **Testing**이면 사용자 Gmail을 **Test users**에 등록
+4. 가입 링크: `https://YOUR-TUNNEL.trycloudflare.com/signup?code=MYOWN-XXXX`
+
+Telegram 봇은 내 PC의 gateway가 돌아가면 사용자도 같은 봇을 쓸 수 있습니다.
+
 ## 명령어
 
 | 명령 | 설명 |

@@ -11,7 +11,8 @@
     "db:push": "pnpm --filter @myown/database db:push",
     "db:migrate-priority": "pnpm --filter @myown/database db:migrate-priority",
     "db:migrate-task-attachments": "pnpm --filter @myown/database db:migrate-task-attachments",
-    "bot:profile": "pnpm --filter @myown/gateway bot:profile"
+    "bot:profile": "pnpm --filter @myown/gateway bot:profile",
+    "tunnel": "\"C:\\Program Files (x86)\\cloudflared\\cloudflared.exe\" tunnel --url http://127.0.0.1:5173"
   },
   "engines": {
     "node": ">=20"
