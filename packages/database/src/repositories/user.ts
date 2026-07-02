@@ -50,6 +50,19 @@ export class UserRepository {
     return user;
   }
 
+  async attachWebAccount(userId: string, webAccountId: string): Promise<User | undefined> {
+    const [user] = await this.db
+      .update(users)
+      .set({ webAccountId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deleteById(userId: string): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, userId));
+  }
+
   async linkTelegram(userId: string, telegramUserId: number): Promise<User | undefined> {
     const [user] = await this.db
       .update(users)

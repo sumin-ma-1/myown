@@ -86,14 +86,39 @@ export class TelegramLinkService {
     }
 
     const existingTg = await this.users.findByTelegramId(telegramUserId);
+    const targetUser = await this.users.findById(record.userId);
+
     if (existingTg && existingTg.id !== record.userId) {
+      // 예전 봇-only users 행 + Google 가입으로 생긴 빈 users 행이 겹치는 경우
+      if (
+        !existingTg.webAccountId &&
+        targetUser?.webAccountId === record.webAccountId
+      ) {
+        await this.users.deleteById(targetUser.id);
+        const merged = await this.users.attachWebAccount(existingTg.id, record.webAccountId);
+        if (!merged) {
+          return { ok: false, message: "Telegram 연결에 실패했습니다." };
+        }
+        await this.channelConnections.ensureTelegram(merged.id, telegramUserId, displayName);
+
+        const completed: LinkRecord = {
+          ...record,
+          status: "completed",
+          userId: merged.id,
+          telegramUserId,
+        };
+        await this.redis.setex(key, 300, JSON.stringify(completed));
+
+        return { ok: true, userId: merged.id };
+      }
+
       return {
         ok: false,
         message: "이 Telegram 계정은 다른 사용자에 이미 연결되어 있습니다.",
       };
     }
 
-    const user = await this.users.findById(record.userId);
+    const user = targetUser;
     if (!user || user.webAccountId !== record.webAccountId) {
       return { ok: false, message: "연결 대상 사용자를 찾을 수 없습니다." };
     }
