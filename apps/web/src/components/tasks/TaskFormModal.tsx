@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import type { ExtraReminderRule, TaskDto } from "@/api/types";
+import type { ExtraReminderRule, ReminderDto, TaskDto } from "@/api/types";
 import { Modal } from "@/components/ui/Modal";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, isValidTimeInput, normalizeTimeInput } from "@/lib/dates";
+import { extraRulesEqual } from "@/lib/reminder-rules";
+import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -21,7 +23,9 @@ function splitDueAt(iso: string | null) {
 
 function toDueAtIso(date: string, time: string): string | undefined {
   if (!date.trim()) return undefined;
-  const t = time.trim() || "09:00";
+  const normalized = normalizeTimeInput(time);
+  const t = normalized || "09:00";
+  if (!isValidTimeInput(t)) return undefined;
   const parsed = new Date(`${date}T${t}:00`);
   if (Number.isNaN(parsed.getTime())) return undefined;
   return parsed.toISOString();
@@ -31,10 +35,11 @@ interface ExtraRuleRow {
   key: string;
   daysBefore: string;
   hoursBefore: string;
+  minutesBefore: string;
 }
 
 function emptyRule(): ExtraRuleRow {
-  return { key: crypto.randomUUID(), daysBefore: "", hoursBefore: "" };
+  return { key: crypto.randomUUID(), daysBefore: "", hoursBefore: "", minutesBefore: "" };
 }
 
 function rulesToRows(rules: ExtraReminderRule[]): ExtraRuleRow[] {
@@ -43,6 +48,7 @@ function rulesToRows(rules: ExtraReminderRule[]): ExtraRuleRow[] {
     key: crypto.randomUUID(),
     daysBefore: r.daysBefore !== undefined ? String(r.daysBefore) : "",
     hoursBefore: r.hoursBefore !== undefined ? String(r.hoursBefore) : "",
+    minutesBefore: r.minutesBefore !== undefined ? String(r.minutesBefore) : "",
   }));
 }
 
@@ -51,12 +57,71 @@ function rowsToRules(rows: ExtraRuleRow[]): ExtraReminderRule[] {
     .map((r) => ({
       daysBefore: r.daysBefore.trim() ? Number(r.daysBefore) : undefined,
       hoursBefore: r.hoursBefore.trim() ? Number(r.hoursBefore) : undefined,
+      minutesBefore: r.minutesBefore.trim() ? Number(r.minutesBefore) : undefined,
     }))
     .filter(
       (r) =>
         (r.daysBefore !== undefined && !Number.isNaN(r.daysBefore) && r.daysBefore >= 0) ||
-        (r.hoursBefore !== undefined && !Number.isNaN(r.hoursBefore) && r.hoursBefore > 0),
+        (r.hoursBefore !== undefined && !Number.isNaN(r.hoursBefore) && r.hoursBefore > 0) ||
+        (r.minutesBefore !== undefined && !Number.isNaN(r.minutesBefore) && r.minutesBefore > 0),
     );
+}
+
+function rowToRule(row: ExtraRuleRow): ExtraReminderRule | null {
+  const [rule] = rowsToRules([row]);
+  return rule ?? null;
+}
+
+function ReminderList({
+  items,
+  emptyMessage,
+  onCancel,
+  cancelPending,
+}: {
+  items: ReminderDto[];
+  emptyMessage: string;
+  onCancel: (id: string) => void;
+  cancelPending: boolean;
+}) {
+  if (items.length === 0) {
+    return <p className="mt-2 text-xs text-slate-500">{emptyMessage}</p>;
+  }
+
+  return (
+    <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
+      {items.map((r) => (
+        <li
+          key={r.id}
+          className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1"
+        >
+          <span>{formatDateTime(r.fireAt)}</span>
+          <span className="flex items-center gap-2">
+            <span
+              className={
+                r.status === "pending"
+                  ? "text-amber-600"
+                  : r.status === "sent"
+                    ? "text-emerald-600"
+                    : "text-slate-400"
+              }
+            >
+              {r.status === "pending" ? "예약" : r.status === "sent" ? "발송" : "취소"}
+            </span>
+            {r.status === "pending" && (
+              <button
+                type="button"
+                className="text-red-600"
+                disabled={cancelPending}
+                onClick={() => onCancel(r.id)}
+              >
+                취소
+              </button>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 interface PendingFile {
@@ -84,7 +149,13 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [extraReminderMessage, setExtraReminderMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialReminderConfigRef = useRef<{
+    useDefaultReminders: boolean;
+    extraRules: ExtraReminderRule[];
+  } | null>(null);
 
   const addPendingFiles = (files: FileList | File[]) => {
     const list = Array.from(files);
@@ -121,6 +192,8 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setSaveMessage(null);
+    setExtraReminderMessage(null);
     setPendingFiles([]);
     setRemovedAttachmentIds([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -134,36 +207,65 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
       setWorkflowStatus("planned");
       setUseDefaultReminders(true);
       setExtraRows([emptyRule()]);
+      initialReminderConfigRef.current = null;
       return;
     }
 
-    if (taskData?.item) {
-      const t = taskData.item;
-      const { date, time } = splitDueAt(t.dueAt);
-      setTitle(t.title);
-      setDescription(t.description ?? "");
-      setDueDate(date);
-      setDueTime(time);
-      setPriority(t.priority);
-      setWorkflowStatus(t.workflowStatus);
-      setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
-      setExtraRows(rulesToRows(taskData.reminderConfig.extraRules));
+    if (!taskData || taskData.item.id !== taskId) {
+      initialReminderConfigRef.current = null;
+      return;
     }
-  }, [open, mode, taskData]);
+
+    const t = taskData.item;
+    const { date, time } = splitDueAt(t.dueAt);
+    setTitle(t.title);
+    setDescription(t.description ?? "");
+    setDueDate(date);
+    setDueTime(time);
+    setPriority(t.priority);
+    setWorkflowStatus(t.workflowStatus);
+    setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
+    setExtraRows(rulesToRows(taskData.reminderConfig.extraRules));
+    initialReminderConfigRef.current = {
+      useDefaultReminders: taskData.reminderConfig.useDefaultReminders,
+      extraRules: taskData.reminderConfig.extraRules,
+    };
+  }, [open, mode, taskData, taskId]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const dueAt = toDueAtIso(dueDate, dueTime);
       const extraReminders = rowsToRules(extraRows);
-      const payload = {
+      const payload: Parameters<typeof api.createTask>[0] = {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
         dueAt,
         workflowStatus,
-        useDefaultReminders,
-        extraReminders,
       };
+
+      if (mode === "create") {
+        payload.useDefaultReminders = useDefaultReminders;
+        payload.extraReminders = extraReminders;
+      } else {
+        let loadedConfig: { useDefaultReminders: boolean; extraRules: ExtraReminderRule[] } | null =
+          null;
+        if (taskData && taskData.item.id === taskId) {
+          loadedConfig = taskData.reminderConfig;
+        }
+        const baseline = initialReminderConfigRef.current ?? loadedConfig;
+        if (baseline) {
+          if (useDefaultReminders !== baseline.useDefaultReminders) {
+            payload.useDefaultReminders = useDefaultReminders;
+          }
+          if (!extraRulesEqual(extraReminders, baseline.extraRules)) {
+            payload.extraReminders = extraReminders;
+          }
+        } else {
+          payload.useDefaultReminders = useDefaultReminders;
+          payload.extraReminders = extraReminders;
+        }
+      }
 
       let saved: TaskDto;
       if (mode === "create") {
@@ -174,7 +276,6 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
           ...payload,
           description: description.trim() || null,
           dueAt: dueAt ?? null,
-          rescheduleReminders: true,
         });
         saved = res.item;
       }
@@ -198,12 +299,85 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
         void queryClient.invalidateQueries({ queryKey: ["task", taskId] });
         void queryClient.invalidateQueries({ queryKey: ["reminders", taskId] });
       }
-      onClose();
+      if (mode === "create") {
+        onClose();
+        return;
+      }
+      setSaveMessage("저장되었습니다.");
+      initialReminderConfigRef.current = {
+        useDefaultReminders,
+        extraRules: rowsToRules(extraRows),
+      };
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : "저장에 실패했습니다.");
     },
   });
+
+  const applyExtraRemindersMutation = useMutation({
+    mutationFn: async (rules: ExtraReminderRule[]) => {
+      if (!taskId) throw new Error("업무를 먼저 저장해 주세요.");
+      await api.updateTask(taskId, { extraReminders: rules });
+      return rules;
+    },
+    onSuccess: (rules) => {
+      initialReminderConfigRef.current = {
+        useDefaultReminders,
+        extraRules: rules,
+      };
+      void queryClient.invalidateQueries({ queryKey: ["reminders", taskId] });
+      void queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    },
+  });
+
+  const commitExtraRemindersIfChanged = async (rules: ExtraReminderRule[]): Promise<boolean> => {
+    if (mode !== "edit" || !taskId) return false;
+    const baseline = initialReminderConfigRef.current;
+    if (baseline && extraRulesEqual(rules, baseline.extraRules)) return false;
+    await applyExtraRemindersMutation.mutateAsync(rules);
+    return true;
+  };
+
+  const handleAddExtraRow = async () => {
+    const rules = rowsToRules(extraRows);
+    if (mode === "edit" && taskId && rules.length > 0) {
+      try {
+        setError(null);
+        setExtraReminderMessage(null);
+        const applied = await commitExtraRemindersIfChanged(rules);
+        if (applied) {
+          setExtraReminderMessage("예약된 알림에 반영되었습니다.");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "알림 예약에 실패했습니다.");
+        return;
+      }
+    }
+    setExtraRows([...extraRows, emptyRule()]);
+  };
+
+  const handleRemoveExtraRow = async (index: number) => {
+    const nextRows = extraRows.filter((_, i) => i !== index);
+    const normalizedRows = nextRows.length > 0 ? nextRows : [emptyRule()];
+    setExtraRows(normalizedRows);
+
+    if (mode !== "edit" || !taskId) return;
+
+    const rules = rowsToRules(normalizedRows);
+    try {
+      setError(null);
+      setExtraReminderMessage(null);
+      const applied = await commitExtraRemindersIfChanged(rules);
+      if (applied) {
+        setExtraReminderMessage("예약된 알림에 반영되었습니다.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "알림 변경에 실패했습니다.");
+    }
+  };
 
   const deleteReminderMutation = useMutation({
     mutationFn: (reminderId: string) => api.deleteReminder(reminderId),
@@ -228,9 +402,15 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
   const offsets = settings?.notification.ddayOffsets ?? [3, 1, 0];
   const offsetLabel = offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
+  const reminderHour = settings?.notification.reminderHour ?? 9;
+  const dueAtIso = toDueAtIso(dueDate, dueTime);
+  const extraApplying = applyExtraRemindersMutation.isPending;
 
   const existingAttachments =
     taskData?.item.attachments.filter((a) => !removedAttachmentIds.includes(a.id)) ?? [];
+  const scheduledReminders =
+    remindersData?.items.filter((r) => r.status !== "cancelled") ?? [];
+  const extraScheduleOptions = { useDefaultReminders, ddayOffsets: offsets };
   const isLoading = mode === "edit" && taskLoading;
 
   return (
@@ -249,6 +429,10 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
             e.preventDefault();
             if (!title.trim()) {
               setError("제목을 입력해 주세요.");
+              return;
+            }
+            if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
+              setError("마감 시각은 24시간 형식으로 입력해 주세요. (예: 14:00)");
               return;
             }
             saveMutation.mutate();
@@ -291,11 +475,16 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                 <div>
                   <label className="block text-xs font-medium text-slate-600">마감 시각</label>
                   <input
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="14:00"
+                    autoComplete="off"
                     className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                     value={dueTime}
                     onChange={(e) => setDueTime(e.target.value)}
+                    onBlur={(e) => setDueTime(normalizeTimeInput(e.target.value))}
                   />
+                  <p className="mt-1 text-xs text-slate-400">24시간 형식 (기본 09:00)</p>
                 </div>
               </div>
 
@@ -438,94 +627,111 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-slate-600">추가 알림</p>
-                    {extraRows.map((row, index) => (
-                      <div key={row.key} className="flex flex-wrap items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="N일 전"
-                          className="w-24 rounded-md border border-surface-border bg-white px-2 py-1 text-sm"
-                          value={row.daysBefore}
-                          onChange={(e) => {
-                            const next = [...extraRows];
-                            next[index] = { ...row, daysBefore: e.target.value };
-                            setExtraRows(next);
-                          }}
-                        />
-                        <span className="text-xs text-slate-500">일 전</span>
-                        <input
-                          type="number"
-                          min={1}
-                          placeholder="N시간 전"
-                          className="w-24 rounded-md border border-surface-border bg-white px-2 py-1 text-sm"
-                          value={row.hoursBefore}
-                          onChange={(e) => {
-                            const next = [...extraRows];
-                            next[index] = { ...row, hoursBefore: e.target.value };
-                            setExtraRows(next);
-                          }}
-                        />
-                        <span className="text-xs text-slate-500">시간 전</span>
-                        {extraRows.length > 1 && (
-                          <button
-                            type="button"
-                            className="text-xs text-red-600"
-                            onClick={() => setExtraRows(extraRows.filter((_, i) => i !== index))}
-                          >
-                            삭제
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      className="text-xs text-brand"
-                      onClick={() => setExtraRows([...extraRows, emptyRule()])}
-                    >
-                      + 추가
-                    </button>
+                    {extraRows.map((row, index) => {
+                      const rule = rowToRule(row);
+                      const scheduleHint =
+                        rule &&
+                        describeExtraRuleSchedule(
+                          dueAtIso,
+                          reminderHour,
+                          rule,
+                          formatDateTime,
+                          extraScheduleOptions,
+                        );
+                      const isLastRow = index === extraRows.length - 1;
+
+                      return (
+                        <div key={row.key} className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={0}
+                              placeholder="일"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
+                              value={row.daysBefore}
+                              onChange={(e) => {
+                                const next = [...extraRows];
+                                next[index] = { ...row, daysBefore: e.target.value };
+                                setExtraRows(next);
+                              }}
+                            />
+                            <span className="shrink-0 text-sm text-slate-500">일</span>
+                            <input
+                              type="number"
+                              min={1}
+                              placeholder="시"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
+                              value={row.hoursBefore}
+                              onChange={(e) => {
+                                const next = [...extraRows];
+                                next[index] = { ...row, hoursBefore: e.target.value };
+                                setExtraRows(next);
+                              }}
+                            />
+                            <span className="shrink-0 text-sm text-slate-500">시간</span>
+                            <input
+                              type="number"
+                              min={1}
+                              placeholder="분"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-ms"
+                              value={row.minutesBefore}
+                              onChange={(e) => {
+                                const next = [...extraRows];
+                                next[index] = { ...row, minutesBefore: e.target.value };
+                                setExtraRows(next);
+                              }}
+                            />
+                            <span className="shrink-0 text-sm text-slate-500">분 전</span>
+                            {isLastRow && (
+                              <button
+                                type="button"
+                                className="shrink-0 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5 text-sm font-medium text-brand hover:bg-brand/10 disabled:opacity-50"
+                                disabled={extraApplying || !rule}
+                                onClick={() => void handleAddExtraRow()}
+                              >
+                                {extraApplying ? "예약 중" : "추가"}
+                              </button>
+                            )}
+                            {extraRows.length > 1 && (
+                              <button
+                                type="button"
+                                className="shrink-0 px-1 text-sm text-red-600 disabled:opacity-50"
+                                disabled={extraApplying}
+                                onClick={() => void handleRemoveExtraRow(index)}
+                              >
+                                삭제
+                              </button>
+                            )}
+                          </div>
+                          {scheduleHint && (
+                            <p className="pl-0.5 text-[11px] text-slate-500">
+                              {scheduleHint}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {mode === "create" && (
+                      <p className="text-[11px] text-slate-400">
+                        추가 알림은 업무 등록 후 예약됩니다.
+                      </p>
+                    )}
+                    {extraReminderMessage && (
+                      <p className="text-xs text-emerald-700">{extraReminderMessage}</p>
+                    )}
                   </div>
 
-                  {mode === "edit" && (remindersData?.items.length ?? 0) > 0 && (
+                  {mode === "edit" && (
                     <div className="border-t border-slate-200 pt-3">
                       <p className="text-xs font-medium text-slate-600">예약된 알림</p>
-                      <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
-                        {remindersData!.items.map((r) => (
-                          <li
-                            key={r.id}
-                            className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1"
-                          >
-                            <span>{formatDateTime(r.fireAt)}</span>
-                            <span className="flex items-center gap-2">
-                              <span
-                                className={
-                                  r.status === "pending"
-                                    ? "text-amber-600"
-                                    : r.status === "sent"
-                                      ? "text-emerald-600"
-                                      : "text-slate-400"
-                                }
-                              >
-                                {r.status === "pending"
-                                  ? "예약"
-                                  : r.status === "sent"
-                                    ? "발송"
-                                    : "취소"}
-                              </span>
-                              {r.status === "pending" && (
-                                <button
-                                  type="button"
-                                  className="text-red-600"
-                                  disabled={deleteReminderMutation.isPending}
-                                  onClick={() => deleteReminderMutation.mutate(r.id)}
-                                >
-                                  취소
-                                </button>
-                              )}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      {remindersData && (
+                        <ReminderList
+                          items={scheduledReminders}
+                          emptyMessage="예약된 알림이 없습니다."
+                          onCancel={(id) => deleteReminderMutation.mutate(id)}
+                          cancelPending={deleteReminderMutation.isPending}
+                        />
+                      )}
                     </div>
                   )}
                 </>
@@ -534,6 +740,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {saveMessage && <p className="text-sm text-emerald-700">{saveMessage}</p>}
 
           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
             {mode === "edit" ? (

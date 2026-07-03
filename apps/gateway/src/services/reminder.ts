@@ -47,16 +47,73 @@ export class ReminderService {
     }
   }
 
+  /** Same fireAt (within tolerance) stays pending; only add/remove deltas. */
+  async syncRemindersForTask(
+    task: Task,
+    telegramUserId: number,
+    user: User,
+    options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
+  ): Promise<void> {
+    if (task.status !== "active" || !task.dueAt) {
+      await this.cancelForTask(task.id);
+      return;
+    }
+
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    const useDefaults = options?.useDefaults ?? true;
+    const storedExtras = prefs.taskReminderRules?.[task.id] ?? [];
+    const extraRules = options?.extraRules ?? storedExtras;
+    const ddayOffsets = useDefaults
+      ? (prefs.notification?.ddayOffsets ?? [3, 1, 0])
+      : [];
+    const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
+
+    const desired = buildReminderFireTimes(task.dueAt, {
+      ddayOffsets,
+      reminderHour,
+      extraRules,
+    });
+    const pending = await this.reminders.listPendingForTask(task.id);
+    const toleranceMs = 60_000;
+    const matchedPending = new Set<string>();
+    const matchedDesired = new Set<number>();
+
+    for (const reminder of pending) {
+      const index = desired.findIndex(
+        (fireAt, i) =>
+          !matchedDesired.has(i) &&
+          Math.abs(reminder.fireAt.getTime() - fireAt.getTime()) <= toleranceMs,
+      );
+      if (index >= 0) {
+        matchedPending.add(reminder.id);
+        matchedDesired.add(index);
+      }
+    }
+
+    for (const reminder of pending) {
+      if (!matchedPending.has(reminder.id)) {
+        await this.cancelReminder(reminder.id);
+      }
+    }
+
+    for (let i = 0; i < desired.length; i++) {
+      if (!matchedDesired.has(i)) {
+        try {
+          await this.scheduleAt(task, telegramUserId, desired[i]);
+        } catch {
+          // Skip times that became invalid between planning and scheduling.
+        }
+      }
+    }
+  }
+
   async rescheduleForTask(
     task: Task,
     telegramUserId: number,
     user: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
-    await this.cancelForTask(task.id);
-    if (task.status === "active" && task.dueAt) {
-      await this.scheduleForTask(task, telegramUserId, user, options);
-    }
+    await this.syncRemindersForTask(task, telegramUserId, user, options);
   }
 
   async scheduleAt(

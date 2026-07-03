@@ -3,6 +3,7 @@ import type { ChannelProvider } from "@myown/database";
 import type { ApiEnv } from "../types.js";
 import { requireAppUser } from "../middleware/session.js";
 import { buildIntegrationList } from "../../integrations/catalog.js";
+import { isKakaoEnabled } from "../../config.js";
 
 export const integrationsRoute = new Hono<ApiEnv>();
 
@@ -12,7 +13,7 @@ integrationsRoute.get("/", async (c) => {
   const userId = c.get("userId")!;
   const app = c.get("app");
   const connections = await app.channelConnections.listByUserId(userId);
-  return c.json({ items: buildIntegrationList(connections) });
+  return c.json({ items: buildIntegrationList(connections, { kakaoEnabled: isKakaoEnabled() }) });
 });
 
 integrationsRoute.post("/telegram/link", async (c) => {
@@ -35,6 +36,31 @@ integrationsRoute.get("/telegram/link/:token", async (c) => {
   return c.json(status);
 });
 
+integrationsRoute.post("/kakao/link", async (c) => {
+  const app = c.get("app");
+  const userId = c.get("userId")!;
+  const webAccountId = c.get("webAccountId")!;
+
+  if (!isKakaoEnabled()) {
+    return c.json({ error: "카카오 연동이 설정되지 않았습니다." }, 503);
+  }
+
+  try {
+    const link = await app.kakaoLink.createLink(webAccountId, userId);
+    return c.json(link);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "연결 링크를 만들지 못했습니다.";
+    return c.json({ error: message }, 500);
+  }
+});
+
+integrationsRoute.get("/kakao/link/:token", async (c) => {
+  const app = c.get("app");
+  const token = c.req.param("token");
+  const status = await app.kakaoLink.getLinkStatus(token);
+  return c.json(status);
+});
+
 integrationsRoute.post("/:provider/sync", async (c) => {
   const provider = c.req.param("provider") as ChannelProvider;
   const userId = c.get("userId");
@@ -48,7 +74,16 @@ integrationsRoute.post("/:provider/sync", async (c) => {
     }
     await app.channelConnections.ensureTelegram(user.id, user.telegramUserId);
     const connections = await app.channelConnections.listByUserId(userId!);
-    return c.json({ items: buildIntegrationList(connections) });
+    return c.json({ items: buildIntegrationList(connections, { kakaoEnabled: isKakaoEnabled() }) });
+  }
+
+  if (provider === "kakao") {
+    const conn = await app.channelConnections.findByUserAndProvider(userId!, "kakao");
+    if (!conn || conn.status !== "connected") {
+      return c.json({ error: "카카오가 아직 연결되지 않았습니다." }, 400);
+    }
+    const connections = await app.channelConnections.listByUserId(userId!);
+    return c.json({ items: buildIntegrationList(connections, { kakaoEnabled: isKakaoEnabled() }) });
   }
 
   return c.json({ error: `${provider} 연동은 아직 지원하지 않습니다.` }, 501);
@@ -76,5 +111,5 @@ integrationsRoute.post("/:provider/disconnect", async (c) => {
 
   await app.channelConnections.disconnect(userId, provider);
   const connections = await app.channelConnections.listByUserId(userId);
-  return c.json({ items: buildIntegrationList(connections) });
+  return c.json({ items: buildIntegrationList(connections, { kakaoEnabled: isKakaoEnabled() }) });
 });

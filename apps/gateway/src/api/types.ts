@@ -25,4 +25,5 @@ export interface UserPreferences {
 export interface ExtraReminderRule {
   daysBefore?: number;
   hoursBefore?: number;
+  minutesBefore?: number;
 }

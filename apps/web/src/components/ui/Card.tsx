@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 interface CardProps {
-  title?: string;
+  title?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -14,7 +14,11 @@ export function Card({ title, action, children, className = "" }: CardProps) {
     >
       {(title || action) && (
         <header className="mb-3 flex items-center justify-between gap-2">
-          {title ? <h2 className="text-sm font-semibold text-slate-800">{title}</h2> : <span />}
+          {title ? (
+            <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+          ) : (
+            <span />
+          )}
           {action}
         </header>
       )}

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { IntegrationCard } from "@/components/integrations/IntegrationCard";
+import { GoogleCalendarCard } from "@/components/integrations/GoogleCalendarCard";
 
 export function IntegrationsPage() {
   const { data, isLoading, error } = useQuery({
@@ -31,6 +32,8 @@ export function IntegrationsPage() {
           ))}
         </div>
       )}
+
+      <GoogleCalendarCard />
     </div>
   );
 }

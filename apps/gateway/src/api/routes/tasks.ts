@@ -3,6 +3,7 @@ import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone, atHourOnDate, addDays } from "../../utils/date.js";
 import {
+  extraRulesEqual,
   getTaskReminderConfig,
   saveTaskReminderConfig,
 } from "../helpers/task-reminders.js";
@@ -39,11 +40,13 @@ function parseExtraRules(raw?: ExtraReminderRule[]): ExtraReminderRule[] {
     .map((r) => ({
       daysBefore: r.daysBefore !== undefined ? Number(r.daysBefore) : undefined,
       hoursBefore: r.hoursBefore !== undefined ? Number(r.hoursBefore) : undefined,
+      minutesBefore: r.minutesBefore !== undefined ? Number(r.minutesBefore) : undefined,
     }))
     .filter(
       (r) =>
         (r.daysBefore !== undefined && r.daysBefore >= 0) ||
-        (r.hoursBefore !== undefined && r.hoursBefore > 0),
+        (r.hoursBefore !== undefined && r.hoursBefore > 0) ||
+        (r.minutesBefore !== undefined && r.minutesBefore > 0),
     );
 }
 
@@ -249,10 +252,16 @@ tasksRoute.patch("/:id", async (c) => {
       ? existing.dueAt !== null
       : new Date(body.dueAt).getTime() !== existing.dueAt?.getTime());
 
+  const existingReminderConfig = getTaskReminderConfig(user, taskId);
   const extraRules =
     body.extraReminders !== undefined ? parseExtraRules(body.extraReminders) : undefined;
-  const reminderConfigChanged =
-    body.useDefaultReminders !== undefined || extraRules !== undefined;
+  const useDefaultChanged =
+    body.useDefaultReminders !== undefined &&
+    body.useDefaultReminders !== existingReminderConfig.useDefaultReminders;
+  const extraRulesChanged =
+    extraRules !== undefined &&
+    !extraRulesEqual(extraRules, existingReminderConfig.extraRules);
+  const reminderConfigChanged = useDefaultChanged || extraRulesChanged;
 
   if (reminderConfigChanged) {
     user = await saveTaskReminderConfig(
@@ -260,8 +269,10 @@ tasksRoute.patch("/:id", async (c) => {
       user,
       taskId,
       {
-        useDefaultReminders: body.useDefaultReminders,
-        extraRules,
+        ...(body.useDefaultReminders !== undefined && {
+          useDefaultReminders: body.useDefaultReminders,
+        }),
+        ...(extraRules !== undefined && { extraRules }),
       },
     );
   }
@@ -281,10 +292,10 @@ tasksRoute.patch("/:id", async (c) => {
   } else if (
     task.dueAt &&
     user.telegramUserId != null &&
-    (dueAtChanged || reminderConfigChanged || body.rescheduleReminders)
+    (dueAtChanged || reminderConfigChanged)
   ) {
     const config = getTaskReminderConfig(user, taskId);
-    await app.reminderService.rescheduleForTask(task, user.telegramUserId, user, {
+    await app.reminderService.syncRemindersForTask(task, user.telegramUserId, user, {
       useDefaults: config.useDefaultReminders,
       extraRules: config.extraRules,
     });
@@ -361,6 +372,7 @@ tasksRoute.post("/:id/reminders", async (c) => {
     fireAt?: string;
     daysBefore?: number;
     hoursBefore?: number;
+    minutesBefore?: number;
   }>();
 
   const task = await app.tasks.findById(userId, taskId);
@@ -379,8 +391,10 @@ tasksRoute.post("/:id/reminders", async (c) => {
     fireAt = atHourOnDate(addDays(task.dueAt, -body.daysBefore), reminderHour);
   } else if (body.hoursBefore !== undefined && body.hoursBefore > 0) {
     fireAt = new Date(task.dueAt.getTime() - body.hoursBefore * 60 * 60 * 1000);
+  } else if (body.minutesBefore !== undefined && body.minutesBefore > 0) {
+    fireAt = new Date(task.dueAt.getTime() - body.minutesBefore * 60 * 1000);
   } else {
-    return c.json({ error: "fireAt, daysBefore, or hoursBefore required" }, 400);
+    return c.json({ error: "fireAt, daysBefore, hoursBefore, or minutesBefore required" }, 400);
   }
 
   if (user.telegramUserId == null) {

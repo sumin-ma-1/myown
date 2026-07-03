@@ -91,3 +91,27 @@ export function buildWeekDays(cursor: Date): Date[] {
     return d;
   });
 }
+
+/** HH:mm (24시간) — Safari는 type="time" 미지원/버그가 있어 텍스트 입력용 */
+const TIME_INPUT_RE = /^(\d{1,2}):(\d{2})$/;
+
+export function normalizeTimeInput(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  const match = t.match(TIME_INPUT_RE);
+  if (!match) return t;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return t;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function isValidTimeInput(raw: string): boolean {
+  const t = raw.trim();
+  if (!t) return true;
+  const match = t.match(TIME_INPUT_RE);
+  if (!match) return false;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour <= 23 && minute <= 59;
+}

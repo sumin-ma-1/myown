@@ -55,6 +55,8 @@ cp .env.example .env
 | `GOOGLE_REDIRECT_URI` | `http://localhost:5173/api/auth/google/callback` |
 | `ADMIN_EMAILS` | 관리자 Google 이메일. 초대코드 없이 가입·`/admin` |
 | `WEB_API_PORT` | API 포트 (기본 `4000`) |
+| `KAKAO_CHANNEL_URL` | (선택) 카카오톡 채널 URL — 설정 시 KakaoTalk 연동 활성화 |
+| `KAKAO_BOT_NAME` | (선택) 오픈빌더 봇 이름 (기본 `MyOwn`) |
 
 ### 3. 설치 및 DB
 
@@ -92,6 +94,75 @@ pnpm dev
 1. 로그인 후 대시보드 (`http://localhost:5173`) → **연동 APP**
 2. **Telegram 연결** → 열리는 봇에서 **시작(Start)**
 3. 웹에「연결됨」이 보이면 봇 사용 가능 (ID 조회·`.env` 수정 불필요)
+
+### 7.1 KakaoTalk 연동 (선택, 오픈빌더)
+
+텔레그램과 별도로 카카오톡 채널에서 업무 등록·조회가 가능합니다. 기존 가입자·데이터는 그대로 유지됩니다.
+
+#### 사전 준비
+
+1. [카카오톡 채널](https://center-pf.kakao.com/) 개설 → 채널 URL 복사 (`https://pf.kakao.com/_xxxxx`)
+2. [카카오 i 오픈빌더](https://i.kakao.com/) → 봇 생성 → **운영 채널 연결**
+3. 오픈빌더 **스킬** 생성 → URL:
+
+```text
+{WEB_APP_URL}/api/kakao/skill
+```
+
+(로컬 베타: Cloudflare Tunnel URL + `/api/kakao/skill`)
+
+4. 폴백 블록(기본 응답)의 봇 응답을 **위 스킬**로 연결
+5. `.env` 설정:
+
+```env
+KAKAO_CHANNEL_URL=https://pf.kakao.com/_xxxxx
+KAKAO_BOT_NAME=MyOwn
+```
+
+6. `pnpm dev` 재시작
+
+#### 사용자 연동 절차
+
+1. 웹 **연동 APP** → **카카오 연결**
+2. 열리는 채널에서 **채널 추가** 후 채팅 열기
+3. 화면에 나온 `연결 link_xxxx` 문구를 채팅에 붙여넣기
+4. 웹에「연결됨」 표시되면 사용 가능
+
+#### 카카오에서 쓸 수 있는 명령
+
+| 입력 | 동작 |
+|------|------|
+| `목록` | 활성 업무 |
+| `오늘` | 오늘 마감 |
+| `완료 1` | 1번 완료 |
+| `추가 보고서 2026-06-15 14:00` | 업무 등록 |
+| `알림 1 5분` | 추가 알림 |
+| 자연어 | LLM 설정 시 (텔레그램과 동일) |
+
+> **알림 발송**은 현재 Telegram 우선입니다. 카카오만 연동한 경우 업무 등록·조회는 되고, 푸시 알림은 Telegram 연동 후 발송됩니다.
+
+### 7.2 Google Calendar 연동 (선택)
+
+Google Calendar 일정을 **가져온 뒤**, 원하는 항목만 MyOwn 업무로 **활성화**합니다. 새로 가져온 일정은 기본 **비활성**입니다.
+
+#### 사전 준비
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → **Google Calendar API** 사용 설정
+2. OAuth 클라이언트 → **승인된 리디렉션 URI**에 추가:
+
+```text
+{WEB_APP_URL}/api/integrations/google-calendar/callback
+```
+
+3. `pnpm db:push` (신규 테이블 반영)
+4. `pnpm dev` 재시작
+
+#### 사용 방법
+
+1. 웹 **연동 APP** → **Google Calendar** → **연결**
+2. **일정 가져오기** — 기본 지난 7일 ~ 앞으로 90일 (연동 APP에서 **과거/앞으로 일수** 조정 가능)
+3. 목록에서 **활성** 체크 또는 「선택 항목 활성화」→ MyOwn 업무·달력에 반영
+4. 비활성화하면 연결된 업무는 취소 처리
 
 ### 8. 사용자에게 공유 (Cloudflare Tunnel, 무료)
 

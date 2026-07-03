@@ -81,7 +81,14 @@ export const config = {
   googleRedirectUri:
     process.env.GOOGLE_REDIRECT_URI ??
     `${process.env.WEB_APP_URL ?? "http://localhost:5173"}/api/auth/google/callback`,
+  /** Kakao Open Builder (카카오톡 채널 + 스킬 서버) */
+  kakaoChannelUrl: process.env.KAKAO_CHANNEL_URL ?? "",
+  kakaoBotName: process.env.KAKAO_BOT_NAME ?? "MyOwn",
 };
+
+export function isKakaoEnabled(): boolean {
+  return Boolean(config.kakaoChannelUrl.trim());
+}
 
 export function isGoogleAuthEnabled(): boolean {
   return Boolean(config.googleClientId && config.googleClientSecret);

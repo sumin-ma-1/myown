@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import {
+  IntegrationIcon,
+  type IntegrationIconId,
+} from "@/components/integrations/IntegrationIcon";
 import type { IntegrationDto, IntegrationStatus } from "@/api/types";
 
 function statusLabel(status: IntegrationStatus): string {
@@ -29,27 +33,58 @@ function statusClass(status: IntegrationStatus): string {
   }
 }
 
-function IntegrationRow({ item }: { item: IntegrationDto }) {
-  const muted = item.status === "unavailable";
+interface PanelRowProps {
+  iconId: IntegrationIconId;
+  name: string;
+  description: string;
+  status: IntegrationStatus;
+  subtitle?: string | null;
+}
+
+function PanelRow({ iconId, name, description, status, subtitle }: PanelRowProps) {
+  const muted = status === "unavailable";
 
   return (
     <li
       className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-        item.status === "connected" ? "bg-slate-50" : ""
+        status === "connected" ? "bg-slate-50" : ""
       } ${muted ? "text-slate-400" : "text-slate-700"}`}
-      title={item.description}
+      title={description}
     >
-      <div className="min-w-0">
-        <span className="text-sm">{item.name}</span>
-        {item.displayName && item.status === "connected" && (
-          <p className="truncate text-[11px] text-slate-500">{item.displayName}</p>
-        )}
+      <div className="flex min-w-0 items-center gap-2">
+        <IntegrationIcon id={iconId} size={18} />
+        <div className="min-w-0">
+          <span className="text-sm">{name}</span>
+          {subtitle && status === "connected" && (
+            <p className="truncate text-[11px] text-slate-500">{subtitle}</p>
+          )}
+        </div>
       </div>
-      <span className={`shrink-0 text-xs ${statusClass(item.status)}`}>
-        {statusLabel(item.status)}
+      <span className={`shrink-0 text-xs ${statusClass(status)}`}>
+        {statusLabel(status)}
       </span>
     </li>
   );
+}
+
+function IntegrationRow({ item }: { item: IntegrationDto }) {
+  return (
+    <PanelRow
+      iconId={item.provider}
+      name={item.name}
+      description={item.description}
+      status={item.status}
+      subtitle={item.displayName}
+    />
+  );
+}
+
+function googleCalendarStatus(
+  data: { available: boolean; connected: boolean } | undefined,
+): IntegrationStatus {
+  if (!data?.available) return "unavailable";
+  if (data.connected) return "connected";
+  return "disconnected";
 }
 
 export function IntegrationsPanel() {
@@ -58,8 +93,14 @@ export function IntegrationsPanel() {
     queryFn: api.listIntegrations,
   });
 
+  const googleCalendar = useQuery({
+    queryKey: ["google-calendar-status"],
+    queryFn: api.getGoogleCalendarStatus,
+  });
+
   const telegram = data?.items.find((i) => i.provider === "telegram");
   const needsLink = telegram?.status === "disconnected";
+  const gcalStatus = googleCalendarStatus(googleCalendar.data);
 
   return (
     <div className="mb-6">
@@ -81,6 +122,15 @@ export function IntegrationsPanel() {
             {data.items.map((item) => (
               <IntegrationRow key={item.provider} item={item} />
             ))}
+            {googleCalendar.data && (
+              <PanelRow
+                iconId="google-calendar"
+                name="Google Calendar"
+                description="Google Calendar 일정을 가져와 업무로 활성화"
+                status={gcalStatus}
+                subtitle={googleCalendar.data.googleEmail}
+              />
+            )}
           </ul>
           {needsLink && (
             <Link

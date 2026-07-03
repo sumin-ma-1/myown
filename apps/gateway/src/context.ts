@@ -1,6 +1,8 @@
 import {
   AttachmentRepository,
+  CalendarImportRepository,
   ChannelConnectionRepository,
+  GoogleCalendarConnectionRepository,
   InviteCodeRepository,
   LoginEventRepository,
   ReminderRepository,
@@ -21,6 +23,8 @@ import { type ReminderJobData, createReminderQueue } from "./services/reminder-q
 import { ReminderService } from "./services/reminder.js";
 import { TaskService } from "./services/task.js";
 import { TelegramLinkService } from "./services/telegram-link.js";
+import { KakaoLinkService } from "./services/kakao-link.js";
+import { GoogleCalendarService } from "./services/google-calendar.js";
 
 export interface AppContext {
   users: UserRepository;
@@ -33,6 +37,8 @@ export interface AppContext {
   attachments: AttachmentRepository;
   taskAttachments: TaskAttachmentRepository;
   channelConnections: ChannelConnectionRepository;
+  googleCalendarConnections: GoogleCalendarConnectionRepository;
+  calendarImports: CalendarImportRepository;
   taskService: TaskService;
   attachmentService: AttachmentService;
   reminderService: ReminderService;
@@ -40,6 +46,8 @@ export interface AppContext {
   reminderQueue: Queue<ReminderJobData>;
   redis: Redis;
   telegramLink: TelegramLinkService;
+  kakaoLink: KakaoLinkService;
+  googleCalendar: GoogleCalendarService;
   auth: AuthService;
 }
 
@@ -55,6 +63,8 @@ export function createContext(redis: Redis): AppContext {
   const attachments = new AttachmentRepository(db);
   const taskAttachments = new TaskAttachmentRepository(db);
   const channelConnections = new ChannelConnectionRepository(db);
+  const googleCalendarConnections = new GoogleCalendarConnectionRepository(db);
+  const calendarImports = new CalendarImportRepository(db);
   const reminderQueue = createReminderQueue();
   const reminderService = new ReminderService(reminders, reminderQueue);
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
@@ -62,6 +72,15 @@ export function createContext(redis: Redis): AppContext {
   const agent = new AgentRuntime(taskService);
   const auth = new AuthService(redis, webAccounts, users, inviteCodes, sessions, loginEvents);
   const telegramLink = new TelegramLinkService(redis, users, channelConnections);
+  const kakaoLink = new KakaoLinkService(redis, users, channelConnections);
+  const googleCalendar = new GoogleCalendarService(
+    redis,
+    googleCalendarConnections,
+    calendarImports,
+    users,
+    tasks,
+    taskService,
+  );
 
   return {
     users,
@@ -74,6 +93,8 @@ export function createContext(redis: Redis): AppContext {
     attachments,
     taskAttachments,
     channelConnections,
+    googleCalendarConnections,
+    calendarImports,
     taskService,
     attachmentService,
     reminderService,
@@ -81,6 +102,8 @@ export function createContext(redis: Redis): AppContext {
     reminderQueue,
     redis,
     telegramLink,
+    kakaoLink,
+    googleCalendar,
     auth,
   };
 }

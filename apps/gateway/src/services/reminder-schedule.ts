@@ -4,6 +4,7 @@ import { isDateOnlyDue } from "../utils/datetime-parse.js";
 export interface ExtraReminderRule {
   daysBefore?: number;
   hoursBefore?: number;
+  minutesBefore?: number;
 }
 
 export function buildReminderFireTimes(
@@ -40,6 +41,9 @@ export function buildReminderFireTimes(
     }
     if (rule.hoursBefore !== undefined && rule.hoursBefore > 0) {
       times.add(dueAt.getTime() - rule.hoursBefore * 60 * 60 * 1000);
+    }
+    if (rule.minutesBefore !== undefined && rule.minutesBefore > 0) {
+      times.add(dueAt.getTime() - rule.minutesBefore * 60 * 1000);
     }
   }
 

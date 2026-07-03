@@ -88,6 +88,36 @@ export class ChannelConnectionRepository {
     });
   }
 
+  async ensureKakao(
+    userId: string,
+    kakaoUserId: string,
+    displayName?: string,
+  ): Promise<ChannelConnection> {
+    return this.ensureConnected({
+      userId,
+      provider: "kakao",
+      externalId: kakaoUserId,
+      displayName: displayName && !isSensitiveConnectionLabel(displayName) ? displayName : undefined,
+    });
+  }
+
+  async findByProviderAndExternalId(
+    provider: ChannelProvider,
+    externalId: string,
+  ): Promise<(ChannelConnection & { userId: string }) | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(channelConnections)
+      .where(
+        and(
+          eq(channelConnections.provider, provider),
+          eq(channelConnections.externalId, externalId),
+        ),
+      )
+      .limit(1);
+    return row;
+  }
+
   async disconnect(userId: string, provider: ChannelProvider): Promise<void> {
     await this.db
       .update(channelConnections)

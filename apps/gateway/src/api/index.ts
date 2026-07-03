@@ -12,6 +12,8 @@ import { remindersRoute } from "./routes/reminders.js";
 import { attachmentsRoute } from "./routes/attachments.js";
 import { authRoute } from "./routes/auth.js";
 import { adminRoute } from "./routes/admin.js";
+import { kakaoRoute } from "./routes/kakao.js";
+import { googleCalendarRoute } from "./routes/google-calendar.js";
 
 export function createApiApp(appContext: AppContext) {
   const app = new Hono<ApiEnv>();
@@ -32,11 +34,14 @@ export function createApiApp(appContext: AppContext) {
 
   app.get("/api/health", (c) => c.json({ ok: true }));
 
+  app.route("/api/kakao", kakaoRoute);
+
   app.route("/api/auth", authRoute);
   app.route("/api/admin", adminRoute);
 
   app.use("/api/*", sessionMiddleware);
 
+  app.route("/api/integrations/google-calendar", googleCalendarRoute);
   app.route("/api/tasks", tasksRoute);
   app.route("/api/reminders", remindersRoute);
   app.route("/api/attachments", attachmentsRoute);

@@ -18,7 +18,7 @@ export const INTEGRATION_CATALOG: IntegrationCatalogItem[] = [
   {
     provider: "kakao",
     name: "KakaoTalk",
-    description: "카카오 채널 연동 (준비 중)",
+    description: "카카오톡 채널로 업무 등록·조회",
     available: false,
   },
   {
@@ -60,24 +60,28 @@ function toPublicDto(
 
 export function buildIntegrationList(
   connections: ChannelConnection[],
+  options?: { kakaoEnabled?: boolean },
 ): IntegrationDto[] {
   const byProvider = new Map(connections.map((c) => [c.provider, c]));
 
   return INTEGRATION_CATALOG.map((item) => {
+    const available =
+      item.provider === "kakao" ? Boolean(options?.kakaoEnabled) : item.available;
+    const catalogItem = { ...item, available };
     const conn = byProvider.get(item.provider);
 
-    if (!item.available) {
-      return toPublicDto(item, undefined, "unavailable");
+    if (!available) {
+      return toPublicDto(catalogItem, undefined, "unavailable");
     }
 
     if (!conn || conn.status !== "connected") {
       return toPublicDto(
-        item,
+        catalogItem,
         conn,
         conn?.status === "error" ? "error" : "disconnected",
       );
     }
 
-    return toPublicDto(item, conn, "connected");
+    return toPublicDto(catalogItem, conn, "connected");
   });
 }

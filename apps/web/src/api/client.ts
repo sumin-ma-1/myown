@@ -11,6 +11,10 @@ import type {
   TaskReminderConfigDto,
   TelegramLinkDto,
   TelegramLinkStatus,
+  KakaoLinkDto,
+  KakaoLinkStatus,
+  CalendarImportDto,
+  GoogleCalendarStatusDto,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -142,9 +146,61 @@ export const api = {
       `/api/integrations/telegram/link/${encodeURIComponent(token)}`,
     ),
 
+  startKakaoLink: () =>
+    request<KakaoLinkDto>("/api/integrations/kakao/link", { method: "POST" }),
+
+  getKakaoLinkStatus: (token: string) =>
+    request<{ status: KakaoLinkStatus; userId?: string }>(
+      `/api/integrations/kakao/link/${encodeURIComponent(token)}`,
+    ),
+
+  disconnectIntegration: (provider: IntegrationDto["provider"]) =>
+    request<{ items: IntegrationDto[] }>(`/api/integrations/${provider}/disconnect`, {
+      method: "POST",
+    }),
+
   syncIntegration: (provider: IntegrationDto["provider"]) =>
     request<{ items: IntegrationDto[] }>(`/api/integrations/${provider}/sync`, {
       method: "POST",
+    }),
+
+  getGoogleCalendarStatus: () =>
+    request<GoogleCalendarStatusDto>("/api/integrations/google-calendar/status"),
+
+  syncGoogleCalendar: (options?: { pastDays?: number; futureDays?: number }) =>
+    request<{ imported: number; updated: number; items: CalendarImportDto[] }>(
+      "/api/integrations/google-calendar/sync",
+      {
+        method: "POST",
+        body: JSON.stringify(options ?? {}),
+      },
+    ),
+
+  disconnectGoogleCalendar: () =>
+    request<{ ok: boolean }>("/api/integrations/google-calendar/disconnect", {
+      method: "POST",
+    }),
+
+  listGoogleCalendarImports: (params?: { from?: string; to?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    const qs = q.toString();
+    return request<{ items: CalendarImportDto[] }>(
+      `/api/integrations/google-calendar/imports${qs ? `?${qs}` : ""}`,
+    );
+  },
+
+  setGoogleCalendarImport: (id: string, enabled: boolean) =>
+    request<{ item: CalendarImportDto }>(`/api/integrations/google-calendar/imports/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }),
+
+  batchSetGoogleCalendarImports: (ids: string[], enabled: boolean) =>
+    request<{ items: CalendarImportDto[] }>("/api/integrations/google-calendar/imports/batch", {
+      method: "POST",
+      body: JSON.stringify({ ids, enabled }),
     }),
 
   updateSettings: (body: {

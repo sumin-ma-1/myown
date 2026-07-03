@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   index,
   jsonb,
   pgEnum,
@@ -147,6 +148,54 @@ export const channelConnections = pgTable(
   ],
 );
 
+export const googleCalendarConnections = pgTable(
+  "google_calendar_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" })
+      .unique(),
+    googleEmail: text("google_email"),
+    refreshToken: text("refresh_token").notNull(),
+    accessToken: text("access_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("google_calendar_connections_user_id_idx").on(table.userId)],
+);
+
+export const calendarImports = pgTable(
+  "calendar_imports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    googleEventId: text("google_event_id").notNull(),
+    googleCalendarId: text("google_calendar_id").notNull().default("primary"),
+    title: text("title").notNull(),
+    description: text("description"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    allDay: boolean("all_day").notNull().default(false),
+    enabled: boolean("enabled").notNull().default(false),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    htmlLink: text("html_link"),
+    etag: text("etag"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_imports_user_event_uidx").on(table.userId, table.googleEventId),
+    index("calendar_imports_user_id_idx").on(table.userId),
+    index("calendar_imports_starts_at_idx").on(table.startsAt),
+    index("calendar_imports_enabled_idx").on(table.userId, table.enabled),
+  ],
+);
+
 export const attachments = pgTable(
   "attachments",
   {
@@ -253,6 +302,10 @@ export type NewAttachment = typeof attachments.$inferInsert;
 export type AttachmentStatus = (typeof attachmentStatusEnum.enumValues)[number];
 export type ChannelConnection = typeof channelConnections.$inferSelect;
 export type NewChannelConnection = typeof channelConnections.$inferInsert;
+export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
+export type NewGoogleCalendarConnection = typeof googleCalendarConnections.$inferInsert;
+export type CalendarImport = typeof calendarImports.$inferSelect;
+export type NewCalendarImport = typeof calendarImports.$inferInsert;
 export type WebAccount = typeof webAccounts.$inferSelect;
 export type NewWebAccount = typeof webAccounts.$inferInsert;
 export type InviteCode = typeof inviteCodes.$inferSelect;

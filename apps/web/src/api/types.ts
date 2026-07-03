@@ -49,6 +49,7 @@ export interface SettingsDto {
 export interface ExtraReminderRule {
   daysBefore?: number;
   hoursBefore?: number;
+  minutesBefore?: number;
 }
 
 export interface TaskReminderConfigDto {
@@ -79,7 +80,37 @@ export interface TelegramLinkDto {
   expiresIn: number;
 }
 
+export interface KakaoLinkDto {
+  token: string;
+  channelUrl: string;
+  linkPhrase: string;
+  expiresIn: number;
+}
+
 export type TelegramLinkStatus = "pending" | "completed" | "expired" | "invalid";
+export type KakaoLinkStatus = TelegramLinkStatus;
+
+export interface CalendarImportDto {
+  id: string;
+  googleEventId: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  allDay: boolean;
+  enabled: boolean;
+  taskId: string | null;
+  htmlLink: string | null;
+  lastSyncedAt: string;
+}
+
+export interface GoogleCalendarStatusDto {
+  available: boolean;
+  connected: boolean;
+  googleEmail?: string | null;
+  importCount?: number;
+  enabledCount?: number;
+}
 
 export interface AuthMeDto {
   authenticated: boolean;
