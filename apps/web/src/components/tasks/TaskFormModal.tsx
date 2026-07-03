@@ -596,7 +596,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                   onChange={(e) => addPendingFiles(e.target.files ?? [])}
                 />
                 <p className="mt-1 text-xs text-slate-400">
-                  여러 파일 선택 가능 · HWP, PDF, DOCX, TXT, 이미지 등 지원
+                  여러 파일 선택 가능 (HWP, PDF, DOCX, TXT, 이미지 등 지원)
                 </p>
               </div>
             </section>
@@ -673,7 +673,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                               type="number"
                               min={1}
                               placeholder="분"
-                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-ms"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
                               value={row.minutesBefore}
                               onChange={(e) => {
                                 const next = [...extraRows];
