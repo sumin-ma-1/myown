@@ -4,12 +4,14 @@ import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { TaskTable } from "@/components/tasks/TaskTable";
+import { FlashMessage } from "@/components/ui/FlashMessage";
 import { RotatingSubtitle, TASK_LIST_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
 
 export function TaskListPage() {
   const [sort, setSort] = useState("priority");
   const [status, setStatus] = useState("active");
   const [modalOpen, setModalOpen] = useState(false);
+  const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
 
   const { data, isLoading, error } = useQuery({
@@ -89,7 +91,10 @@ export function TaskListPage() {
         mode={editingTaskId ? "edit" : "create"}
         taskId={editingTaskId}
         onClose={() => setModalOpen(false)}
+        onSaved={setFlashMessage}
       />
+
+      <FlashMessage message={flashMessage} onDismiss={() => setFlashMessage(null)} />
     </div>
   );
 }

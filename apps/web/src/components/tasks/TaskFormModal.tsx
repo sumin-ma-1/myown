@@ -31,6 +31,12 @@ function toDueAtIso(date: string, time: string): string | undefined {
   return parsed.toISOString();
 }
 
+function dueAtEqual(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return new Date(a).getTime() === new Date(b).getTime();
+}
+
 interface ExtraRuleRow {
   key: string;
   daysBefore: string;
@@ -134,9 +140,11 @@ interface TaskFormModalProps {
   mode: "create" | "edit";
   taskId?: string;
   onClose: () => void;
+  /** 저장 성공 시 부모 페이지에 표시할 안내 (모달 닫힌 뒤) */
+  onSaved?: (message: string) => void;
 }
 
-export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProps) {
+export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskFormModalProps) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -149,7 +157,6 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [extraReminderMessage, setExtraReminderMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialReminderConfigRef = useRef<{
@@ -192,7 +199,6 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setSaveMessage(null);
     setExtraReminderMessage(null);
     setPendingFiles([]);
     setRemovedAttachmentIds([]);
@@ -300,14 +306,16 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
         void queryClient.invalidateQueries({ queryKey: ["reminders", taskId] });
       }
       if (mode === "create") {
+        onSaved?.("업무가 등록되었습니다.");
         onClose();
         return;
       }
-      setSaveMessage("저장되었습니다.");
       initialReminderConfigRef.current = {
         useDefaultReminders,
         extraRules: rowsToRules(extraRows),
       };
+      onSaved?.("변경 사항이 반영되었습니다.");
+      onClose();
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : "저장에 실패했습니다.");
@@ -430,6 +438,27 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
   const footerBusy =
     saveMutation.isPending || deleteTaskMutation.isPending || completeTaskMutation.isPending;
 
+  const hasEditChanges = (): boolean => {
+    if (mode !== "edit" || !taskData || taskData.item.id !== taskId) return false;
+
+    const task = taskData.item;
+    const nextDueAt = toDueAtIso(dueDate, dueTime) ?? null;
+
+    if (title.trim() !== task.title) return true;
+    if ((description.trim() || null) !== (task.description ?? null)) return true;
+    if (priority !== task.priority) return true;
+    if (workflowStatus !== task.workflowStatus) return true;
+    if (!dueAtEqual(nextDueAt, task.dueAt)) return true;
+    if (pendingFiles.length > 0) return true;
+    if (removedAttachmentIds.length > 0) return true;
+
+    const baseline = initialReminderConfigRef.current ?? taskData.reminderConfig;
+    if (useDefaultReminders !== baseline.useDefaultReminders) return true;
+    if (!extraRulesEqual(rowsToRules(extraRows), baseline.extraRules)) return true;
+
+    return false;
+  };
+
   return (
     <Modal
       open={open}
@@ -450,6 +479,10 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
             }
             if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
               setError("마감 시각은 24시간 형식으로 입력해 주세요. (예: 14:00)");
+              return;
+            }
+            if (mode === "edit" && !hasEditChanges()) {
+              onClose();
               return;
             }
             saveMutation.mutate();
@@ -757,7 +790,6 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {saveMessage && <p className="text-sm text-emerald-700">{saveMessage}</p>}
 
           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4 dark:border-slate-700">
             {mode === "edit" ? (

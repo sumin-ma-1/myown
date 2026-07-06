@@ -3,13 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
-import { DdaySettingsCard } from "@/components/dashboard/DdaySettingsCard";
+import { DdaySettingsModal } from "@/components/dashboard/DdaySettingsModal";
+import { FlashMessage } from "@/components/ui/FlashMessage";
 import { RotatingSubtitle, DASHBOARD_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
-import { DueTodayCard, InProgressCard } from "@/components/dashboard/SummaryCards";
+import { DueTodayCard, InProgressCard, PlannedCard } from "@/components/dashboard/SummaryCards";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 
 export function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [ddayModalOpen, setDdayModalOpen] = useState(false);
+  const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
 
   const { data: todayData, isLoading: todayLoading } = useQuery({
@@ -46,22 +49,34 @@ export function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">업무 현황</h1>
           <RotatingSubtitle messages={DASHBOARD_SUBTITLE_MESSAGES} />
         </div>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
-          onClick={openCreate}
-        >
-          <span className="material-icons text-[18px] leading-none" aria-hidden>
-            add_circle
-          </span>
-          새 업무 등록
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            onClick={() => setDdayModalOpen(true)}
+          >
+            <span className="material-icons text-[18px] leading-none" aria-hidden>
+              notifications
+            </span>
+            D-DAY 알림
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
+            onClick={openCreate}
+          >
+            <span className="material-icons text-[18px] leading-none" aria-hidden>
+              add_circle
+            </span>
+            새 업무 등록
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <DueTodayCard tasks={today} onTaskClick={openEdit} />
         <InProgressCard tasks={active} onTaskClick={openEdit} />
-        <DdaySettingsCard />
+        <PlannedCard tasks={active} onTaskClick={openEdit} />
       </div>
 
       <CalendarPanel onTaskClick={openEdit} />
@@ -71,7 +86,12 @@ export function DashboardPage() {
         mode={editingTaskId ? "edit" : "create"}
         taskId={editingTaskId}
         onClose={() => setModalOpen(false)}
+        onSaved={setFlashMessage}
       />
+
+      <DdaySettingsModal open={ddayModalOpen} onClose={() => setDdayModalOpen(false)} />
+
+      <FlashMessage message={flashMessage} onDismiss={() => setFlashMessage(null)} />
     </div>
   );
 }

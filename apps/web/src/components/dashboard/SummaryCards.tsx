@@ -65,9 +65,35 @@ export function InProgressCard({
   );
 
   return (
-    <Card title="진행 중">
+    <Card title="진행">
       {items.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">진행 중인 업무가 없습니다.</p>
+      ) : (
+        <ul>
+          {items.slice(0, 8).map((task) => (
+            <TaskRow key={task.id} task={task} onClick={onTaskClick} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+export function PlannedCard({
+  tasks,
+  onTaskClick,
+}: {
+  tasks: TaskDto[];
+  onTaskClick?: (task: TaskDto) => void;
+}) {
+  const items = tasks.filter(
+    (t) => t.status === "active" && t.workflowStatus === "planned",
+  );
+
+  return (
+    <Card title="예정">
+      {items.length === 0 ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">예정된 업무가 없습니다.</p>
       ) : (
         <ul>
           {items.slice(0, 8).map((task) => (
