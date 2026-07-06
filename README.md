@@ -7,7 +7,7 @@
 <p align="center">The easiest way to add your work schedule and get reminders.
 <br> No downloads needed, just use the apps you already use.
 <br>
-<a href="https://powers-addresses-cubic-magnificent.trycloudflare.com">Visit MyOwn to join.</a>
+Visit <a href="https://powers-addresses-cubic-magnificent.trycloudflare.com">MyOwn</a> to join.
 </p>
 
 ## 기능
