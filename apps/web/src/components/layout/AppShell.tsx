@@ -11,7 +11,7 @@ export function AppShell() {
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}
       />
-      <main className="min-h-screen min-w-0 flex-1 overflow-auto bg-gradient-to-br from-surface via-white to-brand-muted/40 p-6 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800/80">
+      <main className="min-h-screen min-w-0 flex-1 overflow-auto p-6">
         <Outlet />
       </main>
     </div>

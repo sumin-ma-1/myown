@@ -6,6 +6,43 @@ html.dark {
   color-scheme: dark;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
-  @apply bg-surface text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  @apply text-slate-900 antialiased dark:text-slate-100;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(ellipse 75% 55% at 100% 0%, rgba(191, 219, 254, 0.45), transparent 55%),
+    radial-gradient(ellipse 65% 50% at 0% 100%, rgba(186, 230, 253, 0.35), transparent 50%),
+    linear-gradient(160deg, #f8fafc 0%, #ffffff 42%, #f1f5f9 100%);
+}
+
+html.dark body {
+  background-color: #020617;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(37, 99, 235, 0.18), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 0% 100%, rgba(79, 70, 229, 0.14), transparent 50%),
+    linear-gradient(160deg, #020617 0%, #0f172a 48%, #1e293b 100%);
+}
+
+@layer utilities {
+  .page-gradient {
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(ellipse 75% 55% at 100% 0%, rgba(191, 219, 254, 0.45), transparent 55%),
+      radial-gradient(ellipse 65% 50% at 0% 100%, rgba(186, 230, 253, 0.35), transparent 50%),
+      linear-gradient(160deg, #f8fafc 0%, #ffffff 42%, #f1f5f9 100%);
+  }
+
+  html.dark .page-gradient {
+    background-color: #020617;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(37, 99, 235, 0.18), transparent 55%),
+      radial-gradient(ellipse 60% 45% at 0% 100%, rgba(79, 70, 229, 0.14), transparent 50%),
+      linear-gradient(160deg, #020617 0%, #0f172a 48%, #1e293b 100%);
+  }
 }

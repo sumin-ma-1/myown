@@ -4,8 +4,11 @@
 
 <h1 align="center">MyOwn</h1>
 
-<p align="center">The easiest way to add your work schedule and get reminders!
-<br> No downloads needed, just use the apps you already use.</p>
+<p align="center">The easiest way to add your work schedule and get reminders.
+<br> No downloads needed, just use the apps you already use.
+<br>
+<a href="https://powers-addresses-cubic-magnificent.trycloudflare.com">Visit MyOwn to join.</a>
+</p>
 
 ## 기능
 

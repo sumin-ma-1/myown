@@ -49,7 +49,7 @@ export function AdminLayout() {
           {theme === "dark" ? "라이트 모드" : "다크 모드"}
         </button>
       </aside>
-      <main className="flex-1 overflow-auto bg-gradient-to-br from-surface via-white to-brand-muted/40 p-6 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800/80">
+      <main className="flex-1 overflow-auto p-6">
         <Outlet />
       </main>
     </div>

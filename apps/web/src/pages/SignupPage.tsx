@@ -4,6 +4,7 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { ThemeToggleButton } from "@/components/ui/ThemeToggleButton";
 import { api } from "@/api/client";
 import { googleAuthUrl } from "@/lib/google-auth";
+import { PAGE_BG_CLASS } from "@/lib/pageBackground";
 
 const inputClass =
   "w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm outline-none focus:border-brand dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100";
@@ -44,7 +45,7 @@ export function SignupPage() {
   const canSignup = Boolean(inviteCode.trim() && allowedEmail && !inviteError);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+    <div className={`relative flex min-h-screen items-center justify-center p-4 ${PAGE_BG_CLASS}`}>
       <ThemeToggleButton className="absolute right-4 top-4" />
       <div className="w-full max-w-md rounded-2xl border border-surface-border bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
         <div className="mb-6 flex items-center gap-3">
