@@ -15,7 +15,7 @@
 - **KakaoTalk** (선택, `KAKAO_CHANNEL_URL` 설정 시): 오픈빌더 스킬로 업무 등록·조회 · 알림 발송은 Telegram 우선
 
 ### 웹 대시보드
-- [웹 바로가기 링크](`https://powers-addresses-cubic-magnificent.trycloudflare.com)
+- [웹 바로가기 링크](https://powers-addresses-cubic-magnificent.trycloudflare.com)
 - **Google 로그인**: 이메일 전용 초대코드 (클로즈드 베타)
 - **업무 현황**: 금일 마감·진행 중 요약, 월/주 캘린더, D-DAY 알림 기본값 설정
 - **등록 업무 목록**: 진행/완료/전체 필터, 정렬, 웹에서 등록·수정·완료·삭제
