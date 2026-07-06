@@ -765,7 +765,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                 {canComplete && (
                   <button
                     type="button"
-                    className="rounded-lg border border-emerald-200 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-200 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
                     disabled={footerBusy}
                     onClick={() => {
                       if (!taskId) return;
@@ -775,12 +775,15 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                       }
                     }}
                   >
+                    <span className="material-icons text-[18px] leading-none" aria-hidden>
+                      check_circle
+                    </span>
                     {completeTaskMutation.isPending ? "처리 중…" : "업무 완료"}
                   </button>
                 )}
                 <button
                   type="button"
-                  className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+                  className="flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
                   disabled={footerBusy}
                   onClick={() => {
                     if (!taskId) return;
@@ -790,6 +793,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                     }
                   }}
                 >
+                  <span className="material-icons text-[18px] leading-none" aria-hidden>
+                    delete
+                  </span>
                   {deleteTaskMutation.isPending ? "삭제 중…" : "업무 삭제"}
                 </button>
               </div>

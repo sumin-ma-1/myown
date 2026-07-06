@@ -41,8 +41,32 @@ interface PanelRowProps {
   subtitle?: string | null;
 }
 
-function PanelRow({ iconId, name, description, status, subtitle }: PanelRowProps) {
+function PanelRow({
+  iconId,
+  name,
+  description,
+  status,
+  subtitle,
+  compact = false,
+}: PanelRowProps & { compact?: boolean }) {
   const muted = status === "unavailable";
+  const tooltip = compact
+    ? `${name} · ${statusLabel(status)}`
+    : description;
+
+  if (compact) {
+    return (
+      <li title={tooltip}>
+        <div
+          className={`flex items-center justify-center rounded-lg p-1.5 ${
+            status === "connected" ? "bg-slate-50" : ""
+          } ${muted ? "opacity-40" : ""}`}
+        >
+          <IntegrationIcon id={iconId} size={18} />
+        </div>
+      </li>
+    );
+  }
 
   return (
     <li
@@ -67,7 +91,7 @@ function PanelRow({ iconId, name, description, status, subtitle }: PanelRowProps
   );
 }
 
-function IntegrationRow({ item }: { item: IntegrationDto }) {
+function IntegrationRow({ item, compact }: { item: IntegrationDto; compact?: boolean }) {
   return (
     <PanelRow
       iconId={item.provider}
@@ -75,6 +99,7 @@ function IntegrationRow({ item }: { item: IntegrationDto }) {
       description={item.description}
       status={item.status}
       subtitle={item.displayName}
+      compact={compact}
     />
   );
 }
@@ -87,7 +112,11 @@ function googleCalendarStatus(
   return "disconnected";
 }
 
-export function IntegrationsPanel() {
+interface IntegrationsPanelProps {
+  compact?: boolean;
+}
+
+export function IntegrationsPanel({ compact = false }: IntegrationsPanelProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["integrations"],
     queryFn: api.listIntegrations,
@@ -103,24 +132,31 @@ export function IntegrationsPanel() {
   const gcalStatus = googleCalendarStatus(googleCalendar.data);
 
   return (
-    <div className="mb-6">
-      <Link
-        to="/integrations"
-        className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:text-brand"
-      >
-        연동 APP
-      </Link>
-      {isLoading && <p className="text-xs text-slate-500">불러오는 중…</p>}
-      {error && (
+    <div className={compact ? "mb-4 w-full" : "mb-6"}>
+      {!compact && (
+        <Link
+          to="/integrations"
+          className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:text-brand"
+        >
+          연동 APP
+        </Link>
+      )}
+      {isLoading && !compact && <p className="text-xs text-slate-500">불러오는 중…</p>}
+      {isLoading && compact && (
+        <p className="text-center text-[10px] text-slate-400" title="불러오는 중…">
+          …
+        </p>
+      )}
+      {error && !compact && (
         <p className="text-xs text-red-600">
           {error instanceof Error ? error.message : "연동 목록을 불러오지 못했습니다."}
         </p>
       )}
       {data && (
         <>
-          <ul className="space-y-1">
+          <ul className={compact ? "flex flex-col items-center gap-1" : "space-y-1"}>
             {data.items.map((item) => (
-              <IntegrationRow key={item.provider} item={item} />
+              <IntegrationRow key={item.provider} item={item} compact={compact} />
             ))}
             {googleCalendar.data && (
               <PanelRow
@@ -129,10 +165,11 @@ export function IntegrationsPanel() {
                 description="Google Calendar 일정을 가져와 업무로 활성화"
                 status={gcalStatus}
                 subtitle={googleCalendar.data.googleEmail}
+                compact={compact}
               />
             )}
           </ul>
-          {needsLink && (
+          {needsLink && !compact && (
             <Link
               to="/integrations"
               className="mt-2 block rounded-lg bg-brand-muted px-3 py-2 text-center text-xs font-medium text-brand hover:opacity-90"

@@ -225,7 +225,7 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
       <ol className="list-decimal space-y-1 pl-4 text-xs text-slate-600">
         <li>아래 「카카오 연결」을 누릅니다.</li>
         <li>열리는 카카오톡 채널에서 <strong>채널 추가</strong> 후 채팅을 엽니다.</li>
-        <li>안내 문구를 채팅에 붙여넣고 전송합니다.</li>
+        <li>아래 「채널에 입력할 문구」를 채팅에 붙여넣고 전송합니다.</li>
         <li>이 페이지로 돌아오면 자동으로 연결됩니다.</li>
       </ol>
       {linkPhrase && (

@@ -3,8 +3,8 @@ import type { ChannelProvider } from "@/api/types";
 export type IntegrationIconId = ChannelProvider | "google-calendar";
 
 const ICON_SRC: Record<IntegrationIconId, string> = {
-  telegram: "/icons/telegram.svg",
-  kakao: "/icons/kakao.svg",
+  telegram: "/icons/telegram.png",
+  kakao: "/icons/kakaotalk.png",
   slack: "/icons/slack.png",
   "google-calendar": "/icons/google-calendar.png",
 };

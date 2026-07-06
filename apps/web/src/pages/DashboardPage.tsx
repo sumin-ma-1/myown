@@ -4,6 +4,7 @@ import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
 import { DdaySettingsCard } from "@/components/dashboard/DdaySettingsCard";
+import { RotatingSubtitle } from "@/components/dashboard/RotatingSubtitle";
 import { DueTodayCard, InProgressCard } from "@/components/dashboard/SummaryCards";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 
@@ -43,7 +44,7 @@ export function DashboardPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">메인 화면</h1>
-          <p className="text-sm text-slate-500">오늘의 업무와 일정을 한눈에 확인합니다.</p>
+          <RotatingSubtitle />
         </div>
         <button
           type="button"
