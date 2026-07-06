@@ -97,13 +97,13 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
         <IntegrationsPanel compact={!expanded} />
 
         <nav className={`flex flex-1 flex-col gap-1 ${expanded ? "" : "w-full"}`}>
-          <NavLink to="/" end title={expanded ? undefined : "메인 화면"}>
+          <NavLink to="/" end title={expanded ? undefined : "업무 현황"}>
             {({ isActive }) => (
               <span className={navLinkClass(expanded, isActive)}>
                 <span className={navIconClass} aria-hidden>
                   home
                 </span>
-                {expanded && "메인 화면"}
+                {expanded && "업무 현황"}
               </span>
             )}
           </NavLink>

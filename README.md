@@ -4,19 +4,32 @@
 
 <h1 align="center">MyOwn</h1>
 
-<p align="center">개인 일정·업무를 기억하고 텔레그램으로 알려주는 업무 관리 AI 개인 비서</p>
+<p align="center">The easiest way to add your work schedule and get reminders! No downloads needed, just use the apps you already use.</p>
 
 ## 기능
 
-- 텔레그램 봇 (grammY), 화이트리스트 기반 1인 사용
+### 메신저
+
+- **Telegram**: grammY 봇, 웹 **연동 APP**에서 계정 연결, 첨부 분석, 인라인 버튼 알림
+- **KakaoTalk** (선택, `KAKAO_CHANNEL_URL` 설정 시): 오픈빌더 스킬로 업무 등록·조회 · 알림 발송은 Telegram 우선
+
+### 웹 대시보드 (`https://powers-addresses-cubic-magnificent.trycloudflare.com`)
+
+- **Google 로그인** · 이메일 전용 초대코드 (클로즈드 베타)
+- **업무 현황** — 금일 마감·진행 중 요약, 월/주 캘린더, D-DAY 알림 기본값 설정
+- **등록 업무 목록** — 진행/완료/전체 필터, 정렬, 웹에서 등록·수정·완료·삭제
+- **연동 APP** — Telegram · KakaoTalk · **Google Calendar** (일정 가져오기 → 선택 활성화)
+- 접이식 사이드바(아이콘 모드), **라이트·다크 모드**
+- **관리자** (`/admin`) — 사용자·초대코드·로그인 기록
+
+### 업무·알림·AI (Telegram·웹·카카오 공통 DB)
+
 - 업무 등록 · 목록 · 오늘 마감 · 완료
 - 마감일·시각 리마인더 (D-3, D-1, 당일 09:00, 시각 마감 시 1시간 전)
 - 추가 알림 (`/remind`, `N분 후`, `내일 N시에 알려줘`)
-- 인라인 버튼: 완료, 1시간 후, 상세
-- 첨부파일 분석 (HWP, HWPX, PDF, DOCX, 이미지) → 업무 자동 추출
+- 인라인 버튼: 완료, 1시간 후, 상세 (Telegram)
+- 첨부파일 분석 (HWP, HWPX, PDF, DOCX, 이미지) → 업무 자동 추출 (Telegram)
 - OpenAI / Ollama 연동 시 자연어 처리
-- **웹 대시보드** — 메인 화면, 업무 목록, 달력, D-DAY 설정 (텔레그램과 동일 DB)
-- **클로즈드 베타** — Google 로그인, 이메일 전용 초대코드, 관리자 UI
 
 ## 사전 요구사항
 
@@ -53,6 +66,7 @@ cp .env.example .env
 | `GOOGLE_CLIENT_ID` | Google OAuth 클라이언트 ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 클라이언트 시크릿 |
 | `GOOGLE_REDIRECT_URI` | `http://localhost:5173/api/auth/google/callback` |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | (선택) Calendar OAuth callback — 기본 `{WEB_APP_URL}/api/integrations/google-calendar/callback` |
 | `ADMIN_EMAILS` | 관리자 Google 이메일. 초대코드 없이 가입·`/admin` |
 | `WEB_API_PORT` | API 포트 (기본 `4000`) |
 | `KAKAO_CHANNEL_URL` | (선택) 카카오톡 채널 URL — 설정 시 KakaoTalk 연동 활성화 |
@@ -223,7 +237,7 @@ Telegram 봇은 내 PC의 gateway가 돌아가면 사용자도 같은 봇을 쓸
 
 | 명령 | 설명 |
 |------|------|
-| `/start` | 도움말 |
+| `/start`, `/help` | 도움말 |
 | `/list` | 활성 업무 목록 |
 | `/today` | 오늘 마감 업무 |
 | `/add 제목 [YYYY-MM-DD] [HH:MM]` | 업무 등록 (`HH:MM` = 그때까지 마감) |
@@ -257,10 +271,10 @@ Telegram 봇은 내 PC의 gateway가 돌아가면 사용자도 같은 봇을 쓸
 ```
 myown/
 ├── apps/
-│   ├── gateway/           # Telegram 봇, REST API, Reminder Worker
+│   ├── gateway/           # Telegram·Kakao 스킬, REST API, Reminder Worker, Agent
 │   │   └── src/api/       # 웹 대시보드용 HTTP API
-│   └── web/               # React 대시보드 (Vite)
-├── packages/database/     # Drizzle ORM
+│   └── web/               # React 대시보드 (Vite, Tailwind)
+├── packages/database/     # Drizzle ORM (users, tasks, channel_connections, …)
 ├── services/hwp-parser/   # HWP 파서 (Python)
 ├── docs/FEATURES.md       # 기능설명서
 └── docker-compose.yml
