@@ -65,7 +65,6 @@ export class KakaoLinkService {
   async completeLink(
     token: string,
     kakaoUserId: string,
-    displayName?: string,
   ): Promise<{ ok: true; userId: string } | { ok: false; message: string }> {
     const key = `${LINK_PREFIX}${token}`;
     const raw = await this.redis.get(key);
@@ -114,7 +113,7 @@ export class KakaoLinkService {
       };
     }
 
-    await this.channelConnections.ensureKakao(user.id, kakaoUserId, displayName);
+    await this.channelConnections.ensureKakao(user.id, kakaoUserId);
 
     const completed: LinkRecord = {
       ...record,

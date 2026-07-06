@@ -1,10 +1,13 @@
 import type { AppContext } from "../context.js";
 import type { KakaoSkillRequest } from "./types.js";
-import { extractLinkToken, kakaoDisplayName } from "./types.js";
+import { extractLinkToken } from "./types.js";
 import { kakaoMultiTextResponse, kakaoTextResponse } from "./response.js";
 
 const HELP_TEXT = [
   "안녕하세요, MyOwn 업무 관리 비서입니다.",
+  "",
+  "자연어:",
+  '"내일 오후 3시까지 보고서 작성해야해"',
   "",
   "명령어:",
   "목록 — 활성 업무 목록",
@@ -12,9 +15,6 @@ const HELP_TEXT = [
   "완료 1 — 1번 업무 완료",
   "추가 보고서 2026-06-15 14:00 — 업무 등록",
   "알림 1 5분 — N분 후 알림",
-  "",
-  "자연어 (LLM 설정 시):",
-  '"내일 오후 3시까지 보고서 작성해줘"',
   "",
   "※ 알림 발송은 Telegram 연동 시 우선 지원됩니다.",
 ].join("\n");
@@ -65,19 +65,15 @@ export async function handleKakaoSkill(app: AppContext, body: KakaoSkillRequest)
 
   const linkToken = extractLinkToken(utterance);
   if (linkToken) {
-    const result = await app.kakaoLink.completeLink(
-      linkToken,
-      kakaoUserId,
-      kakaoDisplayName(body.userRequest.user),
-    );
+    const result = await app.kakaoLink.completeLink(linkToken, kakaoUserId);
     if (result.ok) {
       return kakaoTextResponse(
         [
           "✅ 웹 대시보드와 카카오톡이 연결되었습니다.",
           "",
           "이제 채널에서 업무를 등록하고 조회할 수 있습니다.",
-          "「목록」— 활성 업무",
-          "「도움말」— 명령어 안내",
+          "「목록」활성 업무",
+          "「도움말」명령어 안내",
         ].join("\n"),
       );
     }

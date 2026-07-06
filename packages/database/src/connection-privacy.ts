@@ -2,7 +2,11 @@
 export function isSensitiveConnectionLabel(value: string | null | undefined): boolean {
   if (!value?.trim()) return false;
   const trimmed = value.trim();
-  return /^Telegram \d+$/i.test(trimmed) || /^\d{6,}$/.test(trimmed);
+  return (
+    /^Telegram \d+$/i.test(trimmed) ||
+    /^\d{6,}$/.test(trimmed) ||
+    /^[a-f0-9]{20,}$/i.test(trimmed)
+  );
 }
 
 export function sanitizeConnectionDisplayName(

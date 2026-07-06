@@ -53,7 +53,10 @@ function toPublicDto(
     available: item.available,
     status,
     connectionId: conn?.id ?? null,
-    displayName: sanitizeConnectionDisplayName(conn?.displayName ?? null),
+    displayName:
+      item.provider === "kakao"
+        ? null
+        : sanitizeConnectionDisplayName(conn?.displayName ?? null),
     connectedAt: conn?.connectedAt?.toISOString() ?? null,
   };
 }

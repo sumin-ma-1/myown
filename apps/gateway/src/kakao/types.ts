@@ -34,11 +34,6 @@ export interface KakaoSkillResponse {
   };
 }
 
-export function kakaoDisplayName(user: KakaoSkillRequest["userRequest"]["user"]): string | undefined {
-  const props = user.properties ?? {};
-  return props.plusfriendUserKey ?? props.botUserKey ?? props.appUserId ?? undefined;
-}
-
 export function extractLinkToken(utterance: string): string | null {
   const trimmed = utterance.trim();
   const match = trimmed.match(/(?:^|\s)link_([a-f0-9]{32})(?:\s|$)/i);
