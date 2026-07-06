@@ -400,6 +400,20 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
     },
   });
 
+  const completeTaskMutation = useMutation({
+    mutationFn: () => api.updateTask(taskId!, { status: "completed" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (taskId) void queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      onClose();
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "완료 처리에 실패했습니다.");
+    },
+  });
+
   const offsets = settings?.notification.ddayOffsets ?? [3, 1, 0];
   const offsetLabel = offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
   const reminderHour = settings?.notification.reminderHour ?? 9;
@@ -412,6 +426,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
     remindersData?.items.filter((r) => r.status !== "cancelled") ?? [];
   const extraScheduleOptions = { useDefaultReminders, ddayOffsets: offsets };
   const isLoading = mode === "edit" && taskLoading;
+  const canComplete = mode === "edit" && taskData?.item.status === "active";
+  const footerBusy =
+    saveMutation.isPending || deleteTaskMutation.isPending || completeTaskMutation.isPending;
 
   return (
     <Modal
@@ -744,20 +761,38 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
             {mode === "edit" ? (
-              <button
-                type="button"
-                className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
-                disabled={deleteTaskMutation.isPending || saveMutation.isPending}
-                onClick={() => {
-                  if (!taskId) return;
-                  const name = title.trim() || "이 업무";
-                  if (window.confirm(`「${name}」을(를) 삭제할까요?\n예약된 알림도 함께 취소됩니다.`)) {
-                    deleteTaskMutation.mutate();
-                  }
-                }}
-              >
-                {deleteTaskMutation.isPending ? "삭제 중…" : "업무 삭제"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {canComplete && (
+                  <button
+                    type="button"
+                    className="rounded-lg border border-emerald-200 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                    disabled={footerBusy}
+                    onClick={() => {
+                      if (!taskId) return;
+                      const name = title.trim() || "이 업무";
+                      if (window.confirm(`「${name}」을(를) 완료 처리할까요?`)) {
+                        completeTaskMutation.mutate();
+                      }
+                    }}
+                  >
+                    {completeTaskMutation.isPending ? "처리 중…" : "업무 완료"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+                  disabled={footerBusy}
+                  onClick={() => {
+                    if (!taskId) return;
+                    const name = title.trim() || "이 업무";
+                    if (window.confirm(`「${name}」을(를) 삭제할까요?\n예약된 알림도 함께 취소됩니다.`)) {
+                      deleteTaskMutation.mutate();
+                    }
+                  }}
+                >
+                  {deleteTaskMutation.isPending ? "삭제 중…" : "업무 삭제"}
+                </button>
+              </div>
             ) : (
               <span />
             )}
@@ -772,7 +807,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
               <button
                 type="submit"
                 className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                disabled={saveMutation.isPending || deleteTaskMutation.isPending}
+                disabled={footerBusy}
               >
                 {saveMutation.isPending ? "저장 중…" : mode === "create" ? "등록" : "저장"}
               </button>
