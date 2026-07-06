@@ -14,7 +14,7 @@ export function GoogleSignInButton({
   return (
     <a
       href={googleAuthUrl(purpose, inviteCode)}
-      className={`flex w-full items-center justify-center gap-2 rounded-lg border border-surface-border bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ${
+      className={`flex w-full items-center justify-center gap-2 rounded-lg border border-surface-border bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
       aria-disabled={disabled}

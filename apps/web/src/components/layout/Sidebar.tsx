@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { IntegrationsPanel } from "@/components/integrations/IntegrationsPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const navIconClass = "material-icons shrink-0 text-[18px] leading-none";
 
@@ -13,16 +14,19 @@ function navLinkClass(expanded: boolean, isActive: boolean) {
   return `flex items-center rounded-lg text-sm transition ${
     expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
   } ${
-    isActive ? "bg-brand-muted font-medium text-brand" : "text-slate-600 hover:bg-slate-100"
+    isActive
+      ? "bg-brand-muted font-medium text-brand dark:bg-blue-950/60 dark:text-blue-300"
+      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
   }`;
 }
 
 export function Sidebar({ expanded, onToggle }: SidebarProps) {
   const { me, isAdmin, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   return (
     <aside
-      className={`flex shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white transition-[width] duration-300 ease-in-out ${
+      className={`flex shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
         expanded ? "w-56" : "w-14"
       }`}
     >
@@ -42,12 +46,12 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
                   width={32}
                   height={32}
                 />
-                <p className="text-lg font-bold text-slate-900">MyOwn</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">MyOwn</p>
               </NavLink>
               <button
                 type="button"
                 onClick={onToggle}
-                className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 aria-label="사이드바 접기"
               >
                 <span className="material-icons text-[20px] leading-none" aria-hidden>
@@ -67,7 +71,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
               <button
                 type="button"
                 onClick={onToggle}
-                className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100"
+                className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 aria-label="사이드바 펼치기"
               >
                 <span className="material-icons text-[20px] leading-none" aria-hidden>
@@ -78,9 +82,13 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           )}
           {expanded && (
             <>
-              <p className="mt-1 pl-10 text-xs text-slate-500">개인 업무 관리 플랫폼</p>
+              <p className="mt-1 pl-10 text-xs text-slate-500 dark:text-slate-400">
+                개인 업무 관리 플랫폼
+              </p>
               {me?.account?.email && (
-                <p className="mt-2 truncate pl-10 text-xs text-slate-400">{me.account.email}</p>
+                <p className="mt-2 truncate pl-10 text-xs text-slate-400 dark:text-slate-500">
+                  {me.account.email}
+                </p>
               )}
             </>
           )}
@@ -135,10 +143,24 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
 
         <button
           type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title={expanded ? undefined : theme === "dark" ? "라이트 모드" : "다크 모드"}
+          className={`flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
+            expanded ? "mt-4 gap-1.5 px-3 py-2" : "mt-4 justify-center px-2 py-2"
+          }`}
+        >
+          <span className="material-icons text-[18px] leading-none" aria-hidden>
+            {theme === "dark" ? "light_mode" : "dark_mode"}
+          </span>
+          {expanded && (theme === "dark" ? "라이트 모드" : "다크 모드")}
+        </button>
+
+        <button
+          type="button"
           onClick={() => void logout()}
           title={expanded ? undefined : "로그아웃"}
-          className={`mt-4 flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 ${
-            expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
+          className={`flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
+            expanded ? "mt-1 gap-1.5 px-3 py-2" : "mt-1 justify-center px-2 py-2"
           }`}
         >
           <span className="material-icons text-[18px] leading-none" aria-hidden>

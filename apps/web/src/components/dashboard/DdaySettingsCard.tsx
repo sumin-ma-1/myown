@@ -45,21 +45,21 @@ export function DdaySettingsCard() {
         </button>
       }
     >
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-slate-600 dark:text-slate-300">
         마감{" "}
         {offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ")} 알림
       </p>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
         새 업무 등록 시 기본 알림으로 적용됩니다.
       </p>
 
       {open && (
-        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <label className="block text-xs font-medium text-slate-600">
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-900/50">
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
             D-DAY 오프셋 (쉼표 구분, 예: 7,3,1,0)
           </label>
           <input
-            className="mt-1 w-full rounded-md border border-surface-border px-2 py-1 text-sm"
+            className="mt-1 w-full rounded-md border border-surface-border bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
@@ -80,7 +80,7 @@ export function DdaySettingsCard() {
             </button>
             <button
               type="button"
-              className="rounded-md border px-3 py-1 text-xs"
+              className="rounded-md border border-surface-border px-3 py-1 text-xs dark:border-slate-600 dark:text-slate-300"
               onClick={() => setOpen(false)}
             >
               닫기

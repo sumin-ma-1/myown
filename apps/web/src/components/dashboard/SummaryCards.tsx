@@ -8,16 +8,16 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
     <li>
       <button
         type="button"
-        className={`flex w-full items-start justify-between gap-2 border-b border-slate-100 py-2 text-left last:border-0 ${
-          onClick ? "cursor-pointer hover:bg-slate-50/80" : ""
+        className={`flex w-full items-start justify-between gap-2 border-b border-slate-100 py-2 text-left last:border-0 dark:border-slate-700 ${
+          onClick ? "cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50" : ""
         }`}
         onClick={() => onClick?.(task)}
         disabled={!onClick}
       >
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-800">{task.title}</p>
+          <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{task.title}</p>
           {task.dueAt && (
-            <p className="text-xs text-slate-500">{formatDateTime(task.dueAt)}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(task.dueAt)}</p>
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -41,7 +41,7 @@ export function DueTodayCard({
   return (
     <Card title="금일 마감">
       {tasks.length === 0 ? (
-        <p className="text-sm text-slate-500">오늘 마감 업무가 없습니다.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">오늘 마감 업무가 없습니다.</p>
       ) : (
         <ul>
           {tasks.map((task) => (
@@ -67,7 +67,7 @@ export function InProgressCard({
   return (
     <Card title="진행 중">
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">진행 중인 업무가 없습니다.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">진행 중인 업무가 없습니다.</p>
       ) : (
         <ul>
           {items.slice(0, 8).map((task) => (

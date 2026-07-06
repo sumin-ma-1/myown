@@ -23,13 +23,13 @@ function statusLabel(status: IntegrationStatus): string {
 function statusClass(status: IntegrationStatus): string {
   switch (status) {
     case "connected":
-      return "text-emerald-600";
+      return "text-emerald-600 dark:text-emerald-400";
     case "error":
-      return "text-red-600";
+      return "text-red-600 dark:text-red-400";
     case "unavailable":
-      return "text-slate-400";
+      return "text-slate-400 dark:text-slate-500";
     default:
-      return "text-slate-500";
+      return "text-slate-500 dark:text-slate-400";
   }
 }
 
@@ -59,7 +59,7 @@ function PanelRow({
       <li title={tooltip}>
         <div
           className={`flex items-center justify-center rounded-lg p-1.5 ${
-            status === "connected" ? "bg-slate-50" : ""
+            status === "connected" ? "bg-slate-50 dark:bg-slate-800/60" : ""
           } ${muted ? "opacity-40" : ""}`}
         >
           <IntegrationIcon id={iconId} size={18} />
@@ -71,8 +71,8 @@ function PanelRow({
   return (
     <li
       className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-        status === "connected" ? "bg-slate-50" : ""
-      } ${muted ? "text-slate-400" : "text-slate-700"}`}
+        status === "connected" ? "bg-slate-50 dark:bg-slate-800/60" : ""
+      } ${muted ? "text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}
       title={description}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -80,7 +80,7 @@ function PanelRow({
         <div className="min-w-0">
           <span className="text-sm">{name}</span>
           {subtitle && status === "connected" && (
-            <p className="truncate text-[11px] text-slate-500">{subtitle}</p>
+            <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>
           )}
         </div>
       </div>
@@ -136,7 +136,7 @@ export function IntegrationsPanel({ compact = false }: IntegrationsPanelProps) {
       {!compact && (
         <Link
           to="/integrations"
-          className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:text-brand"
+          className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:text-brand dark:text-slate-500"
         >
           연동 APP
         </Link>

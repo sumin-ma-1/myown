@@ -12,24 +12,27 @@ function ReminderPanel({ taskId }: { taskId: string }) {
     queryFn: () => api.listReminders(taskId),
   });
 
-  if (isLoading) return <p className="text-xs text-slate-500">불러오는 중…</p>;
+  if (isLoading) return <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중…</p>;
   const items = data?.items ?? [];
   if (items.length === 0) {
-    return <p className="text-xs text-slate-500">예약된 알림이 없습니다.</p>;
+    return <p className="text-xs text-slate-500 dark:text-slate-400">예약된 알림이 없습니다.</p>;
   }
 
   return (
     <ul className="max-h-40 space-y-1 overflow-auto text-xs">
       {items.map((r) => (
-        <li key={r.id} className="flex justify-between gap-2 rounded bg-slate-50 px-2 py-1">
-          <span>{formatDateTime(r.fireAt)}</span>
+        <li
+          key={r.id}
+          className="flex justify-between gap-2 rounded bg-slate-50 px-2 py-1 dark:bg-slate-800"
+        >
+          <span className="text-slate-700 dark:text-slate-200">{formatDateTime(r.fireAt)}</span>
           <span
             className={
               r.status === "pending"
-                ? "text-amber-600"
+                ? "text-amber-600 dark:text-amber-400"
                 : r.status === "sent"
-                  ? "text-emerald-600"
-                  : "text-slate-400"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-slate-400 dark:text-slate-500"
             }
           >
             {r.status === "pending" ? "예약" : r.status === "sent" ? "발송" : "취소"}
@@ -113,14 +116,14 @@ export function ReminderBell({ taskId, pendingCount }: ReminderBellProps) {
       <button
         ref={buttonRef}
         type="button"
-        className="rounded-full p-1.5 hover:bg-slate-100"
+        className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
         title="알림 로그"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
         🔔
         {pendingCount > 0 && (
-          <span className="ml-0.5 text-xs text-amber-600">{pendingCount}</span>
+          <span className="ml-0.5 text-xs text-amber-600 dark:text-amber-400">{pendingCount}</span>
         )}
       </button>
 
@@ -128,12 +131,14 @@ export function ReminderBell({ taskId, pendingCount }: ReminderBellProps) {
         createPortal(
           <div
             ref={panelRef}
-            className="fixed z-50 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-lg"
+            className="fixed z-50 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:shadow-2xl"
             style={{ top: position.top, left: position.left, width: PANEL_WIDTH }}
             role="dialog"
             aria-label="알림 예약 및 발송 내역"
           >
-            <p className="mb-2 text-xs font-semibold text-slate-700">알림 예약/발송</p>
+            <p className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
+              알림 예약/발송
+            </p>
             <ReminderPanel taskId={taskId} />
           </div>,
           document.body,

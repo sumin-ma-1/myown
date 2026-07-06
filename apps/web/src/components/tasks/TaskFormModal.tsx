@@ -84,7 +84,7 @@ function ReminderList({
   cancelPending: boolean;
 }) {
   if (items.length === 0) {
-    return <p className="mt-2 text-xs text-slate-500">{emptyMessage}</p>;
+    return <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{emptyMessage}</p>;
   }
 
   return (
@@ -92,7 +92,7 @@ function ReminderList({
       {items.map((r) => (
         <li
           key={r.id}
-          className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1"
+          className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1 dark:bg-slate-800"
         >
           <span>{formatDateTime(r.fireAt)}</span>
           <span className="flex items-center gap-2">
@@ -438,7 +438,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
       extraWide
     >
       {isLoading ? (
-        <p className="text-sm text-slate-500">불러오는 중…</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>
       ) : (
         <form
           className="space-y-4"
@@ -457,12 +457,12 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
         >
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-800">업무</h3>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">업무</h3>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600">제목 *</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">제목 *</label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   autoFocus
@@ -470,9 +470,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600">설명</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">설명</label>
                 <textarea
-                  className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -481,35 +481,35 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">마감일</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감일</label>
                   <input
                     type="date"
-                    className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">마감 시각</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감 시각</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     placeholder="14:00"
                     autoComplete="off"
-                    className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={dueTime}
                     onChange={(e) => setDueTime(e.target.value)}
                     onBlur={(e) => setDueTime(normalizeTimeInput(e.target.value))}
                   />
-                  <p className="mt-1 text-xs text-slate-400">24시간 형식 (기본 09:00)</p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">24시간 형식 (기본 09:00)</p>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">우선순위</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">우선순위</label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskDto["priority"])}
                   >
@@ -519,9 +519,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600">상태</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">상태</label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={workflowStatus}
                     onChange={(e) =>
                       setWorkflowStatus(e.target.value as TaskDto["workflowStatus"])
@@ -534,13 +534,13 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600">첨부 파일</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">첨부 파일</label>
                 {(existingAttachments.length > 0 || pendingFiles.length > 0) && (
                   <ul className="mt-2 space-y-2">
                     {existingAttachments.map((attachment) => (
                       <li
                         key={attachment.id}
-                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-800/60"
                       >
                         <span className="min-w-0 flex-1 truncate text-sm">
                           <AttachmentDownload
@@ -566,7 +566,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                       return (
                         <li
                           key={`removed-${id}`}
-                          className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-3 py-2"
+                          className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-3 py-2 dark:border-slate-600 dark:bg-slate-900/40"
                         >
                           <span className="min-w-0 flex-1 truncate text-sm text-slate-400 line-through">
                             {removed.fileName}
@@ -574,7 +574,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                           <span className="shrink-0 text-xs text-amber-600">저장 시 삭제</span>
                           <button
                             type="button"
-                            className="shrink-0 text-xs text-slate-600 hover:text-slate-800"
+                            className="shrink-0 text-xs text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
                             onClick={() =>
                               setRemovedAttachmentIds((prev) => prev.filter((x) => x !== id))
                             }
@@ -587,9 +587,9 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                     {pendingFiles.map((pending) => (
                       <li
                         key={pending.key}
-                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-800/60"
                       >
-                        <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                        <span className="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-200">
                           {pending.file.name}
                           <span className="ml-1 text-xs text-slate-400">(새 파일)</span>
                         </span>
@@ -612,22 +612,22 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                   accept=".hwp,.hwpx,.pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
                   onChange={(e) => addPendingFiles(e.target.files ?? [])}
                 />
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   여러 파일 선택 가능 (HWP, PDF, DOCX, TXT, 이미지 등 지원)
                 </p>
               </div>
             </section>
 
-            <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/60 p-4 lg:min-h-full">
-              <h3 className="text-sm font-semibold text-slate-800">알림</h3>
+            <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/60 p-4 lg:min-h-full dark:border-slate-600 dark:bg-slate-900/40">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">알림</h3>
 
               {!dueDate ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   마감일을 설정하면 알림을 예약할 수 있습니다.
                 </p>
               ) : (
                 <>
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                     <input
                       type="checkbox"
                       checked={useDefaultReminders}
@@ -637,13 +637,13 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                   </label>
 
                   {useDefaultReminders && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       마감일 기준 {offsetLabel}에 알림이 예약됩니다.
                     </p>
                   )}
 
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">추가 알림</p>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-300">추가 알림</p>
                     {extraRows.map((row, index) => {
                       const rule = rowToRule(row);
                       const scheduleHint =
@@ -664,7 +664,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                               type="number"
                               min={0}
                               placeholder="일"
-                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                               value={row.daysBefore}
                               onChange={(e) => {
                                 const next = [...extraRows];
@@ -672,12 +672,12 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                                 setExtraRows(next);
                               }}
                             />
-                            <span className="shrink-0 text-sm text-slate-500">일</span>
+                            <span className="shrink-0 text-sm text-slate-500 dark:text-slate-400">일</span>
                             <input
                               type="number"
                               min={1}
                               placeholder="시"
-                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                               value={row.hoursBefore}
                               onChange={(e) => {
                                 const next = [...extraRows];
@@ -685,12 +685,12 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                                 setExtraRows(next);
                               }}
                             />
-                            <span className="shrink-0 text-sm text-slate-500">시간</span>
+                            <span className="shrink-0 text-sm text-slate-500 dark:text-slate-400">시간</span>
                             <input
                               type="number"
                               min={1}
                               placeholder="분"
-                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm"
+                              className="w-14 shrink-0 rounded-md border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                               value={row.minutesBefore}
                               onChange={(e) => {
                                 const next = [...extraRows];
@@ -698,7 +698,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                                 setExtraRows(next);
                               }}
                             />
-                            <span className="shrink-0 text-sm text-slate-500">분 전</span>
+                            <span className="shrink-0 text-sm text-slate-500 dark:text-slate-400">분 전</span>
                             {isLastRow && (
                               <button
                                 type="button"
@@ -721,7 +721,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                             )}
                           </div>
                           {scheduleHint && (
-                            <p className="pl-0.5 text-[11px] text-slate-500">
+                            <p className="pl-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                               {scheduleHint}
                             </p>
                           )}
@@ -729,7 +729,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                       );
                     })}
                     {mode === "create" && (
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
                         추가 알림은 업무 등록 후 예약됩니다.
                       </p>
                     )}
@@ -739,8 +739,8 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
                   </div>
 
                   {mode === "edit" && (
-                    <div className="border-t border-slate-200 pt-3">
-                      <p className="text-xs font-medium text-slate-600">예약된 알림</p>
+                    <div className="border-t border-slate-200 pt-3 dark:border-slate-700">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">예약된 알림</p>
                       {remindersData && (
                         <ReminderList
                           items={scheduledReminders}
@@ -759,7 +759,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
           {error && <p className="text-sm text-red-600">{error}</p>}
           {saveMessage && <p className="text-sm text-emerald-700">{saveMessage}</p>}
 
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4 dark:border-slate-700">
             {mode === "edit" ? (
               <div className="flex flex-wrap gap-2">
                 {canComplete && (
@@ -805,7 +805,7 @@ export function TaskFormModal({ open, mode, taskId, onClose }: TaskFormModalProp
             <div className="flex gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm dark:border-slate-600 dark:text-slate-300"
                 onClick={onClose}
               >
                 닫기

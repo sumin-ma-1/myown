@@ -11,7 +11,9 @@ function statusLabel(connected: boolean): string {
 }
 
 function statusClass(connected: boolean): string {
-  return connected ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600";
+  return connected
+    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
 export function GoogleCalendarCard() {
@@ -142,7 +144,7 @@ export function GoogleCalendarCard() {
   if (!available) {
     return (
       <Card title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Google OAuth가 설정되지 않아 Calendar 연동을 사용할 수 없습니다.
         </p>
       </Card>
@@ -153,7 +155,7 @@ export function GoogleCalendarCard() {
     <Card title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}>
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Google Calendar 일정을 가져온 뒤, 원하는 항목만 MyOwn 업무로 활성화합니다.
           </p>
           <span
@@ -164,7 +166,7 @@ export function GoogleCalendarCard() {
         </div>
 
         {connected && status.data?.googleEmail && (
-          <p className="text-xs text-slate-500">연결 계정: {status.data.googleEmail}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">연결 계정: {status.data.googleEmail}</p>
         )}
 
         <div className="flex flex-wrap gap-2">
@@ -179,23 +181,23 @@ export function GoogleCalendarCard() {
             <>
               <div className="flex flex-wrap items-end gap-3 text-xs">
                 <label className="space-y-1">
-                  <span className="text-slate-600">과거 (일)</span>
+                  <span className="text-slate-600 dark:text-slate-300">과거 (일)</span>
                   <input
                     type="number"
                     min={0}
                     max={365}
-                    className="block w-20 rounded-lg border border-surface-border px-2 py-1.5"
+                    className="block w-20 rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={pastDays}
                     onChange={(e) => setPastDays(Number(e.target.value))}
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-slate-600">앞으로 (일)</span>
+                  <span className="text-slate-600 dark:text-slate-300">앞으로 (일)</span>
                   <input
                     type="number"
                     min={1}
                     max={365}
-                    className="block w-20 rounded-lg border border-surface-border px-2 py-1.5"
+                    className="block w-20 rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={futureDays}
                     onChange={(e) => setFutureDays(Number(e.target.value))}
                   />
@@ -211,7 +213,7 @@ export function GoogleCalendarCard() {
               </button>
               <button
                 type="button"
-                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                 disabled={disconnect.isPending}
                 onClick={() => disconnect.mutate()}
               >
@@ -221,16 +223,16 @@ export function GoogleCalendarCard() {
           )}
         </div>
 
-        {message && <p className="text-xs text-emerald-700">{message}</p>}
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {message && <p className="text-xs text-emerald-700 dark:text-emerald-400">{message}</p>}
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
         {connected && (
-          <div className="space-y-3 border-t border-slate-200 pt-4">
-            <p className="text-xs font-medium text-slate-700">
+          <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
               가져온 일정 ({items.length}건 · 활성 {status.data?.enabledCount ?? 0}건)
             </p>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               새로 가져온 일정은 <strong>비활성</strong>입니다.{" "}
               <strong>선택</strong>은 여러 개 고른 뒤 일괄 처리할 때 쓰고,{" "}
               <strong>활성</strong>은 그 줄만 바로 MyOwn 업무에 반영합니다.
@@ -240,29 +242,29 @@ export function GoogleCalendarCard() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                   onClick={toggleSelectAll}
                 >
                   {allSelected ? "전체 해제" : "전체 선택"}
                 </button>
                 <button
                   type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                   onClick={() => selectByEnabled(false)}
                 >
                   비활성만 선택
                 </button>
                 <button
                   type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                   onClick={() => selectByEnabled(true)}
                 >
                   활성만 선택
                 </button>
-                <span className="text-[11px] text-slate-400">|</span>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">|</span>
                 <button
                   type="button"
-                  className="rounded border border-brand/30 bg-brand/5 px-2 py-1 text-[11px] text-brand hover:bg-brand/10 disabled:opacity-50"
+                  className="rounded border border-brand/30 bg-brand/5 px-2 py-1 text-[11px] text-brand hover:bg-brand/10 disabled:opacity-50 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
                   disabled={selectedIds.length === 0 || batchPending}
                   onClick={() => batchSetEnabled.mutate({ ids: selectedIds, enabled: true })}
                 >
@@ -279,18 +281,18 @@ export function GoogleCalendarCard() {
               </div>
             )}
 
-            {imports.isLoading && <p className="text-xs text-slate-500">일정 불러오는 중…</p>}
+            {imports.isLoading && <p className="text-xs text-slate-500 dark:text-slate-400">일정 불러오는 중…</p>}
 
             {!imports.isLoading && items.length === 0 && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 아직 가져온 일정이 없습니다. 「일정 가져오기」를 눌러 주세요.
               </p>
             )}
 
             {items.length > 0 && (
-              <div className="max-h-80 overflow-y-auto rounded-lg border border-slate-200">
+              <div className="max-h-80 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-slate-50 text-slate-600">
+                  <thead className="sticky top-0 bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                     <tr>
                       <th className="px-3 py-2">
                         <input
@@ -307,7 +309,7 @@ export function GoogleCalendarCard() {
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr key={item.id} className="border-t border-slate-100">
+                      <tr key={item.id} className="border-t border-slate-100 dark:border-slate-700">
                         <td className="px-3 py-2">
                           <input
                             type="checkbox"
@@ -326,17 +328,17 @@ export function GoogleCalendarCard() {
                           />
                         </td>
                         <td className="px-3 py-2">
-                          <div className="font-medium text-slate-800">{item.title}</div>
+                          <div className="font-medium text-slate-800 dark:text-slate-100">{item.title}</div>
                           {item.description && (
-                            <div className="mt-0.5 line-clamp-2 text-slate-500">
+                            <div className="mt-0.5 line-clamp-2 text-slate-500 dark:text-slate-400">
                               {item.description}
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-slate-600">
+                        <td className="px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300">
                           {formatDateTime(item.startsAt)}
                           {item.allDay && (
-                            <span className="ml-1 text-slate-400">(종일)</span>
+                            <span className="ml-1 text-slate-400 dark:text-slate-500">(종일)</span>
                           )}
                         </td>
                       </tr>

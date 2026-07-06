@@ -11,7 +11,7 @@ interface RotatingSubtitleProps {
 
 export function RotatingSubtitle({
   messages,
-  className = "text-sm text-slate-500",
+  className = "text-sm text-slate-500 dark:text-slate-400",
 }: RotatingSubtitleProps) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);

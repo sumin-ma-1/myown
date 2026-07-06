@@ -13,10 +13,10 @@ export function IntegrationsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">연동 APP</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">연동 APP</h1>
         <RotatingSubtitle
           messages={INTEGRATIONS_SUBTITLE_MESSAGES}
-          className="mt-1 text-sm text-slate-600"
+          className="mt-1 text-sm text-slate-600 dark:text-slate-400"
         />
       </div>
 

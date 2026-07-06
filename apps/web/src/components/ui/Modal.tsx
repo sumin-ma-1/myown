@@ -30,25 +30,25 @@ export function Modal({ open, title, onClose, children, wide, extraWide }: Modal
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-slate-900/40"
+        className="absolute inset-0 bg-slate-900/40 dark:bg-black/60"
         aria-label="닫기"
         onClick={onClose}
       />
       <div
-        className={`relative max-h-[90vh] w-full overflow-auto rounded-xl bg-white shadow-xl ${
+        className={`relative max-h-[90vh] w-full overflow-auto rounded-xl bg-white shadow-xl dark:bg-slate-900 dark:shadow-2xl ${
           extraWide ? "max-w-4xl" : wide ? "max-w-2xl" : "max-w-lg"
         }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-900">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-700 dark:bg-slate-900">
+          <h2 id="modal-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {title}
           </h2>
           <button
             type="button"
-            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             onClick={onClose}
           >
             ✕

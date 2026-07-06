@@ -42,7 +42,7 @@ export function IntegrationTitle({
   className = "",
 }: IntegrationTitleProps) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-2 text-slate-800 dark:text-slate-100 ${className}`}>
       <IntegrationIcon id={id} size={iconSize} />
       <span>{name}</span>
     </span>

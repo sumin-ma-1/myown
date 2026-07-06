@@ -8,20 +8,24 @@ export function AdminUsersPage() {
     queryFn: api.adminListUsers,
   });
 
-  if (isLoading) return <p className="text-sm text-slate-500">불러오는 중…</p>;
+  if (isLoading) return <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>;
   if (error) {
-    return <p className="text-sm text-red-600">{error instanceof Error ? error.message : "오류"}</p>;
+    return (
+      <p className="text-sm text-red-600 dark:text-red-400">
+        {error instanceof Error ? error.message : "오류"}
+      </p>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">사용자</h1>
-        <p className="text-sm text-slate-500">가입한 계정과 Telegram 연동 상태</p>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">사용자</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">가입한 계정과 Telegram 연동 상태</p>
       </div>
       <Card className="overflow-hidden p-0">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-surface-border bg-slate-50 text-xs text-slate-500">
+          <thead className="border-b border-surface-border bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
             <tr>
               <th className="px-4 py-3 font-medium">이메일</th>
               <th className="px-4 py-3 font-medium">역할</th>
@@ -33,29 +37,36 @@ export function AdminUsersPage() {
           </thead>
           <tbody>
             {data?.items.map((user) => (
-              <tr key={user.id} className="border-b border-surface-border last:border-0">
-                <td className="px-4 py-3 font-medium text-slate-900">{user.email}</td>
-                <td className="px-4 py-3 text-slate-600">{user.role}</td>
-                <td className="px-4 py-3 text-slate-600">
+              <tr
+                key={user.id}
+                className="border-b border-surface-border last:border-0 dark:border-slate-700"
+              >
+                <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                  {user.email}
+                </td>
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.role}</td>
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                   {user.telegramConnected
                     ? user.telegramDisplayName ?? "연결됨"
                     : "미연결"}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
                   {user.inviteCode ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                   {user.lastLoginAt
                     ? new Date(user.lastLoginAt).toLocaleString("ko-KR")
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{user.activeTaskCount}</td>
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.activeTaskCount}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {data?.items.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-slate-500">아직 사용자가 없습니다.</p>
+          <p className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+            아직 사용자가 없습니다.
+          </p>
         )}
       </Card>
     </div>

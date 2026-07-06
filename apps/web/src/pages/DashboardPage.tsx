@@ -43,7 +43,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">메인 화면</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">메인 화면</h1>
           <RotatingSubtitle messages={DASHBOARD_SUBTITLE_MESSAGES} />
         </div>
         <button

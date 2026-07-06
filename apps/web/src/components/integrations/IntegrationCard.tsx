@@ -21,13 +21,13 @@ function statusLabel(status: IntegrationDto["status"]): string {
 function statusClass(status: IntegrationDto["status"]): string {
   switch (status) {
     case "connected":
-      return "bg-emerald-50 text-emerald-700";
+      return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400";
     case "error":
-      return "bg-red-50 text-red-700";
+      return "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400";
     case "unavailable":
-      return "bg-slate-100 text-slate-400";
+      return "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500";
     default:
-      return "bg-slate-100 text-slate-600";
+      return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
   }
 }
 
@@ -91,7 +91,7 @@ function TelegramActions({ item }: { item: IntegrationDto }) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending}
           onClick={() => sync.mutate()}
         >
@@ -103,7 +103,7 @@ function TelegramActions({ item }: { item: IntegrationDto }) {
 
   return (
     <div className="space-y-3">
-      <ol className="list-decimal space-y-1 pl-4 text-xs text-slate-600">
+      <ol className="list-decimal space-y-1 pl-4 text-xs text-slate-600 dark:text-slate-400">
         <li>아래 「Telegram 연결」을 누릅니다.</li>
         <li>열리는 Telegram에서 <strong>시작(Start)</strong>을 누릅니다.</li>
         <li>이 페이지로 돌아오면 자동으로 연결됩니다.</li>
@@ -119,7 +119,7 @@ function TelegramActions({ item }: { item: IntegrationDto }) {
         </button>
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending || linking}
           onClick={() => sync.mutate()}
         >
@@ -202,7 +202,7 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending}
           onClick={() => sync.mutate()}
         >
@@ -222,19 +222,19 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
 
   return (
     <div className="space-y-3">
-      <ol className="list-decimal space-y-1 pl-4 text-xs text-slate-600">
+      <ol className="list-decimal space-y-1 pl-4 text-xs text-slate-600 dark:text-slate-400">
         <li>아래 「카카오 연결」을 누릅니다.</li>
         <li>열리는 카카오톡 채널에서 <strong>채널 추가</strong> 후 채팅을 엽니다.</li>
         <li>아래 「채널에 입력할 문구」를 채팅에 붙여넣고 전송합니다.</li>
         <li>이 페이지로 돌아오면 자동으로 연결됩니다.</li>
       </ol>
       {linkPhrase && (
-        <div className="rounded-lg border border-surface-border bg-slate-50 p-3 text-xs">
-          <p className="mb-2 font-medium text-slate-700">채널에 입력할 문구</p>
-          <code className="block break-all text-slate-800">{linkPhrase}</code>
+        <div className="rounded-lg border border-surface-border bg-slate-50 p-3 text-xs dark:border-slate-600 dark:bg-slate-900/50">
+          <p className="mb-2 font-medium text-slate-700 dark:text-slate-200">채널에 입력할 문구</p>
+          <code className="block break-all text-slate-800 dark:text-slate-200">{linkPhrase}</code>
           <button
             type="button"
-            className="mt-2 rounded border border-surface-border bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
+            className="mt-2 rounded border border-surface-border bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             onClick={() => void copyPhrase()}
           >
             {copied ? "복사됨" : "문구 복사"}
@@ -252,7 +252,7 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
         </button>
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending || linking}
           onClick={() => sync.mutate()}
         >
@@ -275,7 +275,7 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
     <Card title={<IntegrationTitle id={item.provider} name={item.name} />}>
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <p className={`text-sm ${muted ? "text-slate-400" : "text-slate-600"}`}>
+          <p className={`text-sm ${muted ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-300"}`}>
             {item.description}
           </p>
           <span
@@ -286,7 +286,7 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
         </div>
 
         {item.status === "connected" && (
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             {item.displayName && <p>표시 이름: {item.displayName}</p>}
             {connectedAt && <p>연결: {connectedAt}</p>}
           </div>
@@ -301,7 +301,7 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
         )}
 
         {item.status === "unavailable" && (
-          <p className="text-xs text-slate-400">추후 지원 예정입니다.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">추후 지원 예정입니다.</p>
         )}
       </div>
     </Card>

@@ -40,7 +40,7 @@ export function TaskListPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">등록 업무 목록</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">등록 업무 목록</h1>
           <RotatingSubtitle messages={TASK_LIST_SUBTITLE_MESSAGES} />
         </div>
         <button
@@ -65,7 +65,9 @@ export function TaskListPage() {
             key={opt.value}
             type="button"
             className={`rounded-lg px-3 py-1.5 ${
-              status === opt.value ? "bg-brand text-white" : "border border-slate-200 text-slate-600"
+              status === opt.value
+                ? "bg-brand text-white"
+                : "border border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-300"
             }`}
             onClick={() => setStatus(opt.value)}
           >

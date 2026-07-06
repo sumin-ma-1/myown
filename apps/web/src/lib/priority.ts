@@ -7,9 +7,9 @@ const LABELS: Record<TaskPriority, string> = {
 };
 
 const STYLES: Record<TaskPriority, string> = {
-  urgent: "bg-red-100 text-red-800 border-red-200",
-  high: "bg-orange-100 text-orange-800 border-orange-200",
-  medium: "bg-slate-100 text-slate-600 border-slate-200",
+  urgent: "bg-red-100 text-red-800 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-900",
+  high: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-900",
+  medium: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600",
 };
 
 export const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [

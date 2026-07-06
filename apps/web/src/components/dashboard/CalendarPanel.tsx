@@ -103,16 +103,16 @@ export function CalendarPanel({
 
   return (
     <Card
-      title="달력"
+      title="일정"
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="flex rounded-lg border border-surface-border p-0.5 text-xs">
+          <div className="flex rounded-lg border border-surface-border p-0.5 text-xs dark:border-slate-600">
             {(["month", "week"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 className={`rounded-md px-2 py-1 ${
-                  view === v ? "bg-brand text-white" : "text-slate-600"
+                  view === v ? "bg-brand text-white" : "text-slate-600 dark:text-slate-300"
                 }`}
                 onClick={() => setView(v)}
               >
@@ -122,16 +122,16 @@ export function CalendarPanel({
           </div>
           <button
             type="button"
-            className="rounded-md border px-2 py-1 text-xs text-slate-600"
+            className="rounded-md border border-surface-border px-2 py-1 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-300"
             onClick={goToday}
           >
             오늘
           </button>
-          <button type="button" className="rounded-md border px-2 py-1 text-xs" onClick={goPrev}>
+          <button type="button" className="rounded-md border border-surface-border px-2 py-1 text-xs dark:border-slate-600 dark:text-slate-300" onClick={goPrev}>
             ◀
           </button>
-          <span className="min-w-28 text-center text-xs font-medium">{headerLabel}</span>
-          <button type="button" className="rounded-md border px-2 py-1 text-xs" onClick={goNext}>
+          <span className="min-w-28 text-center text-xs font-medium dark:text-slate-200">{headerLabel}</span>
+          <button type="button" className="rounded-md border border-surface-border px-2 py-1 text-xs dark:border-slate-600 dark:text-slate-300" onClick={goNext}>
             ▶
           </button>
         </div>
@@ -141,7 +141,7 @@ export function CalendarPanel({
       {view === "month" ? (
         <div className="grid grid-cols-7 gap-1 text-center text-xs">
           {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-            <div key={d} className="py-1 font-semibold text-slate-500">
+            <div key={d} className="py-1 font-semibold text-slate-500 dark:text-slate-400">
               {d}
             </div>
           ))}
@@ -154,7 +154,9 @@ export function CalendarPanel({
               <div
                 key={key}
                 className={`min-h-16 rounded-lg border p-1 text-left ${
-                  inMonth ? "border-slate-200 bg-white" : "border-transparent bg-slate-50 text-slate-400"
+                  inMonth
+                    ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
+                    : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
                 } ${isToday ? "ring-2 ring-brand/30" : ""}`}
               >
                 <div className="mb-1 text-[11px] font-medium">{day.getDate()}</div>
@@ -162,7 +164,7 @@ export function CalendarPanel({
                   <button
                     key={t.id}
                     type="button"
-                    className="block w-full truncate rounded bg-brand-muted px-1 text-left text-[10px] text-brand hover:bg-brand/10"
+                    className="block w-full truncate rounded bg-brand-muted px-1 text-left text-[10px] text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
                     title={t.title}
                     onClick={() => onTaskClick?.(t)}
                   >
@@ -171,7 +173,7 @@ export function CalendarPanel({
                 ))}
                 {dayTasks.length > 2 && (
                   <div
-                    className="text-[10px] text-slate-500"
+                    className="text-[10px] text-slate-500 dark:text-slate-400"
                     title={dayTasks
                       .slice(2)
                       .map((t) => t.title)
@@ -194,10 +196,12 @@ export function CalendarPanel({
               <div
                 key={key}
                 className={`min-h-32 rounded-lg border p-2 text-left ${
-                  isToday ? "border-brand/40 bg-brand-muted/30 ring-2 ring-brand/20" : "border-slate-200 bg-white"
+                  isToday
+                    ? "border-brand/40 bg-brand-muted/30 ring-2 ring-brand/20 dark:bg-blue-950/30"
+                    : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                 }`}
               >
-                <p className="mb-2 text-[11px] font-semibold text-slate-600">
+                <p className="mb-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                   {new Intl.DateTimeFormat("ko-KR", {
                     weekday: "short",
                     month: "numeric",
@@ -205,14 +209,14 @@ export function CalendarPanel({
                   }).format(day)}
                 </p>
                 {dayTasks.length === 0 ? (
-                  <p className="text-[10px] text-slate-400">업무 없음</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">업무 없음</p>
                 ) : (
                   <ul className="space-y-1">
                     {dayTasks.map((t) => (
                       <li key={t.id}>
                         <button
                           type="button"
-                          className="block w-full truncate rounded bg-brand-muted px-1 py-0.5 text-left text-[10px] text-brand hover:bg-brand/10"
+                          className="block w-full truncate rounded bg-brand-muted px-1 py-0.5 text-left text-[10px] text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
                           title={t.title}
                           onClick={() => onTaskClick?.(t)}
                         >
