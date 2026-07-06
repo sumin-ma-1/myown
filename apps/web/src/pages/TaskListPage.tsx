@@ -4,6 +4,7 @@ import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { TaskTable } from "@/components/tasks/TaskTable";
+import { RotatingSubtitle, TASK_LIST_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
 
 export function TaskListPage() {
   const [sort, setSort] = useState("priority");
@@ -40,15 +41,16 @@ export function TaskListPage() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">등록 업무 목록</h1>
-          <p className="text-sm text-slate-500">
-            등록한 업무와 첨부·알림 상태를 관리합니다.
-          </p>
+          <RotatingSubtitle messages={TASK_LIST_SUBTITLE_MESSAGES} />
         </div>
         <button
           type="button"
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
+          className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
           onClick={openCreate}
         >
+          <span className="material-icons text-[18px] leading-none" aria-hidden>
+            add_circle
+          </span>
           새 업무 등록
         </button>
       </header>

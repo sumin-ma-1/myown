@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { IntegrationCard } from "@/components/integrations/IntegrationCard";
 import { GoogleCalendarCard } from "@/components/integrations/GoogleCalendarCard";
+import { INTEGRATIONS_SUBTITLE_MESSAGES, RotatingSubtitle } from "@/components/ui/RotatingSubtitle";
 
 export function IntegrationsPage() {
   const { data, isLoading, error } = useQuery({
@@ -13,9 +14,10 @@ export function IntegrationsPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900">연동 APP</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          APP과 연동하여 채팅으로 업무를 등록하고 알림을 받을 수 있습니다.
-        </p>
+        <RotatingSubtitle
+          messages={INTEGRATIONS_SUBTITLE_MESSAGES}
+          className="mt-1 text-sm text-slate-600"
+        />
       </div>
 
       {isLoading && <p className="text-sm text-slate-500">불러오는 중…</p>}
