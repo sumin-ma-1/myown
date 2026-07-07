@@ -10,13 +10,19 @@ import {
 import { cancelComposeRegistration } from "../helpers/compose-cancel.js";
 import { finalizeComposeRegistration } from "../helpers/compose-finalize.js";
 import { formatDateTime } from "../../utils/date.js";
+import { taskWebLink } from "../../utils/web-links.js";
 
 export function taskActionKeyboard(taskId: string) {
-  return new InlineKeyboard()
+  const kb = new InlineKeyboard()
     .text("✅ 완료", `done:${taskId}`)
-    .text("⏰ 1시간 후", `snooze:60:${taskId}`)
-    .row()
-    .text("📋 상세", `detail:${taskId}`);
+    .text("⏰ 1시간 후", `snooze:60:${taskId}`);
+
+  const webUrl = taskWebLink(taskId);
+  if (webUrl) {
+    kb.row().url("🌐 웹에서 보기", webUrl);
+  }
+
+  return kb.row().text("📋 상세", `detail:${taskId}`);
 }
 
 export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) {

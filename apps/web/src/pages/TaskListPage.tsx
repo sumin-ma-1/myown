@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
@@ -8,6 +9,7 @@ import { FlashMessage } from "@/components/ui/FlashMessage";
 import { RotatingSubtitle, TASK_LIST_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
 
 export function TaskListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sort, setSort] = useState("priority");
   const [status, setStatus] = useState("active");
   const [modalOpen, setModalOpen] = useState(false);
@@ -18,6 +20,22 @@ export function TaskListPage() {
     queryKey: ["tasks", status, sort],
     queryFn: () => api.listTasks({ status, sort }),
   });
+
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId) return;
+
+    setEditingTaskId(openId);
+    setModalOpen(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("open");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   const openCreate = () => {
     setEditingTaskId(undefined);

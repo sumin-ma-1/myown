@@ -315,7 +315,7 @@ export class AgentRuntime {
         : formatDateTime(result.fireAt);
 
     const label = order ? `${order}번 ` : "";
-    return `⏰ ${label}"${result.task.title}" — ${when}에 알려드릴게요.`;
+    return `⏰ ${label}"${result.task.title}", ${when}에 알려드릴게요.`;
   }
 
   private async replyScheduledReminder(
@@ -339,7 +339,7 @@ export class AgentRuntime {
         ? `${Math.max(1, Math.round(msUntil / 60_000))}분 후`
         : formatDateTime(result.fireAt);
 
-    return `⏰ ${order}번 "${result.task.title}" — ${when}에 알려드릴게요.`;
+    return `⏰ ${order}번 "${result.task.title}", ${when}에 알려드릴게요.`;
   }
 
   private async runAgent(input: {

@@ -83,7 +83,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           {expanded && (
             <>
               <p className="mt-1 pl-10 text-xs text-slate-500 dark:text-slate-400">
-                개인 업무 관리 플랫폼
+                개인 일정 · 업무 스마트 관리
               </p>
               {me?.account?.email && (
                 <p className="mt-2 truncate pl-10 text-xs text-slate-400 dark:text-slate-500">
