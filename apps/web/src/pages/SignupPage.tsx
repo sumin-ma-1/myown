@@ -51,7 +51,7 @@ export function SignupPage() {
         <div className="mb-6 flex items-center gap-3">
           <img src="/favicon.png" alt="" className="h-10 w-10 rounded-xl" />
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">My Own</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">MyOwn</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">초대코드로 가입</p>
           </div>
         </div>
