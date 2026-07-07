@@ -4,34 +4,11 @@ import { api } from "@/api/client";
 import type { ExtraReminderRule, ReminderDto, TaskDto } from "@/api/types";
 import { Modal } from "@/components/ui/Modal";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
-import { formatDateTime, isValidTimeInput, normalizeTimeInput } from "@/lib/dates";
+import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
 import { ACTIVE_WORKFLOW_OPTIONS } from "@/lib/status";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function splitDueAt(iso: string | null) {
-  if (!iso) return { date: "", time: "" };
-  const d = new Date(iso);
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-  };
-}
-
-function toDueAtIso(date: string, time: string): string | undefined {
-  if (!date.trim()) return undefined;
-  const normalized = normalizeTimeInput(time);
-  const t = normalized || "09:00";
-  if (!isValidTimeInput(t)) return undefined;
-  const parsed = new Date(`${date}T${t}:00`);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed.toISOString();
-}
 
 function dueAtEqual(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a && !b) return true;
@@ -525,7 +502,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감 시각</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감 · 시작 시각</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -536,7 +513,9 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                     onChange={(e) => setDueTime(e.target.value)}
                     onBlur={(e) => setDueTime(normalizeTimeInput(e.target.value))}
                   />
-                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">24시간 형식 (기본 09:00)</p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    24시간 형식 · 비우면 날짜만 마감
+                  </p>
                 </div>
               </div>
 
@@ -678,7 +657,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
 
                   {useDefaultReminders && (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      마감일 기준 {offsetLabel}에 알림이 예약됩니다.
+                      마감일만 있으면 매 오전 7시에 알립니다.
                     </p>
                   )}
 

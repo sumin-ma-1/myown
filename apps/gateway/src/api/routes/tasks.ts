@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
-import { endOfDayInTimezone, startOfDayInTimezone, atHourOnDate, addDays } from "../../utils/date.js";
+import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
+import { ddayOffsetFireTime } from "../../services/reminder-schedule.js";
 import {
   extraRulesEqual,
   getTaskReminderConfig,
@@ -196,8 +197,8 @@ tasksRoute.post("/", async (c) => {
     );
   }
 
-  const telegramId = user.telegramUserId;
-  if (task.dueAt && telegramId != null) {
+  const telegramId = user.telegramUserId ?? null;
+  if (task.dueAt) {
     await app.reminderService.scheduleForTask(task, telegramId, user, {
       useDefaults,
       extraRules,
@@ -290,11 +291,10 @@ tasksRoute.patch("/:id", async (c) => {
     await app.reminderService.cancelForTask(taskId);
   } else if (
     task.dueAt &&
-    user.telegramUserId != null &&
-    (dueAtChanged || reminderConfigChanged)
+    (dueAtChanged || reminderConfigChanged || body.rescheduleReminders)
   ) {
     const config = getTaskReminderConfig(user, taskId);
-    await app.reminderService.syncRemindersForTask(task, user.telegramUserId, user, {
+    await app.reminderService.syncRemindersForTask(task, user.telegramUserId ?? null, user, {
       useDefaults: config.useDefaultReminders,
       extraRules: config.extraRules,
     });
@@ -351,6 +351,17 @@ tasksRoute.get("/:id/reminders", async (c) => {
   const task = await app.tasks.findById(userId, taskId);
   if (!task) return c.json({ error: "Task not found" }, 404);
 
+  const user = await app.users.findById(userId);
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  if (task.status === "active" && task.dueAt) {
+    const config = getTaskReminderConfig(user, taskId);
+    await app.reminderService.syncRemindersForTask(task, user.telegramUserId ?? null, user, {
+      useDefaults: config.useDefaultReminders,
+      extraRules: config.extraRules,
+    });
+  }
+
   const reminders = await app.reminders.listForTask(taskId);
   return c.json({
     items: reminders.map((r) => ({
@@ -385,9 +396,7 @@ tasksRoute.post("/:id/reminders", async (c) => {
   if (body.fireAt) {
     fireAt = new Date(body.fireAt);
   } else if (body.daysBefore !== undefined) {
-    const prefs = (user.preferences ?? {}) as UserPreferences;
-    const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
-    fireAt = atHourOnDate(addDays(task.dueAt, -body.daysBefore), reminderHour);
+    fireAt = ddayOffsetFireTime(task.dueAt, body.daysBefore);
   } else if (body.hoursBefore !== undefined && body.hoursBefore > 0) {
     fireAt = new Date(task.dueAt.getTime() - body.hoursBefore * 60 * 60 * 1000);
   } else if (body.minutesBefore !== undefined && body.minutesBefore > 0) {
@@ -396,14 +405,10 @@ tasksRoute.post("/:id/reminders", async (c) => {
     return c.json({ error: "fireAt, daysBefore, hoursBefore, or minutesBefore required" }, 400);
   }
 
-  if (user.telegramUserId == null) {
-    return c.json({ error: "Telegram 연동 후 알림을 설정할 수 있습니다." }, 400);
-  }
-
   try {
     const scheduledAt = await app.reminderService.scheduleAt(
       task,
-      user.telegramUserId,
+      user.telegramUserId ?? null,
       fireAt,
     );
     return c.json({ fireAt: scheduledAt.toISOString() }, 201);

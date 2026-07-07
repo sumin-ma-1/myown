@@ -289,14 +289,12 @@ export class GoogleCalendarService {
     }
 
     const user = await this.users.findById(userId);
-    const telegramUserId = user?.telegramUserId ?? 0;
     const task = await this.taskService.create({
       userId,
-      telegramUserId,
+      telegramUserId: user?.telegramUserId ?? null,
       title: row.title,
       description: row.description ?? undefined,
       dueAt: row.startsAt,
-      skipReminders: telegramUserId === 0,
     });
     await this.setTaskWorkflow(userId, task.id, "planned");
     return task.id;

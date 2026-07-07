@@ -9,7 +9,7 @@ import type { ReminderService } from "./reminder.js";
 
 export interface CreateTaskInput {
   userId: string;
-  telegramUserId: number;
+  telegramUserId: number | null;
   title: string;
   description?: string;
   priority?: TaskPriority;
@@ -50,7 +50,10 @@ export class TaskService {
     return task;
   }
 
-  async scheduleRemindersForTask(task: Task, telegramUserId: number): Promise<void> {
+  async scheduleRemindersForTask(
+    task: Task,
+    telegramUserId: number | null,
+  ): Promise<void> {
     if (task.dueAt) {
       await this.reminders.scheduleForTask(task, telegramUserId);
     }
@@ -162,7 +165,7 @@ export class TaskService {
 
   async scheduleReminder(
     userId: string,
-    telegramUserId: number,
+    telegramUserId: number | null,
     displayOrder: number,
     fireAt: Date,
   ): Promise<{ ok: true; task: Task; fireAt: Date } | { ok: false; message: string }> {
@@ -178,7 +181,7 @@ export class TaskService {
 
   async scheduleReminderForTask(
     userId: string,
-    telegramUserId: number,
+    telegramUserId: number | null,
     task: Task,
     fireAt: Date,
   ): Promise<{ ok: true; task: Task; fireAt: Date } | { ok: false; message: string }> {

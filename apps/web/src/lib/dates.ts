@@ -26,6 +26,55 @@ export function formatDday(dday: number | null): string {
   return `D+${Math.abs(dday)}`;
 }
 
+/** 앱 기준 타임존(Asia/Seoul)으로 마감 ISO 생성. 시각 미입력 시 날짜만 마감(23:59) */
+export function toDueAtIso(date: string, time: string): string | undefined {
+  if (!date.trim()) return undefined;
+  const normalized = normalizeTimeInput(time);
+  if (!normalized) {
+    const parsed = new Date(`${date}T23:59:59+09:00`);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  }
+  if (!isValidTimeInput(normalized)) return undefined;
+  const parsed = new Date(`${date}T${normalized}:00+09:00`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return parsed.toISOString();
+}
+
+export function isDateOnlyDueIso(iso: string): boolean {
+  const { hour, minute } = getTimePartsInSeoul(new Date(iso));
+  return hour === 23 && minute === 59;
+}
+
+export function getTimePartsInSeoul(date: Date): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  return {
+    hour: Number(parts.find((p) => p.type === "hour")?.value ?? "0"),
+    minute: Number(parts.find((p) => p.type === "minute")?.value ?? "0"),
+  };
+}
+
+export function splitDueAt(iso: string | null): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+  if (isDateOnlyDueIso(iso)) return { date, time: "" };
+  const { hour, minute } = getTimePartsInSeoul(d);
+  return {
+    date,
+    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+  };
+}
+
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }

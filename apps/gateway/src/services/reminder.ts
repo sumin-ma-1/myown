@@ -20,7 +20,7 @@ export class ReminderService {
 
   async scheduleForTask(
     task: Task,
-    telegramUserId: number,
+    telegramUserId: number | null,
     user?: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
@@ -43,14 +43,18 @@ export class ReminderService {
     });
 
     for (const fireAt of schedules) {
-      await this.scheduleAt(task, telegramUserId, fireAt);
+      try {
+        await this.scheduleAt(task, telegramUserId, fireAt);
+      } catch {
+        // Skip times that became invalid between planning and scheduling.
+      }
     }
   }
 
   /** Same fireAt (within tolerance) stays pending; only add/remove deltas. */
   async syncRemindersForTask(
     task: Task,
-    telegramUserId: number,
+    telegramUserId: number | null,
     user: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
@@ -87,6 +91,7 @@ export class ReminderService {
       if (index >= 0) {
         matchedPending.add(reminder.id);
         matchedDesired.add(index);
+        await this.ensureReminderJob(reminder, task, telegramUserId);
       }
     }
 
@@ -109,7 +114,7 @@ export class ReminderService {
 
   async rescheduleForTask(
     task: Task,
-    telegramUserId: number,
+    telegramUserId: number | null,
     user: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
@@ -118,7 +123,7 @@ export class ReminderService {
 
   async scheduleAt(
     task: Task,
-    telegramUserId: number,
+    telegramUserId: number | null,
     fireAt: Date,
   ): Promise<Date> {
     if (fireAt.getTime() <= Date.now()) {
@@ -131,6 +136,17 @@ export class ReminderService {
       fireAt,
     });
 
+    await this.ensureReminderJob(reminder, task, telegramUserId);
+    return fireAt;
+  }
+
+  private async ensureReminderJob(
+    reminder: { id: string; fireAt: Date; jobId?: string | null },
+    task: Task,
+    telegramUserId: number | null,
+  ): Promise<void> {
+    if (!telegramUserId || telegramUserId <= 0 || reminder.jobId) return;
+
     const jobId = await scheduleReminderJob(
       this.queue,
       {
@@ -139,11 +155,10 @@ export class ReminderService {
         userId: task.userId,
         telegramUserId,
       },
-      fireAt,
+      reminder.fireAt,
     );
 
     await this.reminders.setJobId(reminder.id, jobId);
-    return fireAt;
   }
 
   async cancelForTask(taskId: string): Promise<void> {
@@ -167,7 +182,7 @@ export class ReminderService {
 
   async scheduleSnooze(
     task: Task,
-    telegramUserId: number,
+    telegramUserId: number | null,
     minutes: number,
   ): Promise<Date> {
     const fireAt = new Date(Date.now() + minutes * 60 * 1000);

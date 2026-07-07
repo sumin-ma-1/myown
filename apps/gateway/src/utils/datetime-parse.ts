@@ -32,6 +32,28 @@ export function isDateOnlyDue(dueAt: Date): boolean {
   return hour === 23 && minute === 59;
 }
 
+/** Asia/Seoul 달력·시각 유지하며 일수 이동 */
+export function shiftDaysKeepingLocalTime(date: Date, dayDelta: number): Date {
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: config.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const { hour, minute } = getTimePartsInTimezone(date);
+  const noon = new Date(`${key}T12:00:00+09:00`);
+  const shifted = new Date(noon.getTime() + dayDelta * 24 * 60 * 60 * 1000);
+  const newKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: config.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(shifted);
+  const h = String(hour).padStart(2, "0");
+  const m = String(minute).padStart(2, "0");
+  return new Date(`${newKey}T${h}:${m}:00+09:00`);
+}
+
 export function parseDateAndTime(date?: string, time?: string): Date | undefined {
   if (!date?.trim()) return undefined;
   if (!DATE_RE.test(date)) return undefined;
