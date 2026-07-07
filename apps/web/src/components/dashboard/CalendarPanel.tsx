@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
+import { CardTitle } from "@/components/ui/CardTitle";
 import {
   addMonths,
   addWeeks,
@@ -103,7 +104,11 @@ export function CalendarPanel({
 
   return (
     <Card
-      title="일정"
+      title={
+        <CardTitle icon="calendar_month" iconClassName="text-brand dark:text-blue-400">
+          일정 캘린더
+        </CardTitle>
+      }
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex rounded-lg border border-surface-border p-0.5 text-xs dark:border-slate-600">

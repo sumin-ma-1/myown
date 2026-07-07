@@ -15,7 +15,9 @@ export function Card({ title, action, children, className = "" }: CardProps) {
       {(title || action) && (
         <header className="mb-3 flex items-center justify-between gap-2">
           {title ? (
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {title}
+            </h2>
           ) : (
             <span />
           )}

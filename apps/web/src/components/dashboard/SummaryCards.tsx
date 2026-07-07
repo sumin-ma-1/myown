@@ -1,5 +1,6 @@
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
+import { CardTitle } from "@/components/ui/CardTitle";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
 import { formatDday, formatDateTime } from "@/lib/dates";
 
@@ -39,7 +40,13 @@ export function DueTodayCard({
   onTaskClick?: (task: TaskDto) => void;
 }) {
   return (
-    <Card title="금일 마감">
+    <Card
+      title={
+        <CardTitle icon="alarm" iconClassName="text-amber-600 dark:text-amber-400">
+          금일 종료
+        </CardTitle>
+      }
+    >
       {tasks.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">오늘 마감 업무가 없습니다.</p>
       ) : (
@@ -65,7 +72,13 @@ export function InProgressCard({
   );
 
   return (
-    <Card title="진행 중">
+    <Card
+      title={
+        <CardTitle icon="play_circle" iconClassName="text-brand dark:text-blue-400">
+          진행 중
+        </CardTitle>
+      }
+    >
       {items.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">진행 중인 업무가 없습니다.</p>
       ) : (
@@ -91,7 +104,13 @@ export function PlannedCard({
   );
 
   return (
-    <Card title="계획">
+    <Card
+      title={
+        <CardTitle icon="event_note" iconClassName="text-slate-500 dark:text-slate-400">
+          계획
+        </CardTitle>
+      }
+    >
       {items.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">계획 중인 업무가 없습니다.</p>
       ) : (
