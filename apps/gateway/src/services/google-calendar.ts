@@ -8,6 +8,7 @@ import type {
   UserRepository,
 } from "@myown/database";
 import { config, isGoogleAuthEnabled } from "../config.js";
+import type { TaskWorkflowStatus, UserPreferences } from "../api/types.js";
 import type { TaskService } from "./task.js";
 
 const OAUTH_STATE_PREFIX = "gcal:oauth:";
@@ -282,6 +283,7 @@ export class GoogleCalendarService {
           description: row.description,
           dueAt: row.startsAt,
         });
+        await this.setTaskWorkflow(userId, existing.id, "planned");
         return existing.id;
       }
     }
@@ -296,7 +298,22 @@ export class GoogleCalendarService {
       dueAt: row.startsAt,
       skipReminders: telegramUserId === 0,
     });
+    await this.setTaskWorkflow(userId, task.id, "planned");
     return task.id;
+  }
+
+  private async setTaskWorkflow(
+    userId: string,
+    taskId: string,
+    workflowStatus: TaskWorkflowStatus = "planned",
+  ): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user) return;
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    await this.users.updatePreferences(userId, {
+      ...prefs,
+      taskWorkflow: { ...(prefs.taskWorkflow ?? {}), [taskId]: workflowStatus },
+    });
   }
 
   private toDto(row: CalendarImport): CalendarImportDto {

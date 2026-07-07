@@ -178,12 +178,11 @@ tasksRoute.post("/", async (c) => {
   let user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 
-  if (body.workflowStatus) {
-    const prefs = (user.preferences ?? {}) as UserPreferences;
-    const taskWorkflow = { ...(prefs.taskWorkflow ?? {}), [task.id]: body.workflowStatus };
-    user =
-      (await app.users.updatePreferences(userId, { ...prefs, taskWorkflow })) ?? user;
-  }
+  const workflowStatus: TaskWorkflowStatus = body.workflowStatus ?? "planned";
+  const prefs = (user.preferences ?? {}) as UserPreferences;
+  const taskWorkflow = { ...(prefs.taskWorkflow ?? {}), [task.id]: workflowStatus };
+  user =
+    (await app.users.updatePreferences(userId, { ...prefs, taskWorkflow })) ?? user;
 
   const extraRules = parseExtraRules(body.extraReminders);
   const useDefaults = body.useDefaultReminders ?? true;

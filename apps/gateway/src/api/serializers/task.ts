@@ -44,7 +44,7 @@ function getWorkflowStatus(
 ): TaskWorkflowStatus {
   const prefs = (user.preferences ?? {}) as UserPreferences;
   if (task.status === "completed") return "in_progress";
-  return prefs.taskWorkflow?.[task.id] ?? "in_progress";
+  return prefs.taskWorkflow?.[task.id] ?? "planned";
 }
 
 export function serializeTask(
