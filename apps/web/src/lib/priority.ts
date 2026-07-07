@@ -3,7 +3,7 @@ import type { TaskPriority } from "@/api/types";
 const LABELS: Record<TaskPriority, string> = {
   urgent: "최우선",
   high: "우선",
-  medium: "계획",
+  medium: "일반",
 };
 
 const STYLES: Record<TaskPriority, string> = {
@@ -15,7 +15,7 @@ const STYLES: Record<TaskPriority, string> = {
 export const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: "urgent", label: "최우선" },
   { value: "high", label: "우선" },
-  { value: "medium", label: "계획" },
+  { value: "medium", label: "일반" },
 ];
 
 export function priorityLabel(priority: TaskPriority): string {

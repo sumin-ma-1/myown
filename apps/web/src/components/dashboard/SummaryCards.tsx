@@ -65,7 +65,7 @@ export function InProgressCard({
   );
 
   return (
-    <Card title="진행">
+    <Card title="진행 중">
       {items.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">진행 중인 업무가 없습니다.</p>
       ) : (
@@ -91,9 +91,9 @@ export function PlannedCard({
   );
 
   return (
-    <Card title="예정">
+    <Card title="계획">
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">예정된 업무가 없습니다.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">계획 중인 업무가 없습니다.</p>
       ) : (
         <ul>
           {items.slice(0, 8).map((task) => (

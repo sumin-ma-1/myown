@@ -7,6 +7,8 @@ import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { formatDateTime, isValidTimeInput, normalizeTimeInput } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
+import { PRIORITY_OPTIONS } from "@/lib/priority";
+import { ACTIVE_WORKFLOW_OPTIONS } from "@/lib/status";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -546,9 +548,11 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskDto["priority"])}
                   >
-                    <option value="urgent">긴급</option>
-                    <option value="high">높음</option>
-                    <option value="medium">보통</option>
+                    {PRIORITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -560,8 +564,11 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                       setWorkflowStatus(e.target.value as TaskDto["workflowStatus"])
                     }
                   >
-                    <option value="planned">예정</option>
-                    <option value="in_progress">진행</option>
+                    {ACTIVE_WORKFLOW_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
