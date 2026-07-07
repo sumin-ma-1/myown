@@ -4,7 +4,10 @@ import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
 import { ddayOffsetFireTime } from "../../services/reminder-schedule.js";
 import {
+  clearSuppressedFireTimes,
   extraRulesEqual,
+  filterSuppressedFireTimes,
+  getSuppressedFireTimes,
   getTaskReminderConfig,
   saveTaskReminderConfig,
 } from "../helpers/task-reminders.js";
@@ -125,11 +128,14 @@ tasksRoute.get("/:id", async (c) => {
 
   let defaultPreview: string[] = [];
   if (item.dueAt && reminderConfig.useDefaultReminders) {
-    const fireTimes = buildReminderFireTimes(new Date(item.dueAt), {
-      ddayOffsets,
-      reminderHour,
-      extraRules: [],
-    });
+    const fireTimes = filterSuppressedFireTimes(
+      buildReminderFireTimes(new Date(item.dueAt), {
+        ddayOffsets,
+        reminderHour,
+        extraRules: [],
+      }),
+      getSuppressedFireTimes(user, taskId),
+    );
     defaultPreview = fireTimes.map((d) => d.toISOString());
   }
 
@@ -287,6 +293,14 @@ tasksRoute.patch("/:id", async (c) => {
 
   if (!task) return c.json({ error: "Task not found" }, 404);
 
+  if (dueAtChanged) {
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    user =
+      (await app.users.updatePreferences(userId, {
+        ...clearSuppressedFireTimes(prefs, taskId),
+      } as Record<string, unknown>)) ?? user;
+  }
+
   if (body.status === "completed") {
     await app.reminderService.cancelForTask(taskId);
   } else if (
@@ -325,14 +339,17 @@ tasksRoute.delete("/:id", async (c) => {
     const taskWorkflow = { ...(prefs.taskWorkflow ?? {}) };
     const taskReminderRules = { ...(prefs.taskReminderRules ?? {}) };
     const taskReminderSkipDefaults = { ...(prefs.taskReminderSkipDefaults ?? {}) };
+    const taskReminderSuppressedAt = { ...(prefs.taskReminderSuppressedAt ?? {}) };
     delete taskWorkflow[taskId];
     delete taskReminderRules[taskId];
     delete taskReminderSkipDefaults[taskId];
+    delete taskReminderSuppressedAt[taskId];
     await app.users.updatePreferences(userId, {
       ...prefs,
       taskWorkflow,
       taskReminderRules,
       taskReminderSkipDefaults,
+      taskReminderSuppressedAt,
     });
   }
 

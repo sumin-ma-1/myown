@@ -136,7 +136,6 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [extraReminderMessage, setExtraReminderMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialReminderConfigRef = useRef<{
     useDefaultReminders: boolean;
@@ -178,7 +177,6 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setExtraReminderMessage(null);
     setPendingFiles([]);
     setRemovedAttachmentIds([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -333,10 +331,9 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
     if (mode === "edit" && taskId && rules.length > 0) {
       try {
         setError(null);
-        setExtraReminderMessage(null);
         const applied = await commitExtraRemindersIfChanged(rules);
         if (applied) {
-          setExtraReminderMessage("예약된 알림에 반영되었습니다.");
+          onSaved?.("예약된 알림에 반영되었습니다.");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "알림 예약에 실패했습니다.");
@@ -356,10 +353,9 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
     const rules = rowsToRules(normalizedRows);
     try {
       setError(null);
-      setExtraReminderMessage(null);
       const applied = await commitExtraRemindersIfChanged(rules);
       if (applied) {
-        setExtraReminderMessage("예약된 알림에 반영되었습니다.");
+        onSaved?.("예약된 알림에 반영되었습니다.");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "알림 변경에 실패했습니다.");
@@ -369,8 +365,12 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
   const deleteReminderMutation = useMutation({
     mutationFn: (reminderId: string) => api.deleteReminder(reminderId),
     onSuccess: () => {
+      onSaved?.("알림을 취소했습니다.");
       if (taskId) void queryClient.invalidateQueries({ queryKey: ["reminders", taskId] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "알림 취소에 실패했습니다.");
     },
   });
 
@@ -751,9 +751,6 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                       <p className="text-[11px] text-slate-400 dark:text-slate-500">
                         추가 알림은 업무 등록 후 예약됩니다.
                       </p>
-                    )}
-                    {extraReminderMessage && (
-                      <p className="text-xs text-emerald-700">{extraReminderMessage}</p>
                     )}
                   </div>
 

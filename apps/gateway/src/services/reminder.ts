@@ -3,6 +3,10 @@ import type { Queue } from "bullmq";
 import { config } from "../config.js";
 import type { UserPreferences } from "../api/types.js";
 import {
+  filterSuppressedFireTimes,
+  getSuppressedFireTimes,
+} from "../api/helpers/task-reminders.js";
+import {
   type ExtraReminderRule,
   buildReminderFireTimes,
 } from "./reminder-schedule.js";
@@ -36,11 +40,14 @@ export class ReminderService {
       : [];
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
-    const schedules = buildReminderFireTimes(task.dueAt, {
-      ddayOffsets,
-      reminderHour,
-      extraRules,
-    });
+    const schedules = filterSuppressedFireTimes(
+      buildReminderFireTimes(task.dueAt, {
+        ddayOffsets,
+        reminderHour,
+        extraRules,
+      }),
+      getSuppressedFireTimes(user, task.id),
+    );
 
     for (const fireAt of schedules) {
       try {
@@ -72,11 +79,14 @@ export class ReminderService {
       : [];
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
-    const desired = buildReminderFireTimes(task.dueAt, {
-      ddayOffsets,
-      reminderHour,
-      extraRules,
-    });
+    const desired = filterSuppressedFireTimes(
+      buildReminderFireTimes(task.dueAt, {
+        ddayOffsets,
+        reminderHour,
+        extraRules,
+      }),
+      getSuppressedFireTimes(user, task.id),
+    );
     const pending = await this.reminders.listPendingForTask(task.id);
     const toleranceMs = 60_000;
     const matchedPending = new Set<string>();

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
-import type { ExtraReminderRule, UserPreferences } from "../types.js";
+import type { UserPreferences } from "../types.js";
 import type { ApiEnv } from "../types.js";
+import { addSuppressedFireTime } from "../helpers/task-reminders.js";
 import { requireLinkedUser } from "../helpers/linked-user.js";
 import { requireAppUser } from "../middleware/session.js";
 
@@ -23,5 +24,15 @@ remindersRoute.delete("/:id", async (c) => {
   }
 
   await app.reminderService.cancelReminder(reminderId);
+
+  const user = await app.users.findById(userId);
+  if (user) {
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    await app.users.updatePreferences(
+      userId,
+      addSuppressedFireTime(prefs, reminder.taskId, reminder.fireAt) as Record<string, unknown>,
+    );
+  }
+
   return c.json({ ok: true });
 });
