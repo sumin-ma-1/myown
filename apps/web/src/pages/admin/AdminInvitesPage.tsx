@@ -44,6 +44,13 @@ export function AdminInvitesPage() {
     },
   });
 
+  const deleteInvite = useMutation({
+    mutationFn: (id: string) => api.adminDeleteInvite(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "invites"] });
+    },
+  });
+
   if (isLoading) return <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>;
   if (error) {
     return (
@@ -123,6 +130,7 @@ export function AdminInvitesPage() {
               <th className="px-4 py-3 font-medium">상태</th>
               <th className="px-4 py-3 font-medium">사용자</th>
               <th className="px-4 py-3 font-medium">생성일</th>
+              <th className="px-4 py-3 font-medium">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -143,11 +151,39 @@ export function AdminInvitesPage() {
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                   {new Date(invite.createdAt).toLocaleString("ko-KR")}
                 </td>
+                <td className="px-4 py-3">
+                  {invite.status !== "used" ? (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50 dark:text-red-400"
+                      disabled={deleteInvite.isPending}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `초대코드 ${invite.code}을(를) 삭제할까요?\n삭제하면 더 이상 가입에 사용할 수 없습니다.`,
+                          )
+                        ) {
+                          return;
+                        }
+                        deleteInvite.mutate(invite.id);
+                      }}
+                    >
+                      삭제
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400 dark:text-slate-500">완료</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+      {deleteInvite.error && (
+        <p className="text-sm text-red-600 dark:text-red-400">
+          {deleteInvite.error instanceof Error ? deleteInvite.error.message : "삭제 실패"}
+        </p>
+      )}
     </div>
   );
 }

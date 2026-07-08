@@ -76,4 +76,13 @@ export class InviteCodeRepository {
       );
     return row?.count ?? 0;
   }
+
+  /** Deletes an invite only if it has not been used yet. */
+  async deleteIfUnused(id: string): Promise<boolean> {
+    const rows = await this.db
+      .delete(inviteCodes)
+      .where(and(eq(inviteCodes.id, id), isNull(inviteCodes.usedByAccountId)))
+      .returning({ id: inviteCodes.id });
+    return rows.length > 0;
+  }
 }

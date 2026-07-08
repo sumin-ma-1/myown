@@ -224,6 +224,11 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  adminDeleteInvite: (id: string) =>
+    request<{ ok: boolean }>(`/api/admin/invites/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+
   adminListActivity: () => request<{ items: AdminActivityDto[] }>("/api/admin/activity"),
 
   getChatCompose: () => request<{ compose: ComposeDraftDto | null }>("/api/chat/compose"),

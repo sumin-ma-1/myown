@@ -130,6 +130,16 @@ adminRoute.post("/invites", async (c) => {
   });
 });
 
+adminRoute.delete("/invites/:id", async (c) => {
+  const app = c.var.app;
+  const id = c.req.param("id");
+  const deleted = await app.inviteCodes.deleteIfUnused(id);
+  if (!deleted) {
+    return c.json({ error: "삭제할 수 없습니다. 이미 사용된 초대코드이거나 존재하지 않습니다." }, 404);
+  }
+  return c.json({ ok: true });
+});
+
 adminRoute.get("/activity", async (c) => {
   const app = c.var.app;
   const events = await app.loginEvents.listRecent(100);
