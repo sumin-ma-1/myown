@@ -57,10 +57,11 @@ export const api = {
   getTask: (id: string) =>
     request<{ item: TaskDto; reminderConfig: TaskReminderConfigDto }>(`/api/tasks/${id}`),
 
-  listCalendarTasks: (from: string, to: string) =>
-    request<{ items: TaskDto[] }>(
-      `/api/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-    ),
+  listCalendarTasks: (from: string, to: string, options?: { includeCompleted?: boolean }) => {
+    const params = new URLSearchParams({ from, to });
+    if (options?.includeCompleted) params.set("includeCompleted", "true");
+    return request<{ items: TaskDto[] }>(`/api/calendar?${params}`);
+  },
 
   createTask: (body: {
     title: string;

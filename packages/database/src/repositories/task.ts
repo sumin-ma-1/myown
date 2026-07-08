@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { tasks } from "../schema.js";
 import type { Task, TaskPriority } from "../schema.js";
@@ -160,14 +160,23 @@ export class TaskRepository {
     return this.db.select().from(tasks).where(statusFilter).orderBy(...order).limit(limit);
   }
 
-  async listDueInRange(userId: string, from: Date, to: Date): Promise<Task[]> {
+  async listDueInRange(
+    userId: string,
+    from: Date,
+    to: Date,
+    options?: { includeCompleted?: boolean },
+  ): Promise<Task[]> {
+    const statusFilter = options?.includeCompleted
+      ? inArray(tasks.status, ["active", "completed"])
+      : eq(tasks.status, "active");
+
     return this.db
       .select()
       .from(tasks)
       .where(
         and(
           eq(tasks.userId, userId),
-          eq(tasks.status, "active"),
+          statusFilter,
           isNotNull(tasks.dueAt),
           gte(tasks.dueAt, from),
           lte(tasks.dueAt, to),

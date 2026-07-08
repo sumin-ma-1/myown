@@ -41,12 +41,13 @@ function CalendarTaskChip({
   onClick?: (task: TaskDto) => void;
 }) {
   const dueTime = formatDueTime(task.dueAt);
+  const isCompleted = task.status === "completed";
 
   return (
     <button
       type="button"
-      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${priorityCalendarChipClass(task.priority)}`}
-      title={`${task.title} · ${priorityLabel(task.priority)}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
+      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${priorityCalendarChipClass(task.priority)} ${isCompleted ? "opacity-60" : ""}`}
+      title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
       onClick={() => onClick?.(task)}
     >
       {dueTime && (
@@ -57,10 +58,13 @@ function CalendarTaskChip({
   );
 }
 
-function sortTasksByPriority(tasks: TaskDto[]): TaskDto[] {
-  return [...tasks].sort(
-    (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority],
-  );
+function sortTasksForCalendar(tasks: TaskDto[]): TaskDto[] {
+  return [...tasks].sort((a, b) => {
+    const statusRank = (task: TaskDto) => (task.status === "completed" ? 1 : 0);
+    const byStatus = statusRank(a) - statusRank(b);
+    if (byStatus !== 0) return byStatus;
+    return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+  });
 }
 
 function buildMonthGrid(cursor: Date): Date[] {
@@ -89,6 +93,7 @@ export function CalendarPanel({
 }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>("month");
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const monthDays = useMemo(() => buildMonthGrid(cursor), [cursor]);
   const weekDays = useMemo(() => buildWeekDays(cursor), [cursor]);
@@ -106,6 +111,7 @@ export function CalendarPanel({
     queryKey: [
       "calendar",
       view,
+      showCompleted,
       formatLocalDateKey(visibleRange.from),
       formatLocalDateKey(visibleRange.to),
     ],
@@ -113,6 +119,7 @@ export function CalendarPanel({
       api.listCalendarTasks(
         visibleRange.from.toISOString(),
         visibleRange.to.toISOString(),
+        { includeCompleted: showCompleted },
       ),
   });
 
@@ -128,7 +135,7 @@ export function CalendarPanel({
       map.set(key, list);
     }
     for (const [key, list] of map) {
-      map.set(key, sortTasksByPriority(list));
+      map.set(key, sortTasksForCalendar(list));
     }
     return map;
   }, [tasks]);
@@ -157,6 +164,18 @@ export function CalendarPanel({
       }
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            className={`rounded-md border px-2 py-1 text-xs ${
+              showCompleted
+                ? "border-brand bg-brand text-white"
+                : "border-surface-border text-slate-600 dark:border-slate-600 dark:text-slate-300"
+            }`}
+            onClick={() => setShowCompleted((value) => !value)}
+            aria-pressed={showCompleted}
+          >
+            완료 일정 포함
+          </button>
           <div className="flex rounded-lg border border-surface-border p-0.5 text-xs dark:border-slate-600">
             {(["month", "week"] as const).map((v) => (
               <button

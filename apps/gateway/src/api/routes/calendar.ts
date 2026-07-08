@@ -29,7 +29,9 @@ calendarRoute.get("/", async (c) => {
   const user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 
-  const tasks = await app.tasks.listDueInRange(userId, from, to);
+  const includeCompleted = c.req.query("includeCompleted") === "true";
+
+  const tasks = await app.tasks.listDueInRange(userId, from, to, { includeCompleted });
   const items = await Promise.all(
     tasks.map(async (task) => {
       const attachments = await loadTaskAttachments(app, userId, task);
