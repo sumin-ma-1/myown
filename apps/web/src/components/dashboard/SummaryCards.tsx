@@ -1,8 +1,12 @@
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
 import { CardTitle } from "@/components/ui/CardTitle";
+import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
 import { formatDday, formatDateTime } from "@/lib/dates";
+
+/** Roughly eight task rows visible before the list scrolls. */
+const SUMMARY_LIST_MAX_HEIGHT = "max-h-[28rem]";
 
 function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) => void }) {
   return (
@@ -32,6 +36,82 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
   );
 }
 
+function SummaryTaskList({
+  tasks,
+  emptyMessage,
+  onTaskClick,
+}: {
+  tasks: TaskDto[];
+  emptyMessage: string;
+  onTaskClick?: (task: TaskDto) => void;
+}) {
+  if (tasks.length === 0) {
+    return <p className="text-sm text-slate-500 dark:text-slate-400">{emptyMessage}</p>;
+  }
+
+  return (
+    <ScrollFadeArea className={SUMMARY_LIST_MAX_HEIGHT}>
+      <ul>
+        {tasks.map((task) => (
+          <TaskRow key={task.id} task={task} onClick={onTaskClick} />
+        ))}
+      </ul>
+    </ScrollFadeArea>
+  );
+}
+
+function SummaryCardTitle({
+  icon,
+  iconClassName,
+  label,
+  count,
+}: {
+  icon: string;
+  iconClassName: string;
+  label: string;
+  count: number;
+}) {
+  return (
+    <CardTitle icon={icon} iconClassName={iconClassName}>
+      {label}
+      {count > 0 && (
+        <span className="font-normal text-slate-500 dark:text-slate-400"> {count}건</span>
+      )}
+    </CardTitle>
+  );
+}
+
+function SummaryCard({
+  icon,
+  iconClassName,
+  label,
+  tasks,
+  emptyMessage,
+  onTaskClick,
+}: {
+  icon: string;
+  iconClassName: string;
+  label: string;
+  tasks: TaskDto[];
+  emptyMessage: string;
+  onTaskClick?: (task: TaskDto) => void;
+}) {
+  return (
+    <Card
+      title={
+        <SummaryCardTitle
+          icon={icon}
+          iconClassName={iconClassName}
+          label={label}
+          count={tasks.length}
+        />
+      }
+    >
+      <SummaryTaskList tasks={tasks} emptyMessage={emptyMessage} onTaskClick={onTaskClick} />
+    </Card>
+  );
+}
+
 export function DueTodayCard({
   tasks,
   onTaskClick,
@@ -40,23 +120,14 @@ export function DueTodayCard({
   onTaskClick?: (task: TaskDto) => void;
 }) {
   return (
-    <Card
-      title={
-        <CardTitle icon="alarm" iconClassName="text-amber-600 dark:text-amber-400">
-          금일 종료
-        </CardTitle>
-      }
-    >
-      {tasks.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">오늘 마감 업무가 없습니다.</p>
-      ) : (
-        <ul>
-          {tasks.map((task) => (
-            <TaskRow key={task.id} task={task} onClick={onTaskClick} />
-          ))}
-        </ul>
-      )}
-    </Card>
+    <SummaryCard
+      icon="alarm"
+      iconClassName="text-amber-600 dark:text-amber-400"
+      label="금일 종료"
+      tasks={tasks}
+      emptyMessage="오늘 마감 업무가 없어요."
+      onTaskClick={onTaskClick}
+    />
   );
 }
 
@@ -72,23 +143,14 @@ export function InProgressCard({
   );
 
   return (
-    <Card
-      title={
-        <CardTitle icon="play_circle" iconClassName="text-brand dark:text-blue-400">
-          진행 중
-        </CardTitle>
-      }
-    >
-      {items.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">진행 중인 업무가 없습니다.</p>
-      ) : (
-        <ul>
-          {items.slice(0, 8).map((task) => (
-            <TaskRow key={task.id} task={task} onClick={onTaskClick} />
-          ))}
-        </ul>
-      )}
-    </Card>
+    <SummaryCard
+      icon="play_circle"
+      iconClassName="text-brand dark:text-blue-400"
+      label="진행 중"
+      tasks={items}
+      emptyMessage="진행 중인 업무가 없어요."
+      onTaskClick={onTaskClick}
+    />
   );
 }
 
@@ -104,22 +166,13 @@ export function PlannedCard({
   );
 
   return (
-    <Card
-      title={
-        <CardTitle icon="event_note" iconClassName="text-slate-500 dark:text-slate-400">
-          계획
-        </CardTitle>
-      }
-    >
-      {items.length === 0 ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">계획 중인 업무가 없습니다.</p>
-      ) : (
-        <ul>
-          {items.slice(0, 8).map((task) => (
-            <TaskRow key={task.id} task={task} onClick={onTaskClick} />
-          ))}
-        </ul>
-      )}
-    </Card>
+    <SummaryCard
+      icon="event_note"
+      iconClassName="text-slate-500 dark:text-slate-400"
+      label="계획"
+      tasks={items}
+      emptyMessage="계획 중인 업무가 없어요."
+      onTaskClick={onTaskClick}
+    />
   );
 }

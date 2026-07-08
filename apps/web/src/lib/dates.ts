@@ -26,6 +26,13 @@ export function formatDday(dday: number | null): string {
   return `D+${Math.abs(dday)}`;
 }
 
+/** 마감 시각(HH:mm). 날짜만 마감(23:59)이면 null */
+export function formatDueTime(iso: string | null): string | null {
+  if (!iso || isDateOnlyDueIso(iso)) return null;
+  const { hour, minute } = getTimePartsInSeoul(new Date(iso));
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 /** 앱 기준 타임존(Asia/Seoul)으로 마감 ISO 생성. 시각 미입력 시 날짜만 마감(23:59) */
 export function toDueAtIso(date: string, time: string): string | undefined {
   if (!date.trim()) return undefined;

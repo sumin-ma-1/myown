@@ -4,6 +4,7 @@ import { api } from "@/api/client";
 import type { ComposeDraftDto } from "@/api/types";
 import { formatDateTime } from "@/lib/dates";
 import { priorityLabel } from "@/lib/priority";
+import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { CHAT_HINT_MESSAGES, RotatingSubtitle } from "@/components/ui/RotatingSubtitle";
 
 interface ChatMessage {
@@ -484,7 +485,10 @@ export function ChatPage() {
 
   return (
     <div className={CHAT_PAGE_CLASS}>
-      <div className="-mr-6 min-h-0 flex-1 overflow-y-auto">
+      <ScrollFadeArea
+        wrapperClassName="-mr-6 flex-1"
+        className="h-full"
+      >
         <div className={`${CHAT_COLUMN_CLASS} space-y-3 py-4 pr-6`}>
           {messages.map((msg) => (
             <ChatMessageBubble key={msg.id} role={msg.role} text={msg.text} />
@@ -503,7 +507,7 @@ export function ChatPage() {
 
           <div ref={bottomRef} />
         </div>
-      </div>
+      </ScrollFadeArea>
 
       {error && (
         <p className={`${CHAT_COLUMN_CLASS} py-2 text-sm text-red-600 dark:text-red-400`}>

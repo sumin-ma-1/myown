@@ -309,10 +309,6 @@ export function GoogleCalendarCard() {
               가져온 일정 (검토 대기 {pendingItems.length}건, 전체 {allItems.length}건)
             </p>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              활성화하면 MyOwn 업무로 올라가요.
-            </p>
-
             <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
               <input
                 type="checkbox"

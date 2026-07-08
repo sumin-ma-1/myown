@@ -56,4 +56,43 @@ html.dark body {
       radial-gradient(ellipse 60% 45% at 0% 100%, rgba(79, 70, 229, 0.14), transparent 50%),
       linear-gradient(160deg, #020617 0%, #0f172a 48%, #1e293b 100%);
   }
+
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-subtle:hover {
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+
+  html.dark .scrollbar-subtle:hover {
+    scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+  }
+
+  .scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.35);
+  }
+
+  html.dark .scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 116, 139, 0.45);
+  }
+
+  .scroll-fade-mask-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 4rem), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 4rem), transparent 100%);
+  }
 }

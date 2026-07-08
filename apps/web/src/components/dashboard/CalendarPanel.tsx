@@ -16,9 +16,52 @@ import {
   startOfDay,
   startOfMonth,
   startOfWeek,
+  formatDateTime,
+  formatDueTime,
 } from "@/lib/dates";
+import { priorityCalendarChipClass, priorityLabel } from "@/lib/priority";
 
 type CalendarView = "month" | "week";
+
+/** Max task chips shown per day in month view before "+N more". */
+const MONTH_DAY_TASK_PREVIEW = 3;
+const CALENDAR_TASK_TEXT_CLASS = "text-xs";
+
+const PRIORITY_RANK: Record<TaskDto["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+};
+
+function CalendarTaskChip({
+  task,
+  onClick,
+}: {
+  task: TaskDto;
+  onClick?: (task: TaskDto) => void;
+}) {
+  const dueTime = formatDueTime(task.dueAt);
+
+  return (
+    <button
+      type="button"
+      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${priorityCalendarChipClass(task.priority)}`}
+      title={`${task.title} · ${priorityLabel(task.priority)}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
+      onClick={() => onClick?.(task)}
+    >
+      {dueTime && (
+        <span className="shrink-0 tabular-nums opacity-80">{dueTime}</span>
+      )}
+      <span className="min-w-0 truncate">{task.title}</span>
+    </button>
+  );
+}
+
+function sortTasksByPriority(tasks: TaskDto[]): TaskDto[] {
+  return [...tasks].sort(
+    (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority],
+  );
+}
 
 function buildMonthGrid(cursor: Date): Date[] {
   const start = startOfMonth(cursor);
@@ -83,6 +126,9 @@ export function CalendarPanel({
       const list = map.get(key) ?? [];
       list.push(task);
       map.set(key, list);
+    }
+    for (const [key, list] of map) {
+      map.set(key, sortTasksByPriority(list));
     }
     return map;
   }, [tasks]);
@@ -158,35 +204,31 @@ export function CalendarPanel({
             return (
               <div
                 key={key}
-                className={`min-h-16 rounded-lg border p-1 text-left ${
+                className={`min-h-20 rounded-lg border p-1 text-left ${
                   inMonth
                     ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                     : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
                 } ${isToday ? "ring-2 ring-brand/30" : ""}`}
               >
                 <div className="mb-1 text-[11px] font-medium">{day.getDate()}</div>
-                {dayTasks.slice(0, 2).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="block w-full truncate rounded bg-brand-muted px-1 text-left text-[10px] text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                    title={t.title}
-                    onClick={() => onTaskClick?.(t)}
-                  >
-                    {t.title}
-                  </button>
-                ))}
-                {dayTasks.length > 2 && (
-                  <div
-                    className="text-[10px] text-slate-500 dark:text-slate-400"
-                    title={dayTasks
-                      .slice(2)
-                      .map((t) => t.title)
-                      .join(", ")}
-                  >
-                    +{dayTasks.length - 2}
-                  </div>
-                )}
+                <ul className="space-y-1">
+                  {dayTasks.slice(0, MONTH_DAY_TASK_PREVIEW).map((t) => (
+                    <li key={t.id}>
+                      <CalendarTaskChip task={t} onClick={onTaskClick} />
+                    </li>
+                  ))}
+                  {dayTasks.length > MONTH_DAY_TASK_PREVIEW && (
+                    <li
+                      className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-500 dark:text-slate-400`}
+                      title={dayTasks
+                        .slice(MONTH_DAY_TASK_PREVIEW)
+                        .map((t) => t.title)
+                        .join(", ")}
+                    >
+                      +{dayTasks.length - MONTH_DAY_TASK_PREVIEW}
+                    </li>
+                  )}
+                </ul>
               </div>
             );
           })}
@@ -214,19 +256,12 @@ export function CalendarPanel({
                   }).format(day)}
                 </p>
                 {dayTasks.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">업무 없음</p>
+                  <p className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-400 dark:text-slate-500`}>업무 없음</p>
                 ) : (
                   <ul className="space-y-1">
                     {dayTasks.map((t) => (
                       <li key={t.id}>
-                        <button
-                          type="button"
-                          className="block w-full truncate rounded bg-brand-muted px-1 py-0.5 text-left text-[10px] text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                          title={t.title}
-                          onClick={() => onTaskClick?.(t)}
-                        >
-                          {t.title}
-                        </button>
+                        <CalendarTaskChip task={t} onClick={onTaskClick} />
                       </li>
                     ))}
                   </ul>
