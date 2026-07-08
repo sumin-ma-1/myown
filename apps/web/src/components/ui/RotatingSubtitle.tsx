@@ -48,7 +48,7 @@ export const DASHBOARD_SUBTITLE_MESSAGES = [
 ] as const;
 
 export const TASK_LIST_SUBTITLE_MESSAGES = [
-  "등록한 업무와 첨부파일, 알림 상태를 관리합니다.",
+  "등록한 업무와 첨부파일, 알림 상태를 관리해요.",
   "업무 진행 상태, 정렬 필터로 업무를 빠르게 찾아보세요.",
   "행을 클릭하면 업무를 수정하거나 완료 처리할 수 있어요.",
   "마감, 우선순위 순으로 정렬해 놓치지 않게 관리해요.",
@@ -63,7 +63,7 @@ export const INTEGRATIONS_SUBTITLE_MESSAGES = [
 
 export const CHAT_HINT_MESSAGES = [
   "「내일 오후 3시에 팀 회의있어.」처럼 쉽게 일정을 등록해보세요.",
-  "나의 일정에 관해서 아무거나 물어보세요.",
+  "나의 일정에 관해서 무엇이든 물어보세요.",
   "「다음 주까지 이 파일 수정 보완 해야해.」처럼 파일을 첨부해 업무를 만들 수도 있어요.",
   "텔레그램, 카카오톡과 같은 방식으로 대화해 보세요.",
 ] as const;

@@ -235,7 +235,7 @@ export function GoogleCalendarCard() {
             <p className="text-xs text-slate-500 dark:text-slate-400">
               새로 가져온 일정은 <strong>비활성</strong>입니다.{" "}
               <strong>선택</strong>은 여러 개 고른 뒤 일괄 처리할 때 쓰고,{" "}
-              <strong>활성</strong>은 그 줄만 바로 MyOwn 업무에 반영합니다.
+              <strong>활성</strong>은 그 줄만 바로 MyOwn 업무에 반영해요.
             </p>
 
             {items.length > 0 && (

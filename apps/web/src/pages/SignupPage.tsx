@@ -90,7 +90,7 @@ export function SignupPage() {
           />
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            운영자는{" "}
+            개발자는{" "}
             <a href={googleAuthUrl("signup")} className="font-medium text-brand hover:underline">
               초대코드 없이 Google 가입
             </a>
