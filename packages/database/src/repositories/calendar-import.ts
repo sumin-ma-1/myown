@@ -3,6 +3,38 @@ import type { Database } from "../client.js";
 import { calendarImports } from "../schema.js";
 import type { CalendarImport } from "../schema.js";
 
+type GoogleImportPayload = {
+  title: string;
+  description?: string | null;
+  startsAt: Date;
+  endsAt?: Date | null;
+  allDay: boolean;
+  htmlLink?: string | null;
+  etag?: string | null;
+};
+
+export type GoogleImportUpsertOutcome = "inserted" | "updated" | "unchanged";
+
+function googleImportChanged(existing: CalendarImport, input: GoogleImportPayload): boolean {
+  if (existing.etag && input.etag && existing.etag === input.etag) {
+    return false;
+  }
+
+  if (existing.title !== input.title) return true;
+  if ((existing.description ?? null) !== (input.description ?? null)) return true;
+  if (existing.allDay !== input.allDay) return true;
+  if (existing.startsAt.getTime() !== input.startsAt.getTime()) return true;
+
+  const existingEnds = existing.endsAt?.getTime() ?? null;
+  const inputEnds = input.endsAt?.getTime() ?? null;
+  if (existingEnds !== inputEnds) return true;
+
+  if ((existing.htmlLink ?? null) !== (input.htmlLink ?? null)) return true;
+  if ((existing.etag ?? null) !== (input.etag ?? null)) return true;
+
+  return false;
+}
+
 export class CalendarImportRepository {
   constructor(private readonly db: Database) {}
 
@@ -55,18 +87,18 @@ export class CalendarImportRepository {
     userId: string;
     googleEventId: string;
     googleCalendarId: string;
-    title: string;
-    description?: string | null;
-    startsAt: Date;
-    endsAt?: Date | null;
-    allDay: boolean;
-    htmlLink?: string | null;
-    etag?: string | null;
-  }): Promise<CalendarImport> {
+  } & GoogleImportPayload): Promise<{
+    row: CalendarImport;
+    outcome: GoogleImportUpsertOutcome;
+  }> {
     const existing = await this.findByGoogleEventId(input.userId, input.googleEventId);
     const now = new Date();
 
     if (existing) {
+      if (!googleImportChanged(existing, input)) {
+        return { row: existing, outcome: "unchanged" };
+      }
+
       const [row] = await this.db
         .update(calendarImports)
         .set({
@@ -82,7 +114,7 @@ export class CalendarImportRepository {
         })
         .where(eq(calendarImports.id, existing.id))
         .returning();
-      return row;
+      return { row, outcome: "updated" };
     }
 
     const [row] = await this.db
@@ -102,7 +134,7 @@ export class CalendarImportRepository {
         lastSyncedAt: now,
       })
       .returning();
-    return row;
+    return { row, outcome: "inserted" };
   }
 
   async setEnabled(

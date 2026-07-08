@@ -209,15 +209,14 @@ export class GoogleCalendarService {
       const parsed = this.parseEvent(event);
       if (!parsed) continue;
 
-      const existing = await this.imports.findByGoogleEventId(userId, event.id);
-      await this.imports.upsertFromGoogle({
+      const { outcome } = await this.imports.upsertFromGoogle({
         userId,
         googleEventId: event.id,
         googleCalendarId: "primary",
         ...parsed,
       });
-      if (existing) updated += 1;
-      else imported += 1;
+      if (outcome === "inserted") imported += 1;
+      else if (outcome === "updated") updated += 1;
     }
 
     return { imported, updated };

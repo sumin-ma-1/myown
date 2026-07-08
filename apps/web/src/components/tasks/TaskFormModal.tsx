@@ -8,7 +8,7 @@ import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDue
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
-import { ACTIVE_WORKFLOW_OPTIONS } from "@/lib/status";
+import { ACTIVE_WORKFLOW_OPTIONS, WORKFLOW_STATUS_OPTIONS, type WorkflowUiStatus } from "@/lib/status";
 
 function dueAtEqual(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a && !b) return true;
@@ -130,7 +130,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [priority, setPriority] = useState<TaskDto["priority"]>("medium");
-  const [workflowStatus, setWorkflowStatus] = useState<TaskDto["workflowStatus"]>("planned");
+  const [uiWorkflowStatus, setUiWorkflowStatus] = useState<WorkflowUiStatus>("planned");
   const [useDefaultReminders, setUseDefaultReminders] = useState(true);
   const [extraRows, setExtraRows] = useState<ExtraRuleRow[]>([emptyRule()]);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -187,7 +187,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
       setDueDate("");
       setDueTime("");
       setPriority("medium");
-      setWorkflowStatus("planned");
+      setUiWorkflowStatus("planned");
       setUseDefaultReminders(true);
       setExtraRows([emptyRule()]);
       initialReminderConfigRef.current = null;
@@ -206,7 +206,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
     setDueDate(date);
     setDueTime(time);
     setPriority(t.priority);
-    setWorkflowStatus(t.workflowStatus);
+    setUiWorkflowStatus(t.status === "completed" ? "completed" : t.workflowStatus);
     setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
     setExtraRows(rulesToRows(taskData.reminderConfig.extraRules));
     initialReminderConfigRef.current = {
@@ -224,10 +224,10 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
         description: description.trim() || undefined,
         priority,
         dueAt,
-        workflowStatus,
       };
 
       if (mode === "create") {
+        payload.workflowStatus = uiWorkflowStatus === "completed" ? "planned" : uiWorkflowStatus;
         payload.useDefaultReminders = useDefaultReminders;
         payload.extraReminders = extraReminders;
       } else {
@@ -255,11 +255,31 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
         const res = await api.createTask(payload);
         saved = res.item;
       } else {
-        const res = await api.updateTask(taskId!, {
-          ...payload,
+        const existing = taskData!.item;
+        const updateBody: Parameters<typeof api.updateTask>[1] = {
+          title: title.trim(),
           description: description.trim() || null,
+          priority,
           dueAt: dueAt ?? null,
-        });
+        };
+
+        if (uiWorkflowStatus === "completed") {
+          updateBody.status = "completed";
+        } else if (existing.status === "completed") {
+          updateBody.status = "active";
+          updateBody.workflowStatus = uiWorkflowStatus;
+        } else {
+          updateBody.workflowStatus = uiWorkflowStatus;
+        }
+
+        if (payload.useDefaultReminders !== undefined) {
+          updateBody.useDefaultReminders = payload.useDefaultReminders;
+        }
+        if (payload.extraReminders !== undefined) {
+          updateBody.extraReminders = payload.extraReminders;
+        }
+
+        const res = await api.updateTask(taskId!, updateBody);
         saved = res.item;
       }
 
@@ -426,7 +446,9 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
     if (title.trim() !== task.title) return true;
     if ((description.trim() || null) !== (task.description ?? null)) return true;
     if (priority !== task.priority) return true;
-    if (workflowStatus !== task.workflowStatus) return true;
+    const currentUiStatus: WorkflowUiStatus =
+      task.status === "completed" ? "completed" : task.workflowStatus;
+    if (uiWorkflowStatus !== currentUiStatus) return true;
     if (!dueAtEqual(nextDueAt, task.dueAt)) return true;
     if (pendingFiles.length > 0) return true;
     if (removedAttachmentIds.length > 0) return true;
@@ -538,16 +560,16 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">상태</label>
                   <select
                     className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={workflowStatus}
-                    onChange={(e) =>
-                      setWorkflowStatus(e.target.value as TaskDto["workflowStatus"])
-                    }
+                    value={uiWorkflowStatus}
+                    onChange={(e) => setUiWorkflowStatus(e.target.value as WorkflowUiStatus)}
                   >
-                    {ACTIVE_WORKFLOW_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
+                    {(mode === "edit" ? WORKFLOW_STATUS_OPTIONS : ACTIVE_WORKFLOW_OPTIONS).map(
+                      (opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
               </div>

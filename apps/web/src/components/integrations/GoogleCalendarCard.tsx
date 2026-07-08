@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { api } from "@/api/client";
 import type { CalendarImportDto } from "@/api/types";
 import { IntegrationTitle } from "@/components/integrations/IntegrationIcon";
@@ -16,6 +17,17 @@ function statusClass(connected: boolean): string {
     : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+function matchesImportSearch(item: CalendarImportDto, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    item.title.toLowerCase().includes(q) ||
+    (item.description?.toLowerCase().includes(q) ?? false)
+  );
+}
+
 export function GoogleCalendarCard() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -23,6 +35,10 @@ export function GoogleCalendarCard() {
   const [futureDays, setFutureDays] = useState(90);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showEnabledImports, setShowEnabledImports] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(20);
 
   const status = useQuery({
     queryKey: ["google-calendar-status"],
@@ -112,16 +128,80 @@ export function GoogleCalendarCard() {
     },
   });
 
-  const items = imports.data?.items ?? [];
+  const allItems = imports.data?.items ?? [];
+  const pendingItems = useMemo(() => allItems.filter((item) => !item.enabled), [allItems]);
+  const enabledItems = useMemo(() => allItems.filter((item) => item.enabled), [allItems]);
+  const visibleItems = useMemo(
+    () => (showEnabledImports ? [...pendingItems, ...enabledItems] : pendingItems),
+    [showEnabledImports, pendingItems, enabledItems],
+  );
+  const filteredItems = useMemo(
+    () => visibleItems.filter((item) => matchesImportSearch(item, searchQuery)),
+    [visibleItems, searchQuery],
+  );
+  const filteredPendingItems = useMemo(
+    () => filteredItems.filter((item) => !item.enabled),
+    [filteredItems],
+  );
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const paginatedItems = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, safePage, pageSize]);
+  const pagePendingItems = useMemo(
+    () => paginatedItems.filter((item) => !item.enabled),
+    [paginatedItems],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, showEnabledImports, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
   const connected = Boolean(status.data?.connected);
   const available = status.data?.available !== false;
   const selectedIds = useMemo(() => [...selected], [selected]);
-  const allSelected = items.length > 0 && items.every((item) => selected.has(item.id));
+  const allSelected =
+    filteredPendingItems.length > 0 &&
+    filteredPendingItems.every((item) => selected.has(item.id));
+  const allPagePendingSelected =
+    pagePendingItems.length > 0 && pagePendingItems.every((item) => selected.has(item.id));
   const batchPending = setEnabled.isPending || batchSetEnabled.isPending;
 
   const toggleSelectAll = () => {
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(items.map((item) => item.id)));
+    if (allSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const item of filteredPendingItems) next.delete(item.id);
+        return next;
+      });
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const item of filteredPendingItems) next.add(item.id);
+      return next;
+    });
+  };
+
+  const togglePageSelectAll = () => {
+    if (allPagePendingSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const item of pagePendingItems) next.delete(item.id);
+        return next;
+      });
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const item of pagePendingItems) next.add(item.id);
+      return next;
+    });
   };
 
   const toggleRowSelected = (id: string) => {
@@ -133,12 +213,9 @@ export function GoogleCalendarCard() {
     });
   };
 
-  const selectByEnabled = (enabled: boolean) => {
-    setSelected(new Set(items.filter((item) => item.enabled === enabled).map((item) => item.id)));
-  };
-
-  const toggleEnabled = (item: CalendarImportDto) => {
-    setEnabled.mutate({ id: item.id, enabled: !item.enabled });
+  const activateImport = (item: CalendarImportDto) => {
+    if (item.enabled) return;
+    setEnabled.mutate({ id: item.id, enabled: true });
   };
 
   if (!available) {
@@ -229,78 +306,116 @@ export function GoogleCalendarCard() {
         {connected && (
           <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
             <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-              가져온 일정 ({items.length}건 · 활성 {status.data?.enabledCount ?? 0}건)
+              가져온 일정 (검토 대기 {pendingItems.length}건, 전체 {allItems.length}건)
             </p>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              새로 가져온 일정은 <strong>비활성</strong>입니다.{" "}
-              <strong>선택</strong>은 여러 개 고른 뒤 일괄 처리할 때 쓰고,{" "}
-              <strong>활성</strong>은 그 줄만 바로 MyOwn 업무에 반영해요.
+              활성화하면 MyOwn 업무로 올라가요.
             </p>
 
-            {items.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                  onClick={toggleSelectAll}
-                >
-                  {allSelected ? "전체 해제" : "전체 선택"}
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                  onClick={() => selectByEnabled(false)}
-                >
-                  비활성만 선택
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                  onClick={() => selectByEnabled(true)}
-                >
-                  활성만 선택
-                </button>
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">|</span>
-                <button
-                  type="button"
-                  className="rounded border border-brand/30 bg-brand/5 px-2 py-1 text-[11px] text-brand hover:bg-brand/10 disabled:opacity-50 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                  disabled={selectedIds.length === 0 || batchPending}
-                  onClick={() => batchSetEnabled.mutate({ ids: selectedIds, enabled: true })}
-                >
-                  선택 항목 활성화 ({selectedIds.length})
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  disabled={selectedIds.length === 0 || batchPending}
-                  onClick={() => batchSetEnabled.mutate({ ids: selectedIds, enabled: false })}
-                >
-                  선택 항목 비활성화
-                </button>
+            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={showEnabledImports}
+                onChange={(e) => setShowEnabledImports(e.target.checked)}
+              />
+              이미 등록된 일정 보기
+            </label>
+
+            {visibleItems.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {filteredPendingItems.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        className="rounded border border-surface-border px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        onClick={toggleSelectAll}
+                      >
+                        {allSelected ? "전체 해제" : "전체 선택"}
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-brand/30 bg-brand/5 px-2 py-1 text-[11px] text-brand hover:bg-brand/10 disabled:opacity-50 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                        disabled={selectedIds.length === 0 || batchPending}
+                        onClick={() => batchSetEnabled.mutate({ ids: selectedIds, enabled: true })}
+                      >
+                        선택 항목 활성화 ({selectedIds.length})
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-500 dark:text-slate-400">표시</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) =>
+                        setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])
+                      }
+                      className="rounded border border-surface-border bg-white px-1.5 py-1 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}건
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="일정 제목·설명 검색"
+                      className="w-44 rounded-lg border border-surface-border bg-white py-1 pl-2.5 pr-8 text-[11px] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 sm:w-52"
+                    />
+                    <span
+                      className="material-icons pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[16px] leading-none text-slate-400"
+                      aria-hidden
+                    >
+                      search
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
             {imports.isLoading && <p className="text-xs text-slate-500 dark:text-slate-400">일정 불러오는 중…</p>}
 
-            {!imports.isLoading && items.length === 0 && (
+            {!imports.isLoading && allItems.length === 0 && (
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 아직 가져온 일정이 없습니다. 「일정 가져오기」를 눌러 주세요.
               </p>
             )}
 
-            {items.length > 0 && (
-              <div className="max-h-80 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+            {!imports.isLoading && allItems.length > 0 && visibleItems.length === 0 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                신규 일정이 없어요. 「이미 등록된 일정 보기」로 등록된 항목을 확인할 수 있어요.
+              </p>
+            )}
+
+            {!imports.isLoading && visibleItems.length > 0 && filteredItems.length === 0 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                검색 결과가 없어요.
+              </p>
+            )}
+
+            {filteredItems.length > 0 && (
+              <div className="space-y-2">
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                  <thead className="bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                     <tr>
                       <th className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          onChange={toggleSelectAll}
-                          aria-label="전체 선택"
-                        />
+                        {pagePendingItems.length > 0 && (
+                          <input
+                            type="checkbox"
+                            checked={allPagePendingSelected}
+                            onChange={togglePageSelectAll}
+                            aria-label="이 페이지 검토 대기 일정 전체 선택"
+                          />
+                        )}
                       </th>
                       <th className="px-3 py-2">활성</th>
                       <th className="px-3 py-2">일정</th>
@@ -308,34 +423,55 @@ export function GoogleCalendarCard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
-                      <tr key={item.id} className="border-t border-slate-100 dark:border-slate-700">
+                    {paginatedItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        className={`border-t border-slate-100 dark:border-slate-700 ${
+                          item.enabled ? "bg-slate-50/60 dark:bg-slate-800/40" : ""
+                        }`}
+                      >
                         <td className="px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(item.id)}
-                            onChange={() => toggleRowSelected(item.id)}
-                            aria-label={`${item.title} 선택`}
-                          />
+                          {!item.enabled && (
+                            <input
+                              type="checkbox"
+                              checked={selected.has(item.id)}
+                              onChange={() => toggleRowSelected(item.id)}
+                              aria-label={`${item.title} 선택`}
+                            />
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <input
                             type="checkbox"
                             checked={item.enabled}
-                            disabled={batchPending}
-                            onChange={() => toggleEnabled(item)}
-                            aria-label={`${item.title} 활성화`}
+                            disabled={item.enabled || batchPending}
+                            onChange={() => activateImport(item)}
+                            aria-label={
+                              item.enabled ? `${item.title} 업무로 연결됨` : `${item.title} 활성화`
+                            }
                           />
                         </td>
                         <td className="px-3 py-2">
-                          <div className="font-medium text-slate-800 dark:text-slate-100">{item.title}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="font-medium text-slate-800 dark:text-slate-100">
+                              {item.title}
+                            </div>
+                            {item.enabled && item.taskId && (
+                              <Link
+                                to={`/tasks?open=${item.taskId}`}
+                                className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                              >
+                                등록됨
+                              </Link>
+                            )}
+                          </div>
                           {item.description && (
                             <div className="mt-0.5 line-clamp-2 text-slate-500 dark:text-slate-400">
                               {item.description}
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300">
+                        <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
                           {formatDateTime(item.startsAt)}
                           {item.allDay && (
                             <span className="ml-1 text-slate-400 dark:text-slate-500">(종일)</span>
@@ -345,6 +481,40 @@ export function GoogleCalendarCard() {
                     ))}
                   </tbody>
                 </table>
+                </div>
+
+                {filteredItems.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                    <span>
+                      {filteredItems.length}건 중 {(safePage - 1) * pageSize + 1}-
+                      {Math.min(safePage * pageSize, filteredItems.length)}건
+                      {searchQuery.trim() ? ` · 검색 결과 ${filteredItems.length}건` : ""}
+                    </span>
+                    {pageCount > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-surface-border px-2 py-1 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-700"
+                          disabled={safePage <= 1}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          이전
+                        </button>
+                        <span>
+                          {safePage} / {pageCount}
+                        </span>
+                        <button
+                          type="button"
+                          className="rounded border border-surface-border px-2 py-1 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-700"
+                          disabled={safePage >= pageCount}
+                          onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                        >
+                          다음
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
