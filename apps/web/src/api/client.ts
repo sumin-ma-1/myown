@@ -3,6 +3,8 @@ import type {
   AdminInviteDto,
   AdminUserDto,
   AuthMeDto,
+  ChatReplyDto,
+  ComposeDraftDto,
   ExtraReminderRule,
   IntegrationDto,
   ReminderDto,
@@ -222,4 +224,31 @@ export const api = {
     }),
 
   adminListActivity: () => request<{ items: AdminActivityDto[] }>("/api/admin/activity"),
+
+  getChatCompose: () => request<{ compose: ComposeDraftDto | null }>("/api/chat/compose"),
+
+  sendChatMessage: (text: string) =>
+    request<ChatReplyDto>("/api/chat/messages", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  addChatMemo: (text: string) =>
+    request<ChatReplyDto>("/api/chat/compose/memo", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  uploadChatFile: (file: File, caption?: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (caption?.trim()) form.append("caption", caption.trim());
+    return request<ChatReplyDto>("/api/chat/compose/files", { method: "POST", body: form });
+  },
+
+  registerChatCompose: () =>
+    request<ChatReplyDto>("/api/chat/compose/register", { method: "POST" }),
+
+  cancelChatCompose: () =>
+    request<ChatReplyDto>("/api/chat/compose", { method: "DELETE" }),
 };

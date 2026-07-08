@@ -127,6 +127,16 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
               </span>
             )}
           </NavLink>
+          <NavLink to="/chat" title={expanded ? undefined : "채팅"}>
+            {({ isActive }) => (
+              <span className={navLinkClass(expanded, isActive)}>
+                <span className={navIconClass} aria-hidden>
+                  commit
+                </span>
+                {expanded && "마이온 챗"}
+              </span>
+            )}
+          </NavLink>
           {isAdmin && (
             <NavLink to="/admin" title={expanded ? undefined : "관리자"}>
               {({ isActive }) => (

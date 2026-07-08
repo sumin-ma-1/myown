@@ -10,6 +10,7 @@ import { IntegrationsPage } from "@/pages/IntegrationsPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { TaskListPage } from "@/pages/TaskListPage";
+import { ChatPage } from "@/pages/ChatPage";
 
 export function App() {
   return (
@@ -24,6 +25,7 @@ export function App() {
           <Route element={<AppShell />}>
             <Route index element={<DashboardPage />} />
             <Route path="tasks" element={<TaskListPage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="integrations" element={<IntegrationsPage />} />
           </Route>
         </Route>

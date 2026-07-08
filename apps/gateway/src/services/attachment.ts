@@ -68,7 +68,7 @@ export class AttachmentService {
   /** 초안 → [등록 완료] 시 업무 생성 */
   async registerFromDraft(input: {
     userId: string;
-    telegramUserId: number;
+    telegramUserId: number | null;
     draft: ComposeDraft;
   }): Promise<Task> {
     const task = await this.taskService.create({

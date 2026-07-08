@@ -3,6 +3,7 @@ import { PrioritySelect } from "@/components/tasks/PrioritySelect";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { ReminderBell } from "@/components/tasks/ReminderBell";
 import { StatusSelect } from "@/components/tasks/StatusSelect";
+import { CardTitle } from "@/components/ui/CardTitle";
 import { formatDateTime } from "@/lib/dates";
 
 interface TaskTableProps {
@@ -20,7 +21,11 @@ export function TaskTable({ tasks, sort, onSortChange, showCompletedAt = false, 
   return (
     <div className="overflow-hidden rounded-xl border border-surface-border bg-white shadow-card dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none">
       <div className="flex items-center justify-between border-b border-surface-border px-4 py-3 dark:border-slate-700">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">등록 업무 목록</h2>
+        <h2 className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
+          <CardTitle icon="sort" iconClassName="text-brand dark:text-blue-400">
+            등록 업무 목록
+          </CardTitle>
+        </h2>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           정렬
           <select

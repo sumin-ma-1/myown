@@ -60,6 +60,21 @@ export interface TaskReminderConfigDto {
   reminderHour: number;
 }
 
+export interface ComposeDraftDto {
+  mode: "awaiting_text" | "awaiting_attachment";
+  title: string;
+  description?: string | null;
+  priority?: TaskPriority;
+  dueAt?: string | null;
+  attachmentIds: string[];
+  attachments: { id: string; fileName: string }[];
+}
+
+export interface ChatReplyDto {
+  reply: string;
+  compose: ComposeDraftDto | null;
+}
+
 export type IntegrationStatus = "connected" | "disconnected" | "error" | "unavailable";
 export type ChannelProvider = "telegram" | "kakao" | "slack";
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { ChatFab } from "./ChatFab";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
@@ -11,8 +12,9 @@ export function AppShell() {
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}
       />
-      <main className="min-h-screen min-w-0 flex-1 overflow-auto p-6">
+      <main className="relative min-h-screen min-w-0 flex-1 overflow-auto p-6">
         <Outlet />
+        <ChatFab />
       </main>
     </div>
   );
