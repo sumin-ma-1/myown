@@ -23,6 +23,34 @@ export function ddayOffsetFireTime(dueAt: Date, offset: number): Date {
   return shiftDaysKeepingLocalTime(anchor, -offset);
 }
 
+/** 추가 알림 규칙 — 일·시간·분을 합쳐 마감 전 한 시각으로 계산 */
+export function extraRuleFireTime(
+  dueAt: Date,
+  rule: ExtraReminderRule,
+): Date | null {
+  const days = rule.daysBefore;
+  const hours = rule.hoursBefore ?? 0;
+  const minutes = rule.minutesBefore ?? 0;
+
+  const hasDays = days !== undefined && days >= 0;
+  const hasSubDayTime = hours > 0 || minutes > 0;
+
+  if (!hasDays && !hasSubDayTime) return null;
+
+  let base: Date;
+  if (hasDays && days! > 0) {
+    base = ddayOffsetFireTime(dueAt, days!);
+    if (!hasSubDayTime) return base;
+  } else if (hasDays && days === 0 && !hasSubDayTime) {
+    return ddayOffsetFireTime(dueAt, 0);
+  } else {
+    base = dueAt;
+  }
+
+  const offsetMs = (hours * 60 * 60 + minutes * 60) * 1000;
+  return offsetMs > 0 ? new Date(base.getTime() - offsetMs) : base;
+}
+
 export function buildReminderFireTimes(
   dueAt: Date,
   options: {
@@ -45,15 +73,8 @@ export function buildReminderFireTimes(
   }
 
   for (const rule of extraRules) {
-    if (rule.daysBefore !== undefined && rule.daysBefore >= 0) {
-      times.add(ddayOffsetFireTime(dueAt, rule.daysBefore).getTime());
-    }
-    if (rule.hoursBefore !== undefined && rule.hoursBefore > 0) {
-      times.add(dueAt.getTime() - rule.hoursBefore * 60 * 60 * 1000);
-    }
-    if (rule.minutesBefore !== undefined && rule.minutesBefore > 0) {
-      times.add(dueAt.getTime() - rule.minutesBefore * 60 * 1000);
-    }
+    const fireAt = extraRuleFireTime(dueAt, rule);
+    if (fireAt) times.add(fireAt.getTime());
   }
 
   return [...times]

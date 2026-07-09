@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
-import { ddayOffsetFireTime } from "../../services/reminder-schedule.js";
+import { buildReminderFireTimes, extraRuleFireTime } from "../../services/reminder-schedule.js";
 import {
   clearSuppressedFireTimes,
   extraRulesEqual,
@@ -15,7 +15,6 @@ import { loadTaskAttachments } from "../helpers/load-task-attachments.js";
 import type { ApiEnv, ExtraReminderRule, TaskWorkflowStatus, UserPreferences } from "../types.js";
 import { serializeTask } from "../serializers/task.js";
 import { requireAppUser } from "../middleware/session.js";
-import { buildReminderFireTimes } from "../../services/reminder-schedule.js";
 import { config } from "../../config.js";
 import { requireLinkedUser } from "../helpers/linked-user.js";
 
@@ -412,14 +411,16 @@ tasksRoute.post("/:id/reminders", async (c) => {
   let fireAt: Date;
   if (body.fireAt) {
     fireAt = new Date(body.fireAt);
-  } else if (body.daysBefore !== undefined) {
-    fireAt = ddayOffsetFireTime(task.dueAt, body.daysBefore);
-  } else if (body.hoursBefore !== undefined && body.hoursBefore > 0) {
-    fireAt = new Date(task.dueAt.getTime() - body.hoursBefore * 60 * 60 * 1000);
-  } else if (body.minutesBefore !== undefined && body.minutesBefore > 0) {
-    fireAt = new Date(task.dueAt.getTime() - body.minutesBefore * 60 * 1000);
   } else {
-    return c.json({ error: "fireAt, daysBefore, hoursBefore, or minutesBefore required" }, 400);
+    const computed = extraRuleFireTime(task.dueAt, {
+      daysBefore: body.daysBefore,
+      hoursBefore: body.hoursBefore,
+      minutesBefore: body.minutesBefore,
+    });
+    if (!computed) {
+      return c.json({ error: "fireAt, daysBefore, hoursBefore, or minutesBefore required" }, 400);
+    }
+    fireAt = computed;
   }
 
   try {
