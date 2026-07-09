@@ -4,12 +4,14 @@ import { createApiApp } from "./api/index.js";
 import { createContext } from "./context.js";
 import { config } from "./config.js";
 import { createBot } from "./telegram/bot.js";
+import { setupTelegramMenuButton } from "./telegram/menu-button.js";
 import { handleReminderJob } from "./workers/reminder-worker.js";
 
 async function main() {
   const redis = createRedisConnection();
   const app = createContext(redis);
   const bot = createBot(app);
+  await setupTelegramMenuButton(bot);
 
   const worker = createReminderWorker(async (job) => {
     await handleReminderJob(bot, app, job);

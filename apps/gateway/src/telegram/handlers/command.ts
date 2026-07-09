@@ -2,6 +2,8 @@ import type { Bot } from "grammy";
 import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
 import { telegramDisplayName } from "../../integrations/privacy.js";
+import { dashboardInlineKeyboard } from "../dashboard-keyboard.js";
+import { dashboardWebLink } from "../../utils/web-links.js";
 
 const HELP_TEXT = [
   "안녕하세요, MyOwn 업무 관리 개인 비서 봇입니다.",
@@ -16,6 +18,7 @@ const HELP_TEXT = [
   "· [답장하기]로 이어서 업무 메모 입력",
   "",
   "명령어:",
+  "/web: 웹 대시보드 (브라우저에서 열기)",
   "/help: 도움말",
   "/list: 활성 업무 목록",
   "/today: 오늘 마감 업무",
@@ -34,9 +37,34 @@ const HELP_TEXT = [
   "1번 내일 15시에 알려줘",
 ].join("\n");
 
+function replyOptions() {
+  const keyboard = dashboardInlineKeyboard();
+  return keyboard ? { reply_markup: keyboard } : undefined;
+}
+
 export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
+  bot.command("web", async (ctx) => {
+    const url = dashboardWebLink();
+    const keyboard = dashboardInlineKeyboard();
+    if (!url || !keyboard) {
+      await ctx.reply(
+        "웹 대시보드 URL이 설정되지 않았습니다. WEB_APP_URL(HTTPS)을 확인해 주세요.",
+      );
+      return;
+    }
+    await ctx.reply(
+      [
+        "웹 대시보드:",
+        url,
+        "",
+        "아래 버튼을 누르거나, 링크를 복사해 Chrome·Edge 등에서 열어 주세요.",
+      ].join("\n"),
+      { reply_markup: keyboard },
+    );
+  });
+
   bot.command("help", async (ctx) => {
-    await ctx.reply(HELP_TEXT);
+    await ctx.reply(HELP_TEXT, replyOptions());
   });
 
   bot.command("start", async (ctx) => {
@@ -60,6 +88,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
             "이제 자연어 또는 명령어로 업무를 등록하거나 알림을 받을 수 있습니다.",
             "/help: 도움말",
           ].join("\n"),
+          replyOptions(),
         );
         return;
       }
@@ -68,7 +97,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
 
-    await ctx.reply(HELP_TEXT);
+    await ctx.reply(HELP_TEXT, replyOptions());
   });
 
   bot.command("list", async (ctx) => {
@@ -78,7 +107,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
     const text = await app.taskService.listActive(userId);
-    await ctx.reply(text);
+    await ctx.reply(text, replyOptions());
   });
 
   bot.command("today", async (ctx) => {
@@ -88,7 +117,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
     const text = await app.taskService.listToday(userId);
-    await ctx.reply(text);
+    await ctx.reply(text, replyOptions());
   });
 
   bot.command("done", async (ctx) => {

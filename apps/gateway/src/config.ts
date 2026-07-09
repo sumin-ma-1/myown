@@ -39,6 +39,10 @@ if (process.env.ALLOWED_TELEGRAM_USER_IDS?.trim() === "") {
 
 export const config = {
   telegramBotToken: required("TELEGRAM_BOT_TOKEN"),
+  /** @username 없이. 미니앱 로그인 후 돌아오기용 (미설정 시 getMe로 조회) */
+  telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME ?? "",
+  /** BotFather Mini App short name (있으면 t.me/bot/shortname?startapp= 사용) */
+  telegramWebAppShortName: process.env.TELEGRAM_WEBAPP_SHORT_NAME ?? "",
   allowedTelegramUserIds: parseAllowedUserIds(
     process.env.ALLOWED_TELEGRAM_USER_IDS ?? "",
   ),

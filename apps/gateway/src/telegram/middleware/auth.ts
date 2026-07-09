@@ -1,6 +1,7 @@
 import type { Context, NextFunction } from "grammy";
 import type { AppContext } from "../../context.js";
-import { config, isUserAllowed } from "../../config.js";
+import { isUserAllowed } from "../../config.js";
+import { dashboardInlineKeyboard } from "../dashboard-keyboard.js";
 
 function startPayload(ctx: Context): string | undefined {
   const text = ctx.message?.text;
@@ -9,12 +10,24 @@ function startPayload(ctx: Context): string | undefined {
   return match?.[1]?.trim();
 }
 
+/** 연동 전에도 웹 대시보드·도움말은 사용 가능 */
+function isGuestAllowedCommand(ctx: Context): boolean {
+  const text = ctx.message?.text?.trim();
+  if (!text) return false;
+  return /^\/(web|help|start)(@\w+)?(\s|$)/i.test(text);
+}
+
 async function hasConnectedTelegram(app: AppContext, telegramUserId: number): Promise<boolean> {
   const user = await app.users.findByTelegramId(telegramUserId);
   if (!user) return false;
 
   const conn = await app.channelConnections.findByUserAndProvider(user.id, "telegram");
   return conn?.status === "connected";
+}
+
+function guestReplyOptions() {
+  const keyboard = dashboardInlineKeyboard();
+  return keyboard ? { reply_markup: keyboard } : undefined;
 }
 
 export function createAuthMiddleware(app: AppContext) {
@@ -43,14 +56,22 @@ export function createAuthMiddleware(app: AppContext) {
       return;
     }
 
+    if (isGuestAllowedCommand(ctx)) {
+      await next();
+      return;
+    }
+
     console.warn(`[auth] 거부됨 — Telegram ID: ${userId}`);
     await ctx.reply(
       [
         "⛔ 아직 이 봇을 사용할 수 없습니다.",
         "",
-        "웹 대시보드 → 연동 APP → Telegram에서",
-        "「Telegram 연결」을 눌러 연동을 완료해 주세요.",
+        "아래 「웹 대시보드」로 이동해 로그인 후",
+        "연동 APP → Telegram → 「Telegram 연결」을 완료해 주세요.",
+        "",
+        "또는 /web 명령으로 대시보드 링크를 받을 수 있습니다.",
       ].join("\n"),
+      guestReplyOptions(),
     );
   };
 }

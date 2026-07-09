@@ -25,12 +25,21 @@ export interface KakaoSkillRequest {
   };
 }
 
+export interface KakaoQuickReply {
+  label: string;
+  action: "message" | "block" | "webLink";
+  messageText?: string;
+  blockId?: string;
+  webLinkUrl?: string;
+}
+
 export interface KakaoSkillResponse {
   version: "2.0";
   template: {
     outputs: Array<{
       simpleText?: { text: string };
     }>;
+    quickReplies?: KakaoQuickReply[];
   };
 }
 

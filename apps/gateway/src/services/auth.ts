@@ -11,11 +11,14 @@ import { config, isAdminEmail, isGoogleAuthEnabled } from "../config.js";
 
 const OAUTH_STATE_PREFIX = "auth:oauth:";
 const OAUTH_STATE_TTL_SEC = 600;
+const TELEGRAM_HANDOFF_PREFIX = "auth:telegram-handoff:";
+const TELEGRAM_HANDOFF_TTL_SEC = 300;
 const SESSION_COOKIE = "myown_session";
 
 interface OAuthState {
   purpose: "login" | "signup";
   inviteCodeId?: string;
+  returnTo?: "telegram";
 }
 
 interface GoogleTokenResponse {
@@ -61,6 +64,7 @@ export class AuthService {
   async beginGoogleAuth(input: {
     purpose: "login" | "signup";
     inviteCode?: string;
+    returnTo?: "telegram";
   }): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
     if (!isGoogleAuthEnabled()) {
       return { ok: false, message: "Google 로그인이 설정되지 않았습니다." };
@@ -79,7 +83,11 @@ export class AuthService {
     }
 
     const state = randomBytes(24).toString("hex");
-    const payload: OAuthState = { purpose: input.purpose, inviteCodeId };
+    const payload: OAuthState = {
+      purpose: input.purpose,
+      inviteCodeId,
+      returnTo: input.returnTo,
+    };
     await this.redis.setex(
       `${OAUTH_STATE_PREFIX}${state}`,
       OAUTH_STATE_TTL_SEC,
@@ -103,7 +111,12 @@ export class AuthService {
     state: string,
     meta: { ip?: string; userAgent?: string },
   ): Promise<
-    | { ok: true; sessionId: string; webAccountId: string }
+    | {
+        ok: true;
+        sessionId: string;
+        webAccountId: string;
+        telegramHandoffToken?: string;
+      }
     | { ok: false; message: string }
   > {
     if (!isGoogleAuthEnabled()) {
@@ -195,7 +208,45 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + this.sessionMaxAgeSec() * 1000);
     const session = await this.sessions.create(account.id, expiresAt);
 
-    return { ok: true, sessionId: session.id, webAccountId: account.id };
+    let telegramHandoffToken: string | undefined;
+    if (oauthState.returnTo === "telegram") {
+      telegramHandoffToken = await this.createTelegramHandoffToken(session.id);
+    }
+
+    return {
+      ok: true,
+      sessionId: session.id,
+      webAccountId: account.id,
+      telegramHandoffToken,
+    };
+  }
+
+  async createTelegramHandoffToken(sessionId: string): Promise<string> {
+    const token = randomBytes(24).toString("hex");
+    await this.redis.setex(
+      `${TELEGRAM_HANDOFF_PREFIX}${token}`,
+      TELEGRAM_HANDOFF_TTL_SEC,
+      sessionId,
+    );
+    return token;
+  }
+
+  async completeTelegramHandoff(
+    token: string,
+  ): Promise<{ ok: true; sessionId: string } | { ok: false; message: string }> {
+    const key = `${TELEGRAM_HANDOFF_PREFIX}${token.trim()}`;
+    const sessionId = await this.redis.get(key);
+    if (!sessionId) {
+      return { ok: false, message: "로그인 연결이 만료되었습니다. 다시 시도해 주세요." };
+    }
+    await this.redis.del(key);
+
+    const session = await this.sessions.findValid(sessionId);
+    if (!session) {
+      return { ok: false, message: "세션이 만료되었습니다. 다시 로그인해 주세요." };
+    }
+
+    return { ok: true, sessionId };
   }
 
   private async fetchGoogleProfile(code: string): Promise<GoogleUserInfo> {

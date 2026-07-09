@@ -4,6 +4,11 @@ import type { ApiEnv } from "../types.js";
 import { AuthService } from "../../services/auth.js";
 import { config } from "../../config.js";
 import { sessionMiddleware } from "../middleware/session.js";
+import { sessionCookieOptions } from "../../utils/session-cookie.js";
+import {
+  resolveTelegramBotUsername,
+  telegramMiniAppDeepLink,
+} from "../../utils/telegram-bot.js";
 
 export const authRoute = new Hono<ApiEnv>();
 
@@ -24,6 +29,7 @@ authRoute.get("/invite/validate", async (c) => {
 authRoute.get("/google/start", async (c) => {
   const purpose = c.req.query("purpose");
   const inviteCode = c.req.query("code");
+  const returnTo = c.req.query("returnTo");
 
   if (purpose !== "login" && purpose !== "signup") {
     return c.json({ error: "잘못된 요청입니다." }, 400);
@@ -32,6 +38,7 @@ authRoute.get("/google/start", async (c) => {
   const result = await c.var.app.auth.beginGoogleAuth({
     purpose,
     inviteCode: inviteCode ?? undefined,
+    returnTo: returnTo === "telegram" ? "telegram" : undefined,
   });
 
   if (!result.ok) {
@@ -66,19 +73,52 @@ authRoute.get("/google/callback", async (c) => {
       );
     }
 
-    setCookie(c, AuthService.sessionCookieName(), result.sessionId, {
-      httpOnly: true,
-      secure: config.nodeEnv === "production",
-      sameSite: "Lax",
-      path: "/",
-      maxAge: c.var.app.auth.sessionMaxAgeSec(),
-    });
+    setCookie(
+      c,
+      AuthService.sessionCookieName(),
+      result.sessionId,
+      sessionCookieOptions(c.var.app.auth.sessionMaxAgeSec()),
+    );
+
+    if (result.telegramHandoffToken) {
+      const botUsername = await resolveTelegramBotUsername();
+      if (botUsername) {
+        return c.redirect(
+          telegramMiniAppDeepLink(botUsername, result.telegramHandoffToken),
+        );
+      }
+      return c.redirect(
+        `${config.webAppUrl}/login?telegram_handoff=${encodeURIComponent(result.telegramHandoffToken)}`,
+      );
+    }
 
     return c.redirect(`${config.webAppUrl}/?welcome=1`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Google 로그인에 실패했습니다.";
     return c.redirect(`${config.webAppUrl}/login?error=${encodeURIComponent(message)}`);
   }
+});
+
+authRoute.post("/telegram-handoff", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { token?: string } | null;
+  const token = body?.token?.trim();
+  if (!token) {
+    return c.json({ error: "잘못된 요청입니다." }, 400);
+  }
+
+  const result = await c.var.app.auth.completeTelegramHandoff(token);
+  if (!result.ok) {
+    return c.json({ error: result.message }, 400);
+  }
+
+  setCookie(
+    c,
+    AuthService.sessionCookieName(),
+    result.sessionId,
+    sessionCookieOptions(c.var.app.auth.sessionMaxAgeSec()),
+  );
+
+  return c.json({ ok: true });
 });
 
 authRoute.use("*", sessionMiddleware);
