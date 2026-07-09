@@ -37,12 +37,11 @@ function ChatTypingIndicator() {
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="animate-bounce rounded-full bg-slate-400 dark:bg-slate-300"
+              className="chat-typing-dot rounded-full"
               style={{
                 width: TYPING_DOT_SIZE_PX,
                 height: TYPING_DOT_SIZE_PX,
-                animationDelay: `${i * 150}ms`,
-                animationDuration: "0.8s",
+                animationDelay: `${i * 400}ms`,
               }}
               aria-hidden
             />

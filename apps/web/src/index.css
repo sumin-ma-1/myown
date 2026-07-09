@@ -40,6 +40,28 @@ html.dark body {
   }
 }
 
+@keyframes chat-typing-dot-wave {
+  0%,
+  75%,
+  100% {
+    background-color: #94a3b8;
+  }
+  25% {
+    background-color: #2563eb;
+  }
+}
+
+@keyframes chat-typing-dot-wave-dark {
+  0%,
+  75%,
+  100% {
+    background-color: #64748b;
+  }
+  25% {
+    background-color: #60a5fa;
+  }
+}
+
 @layer utilities {
   .page-gradient {
     background-color: #f8fafc;
@@ -94,5 +116,15 @@ html.dark body {
   .scroll-fade-mask-bottom {
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 4rem), transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 4rem), transparent 100%);
+  }
+
+  .chat-typing-dot {
+    background-color: #94a3b8;
+    animation: chat-typing-dot-wave 1.2s ease-in-out infinite;
+  }
+
+  html.dark .chat-typing-dot {
+    background-color: #64748b;
+    animation-name: chat-typing-dot-wave-dark;
   }
 }
