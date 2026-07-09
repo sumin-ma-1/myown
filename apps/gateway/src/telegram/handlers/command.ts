@@ -3,7 +3,6 @@ import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
 import { telegramDisplayName } from "../../integrations/privacy.js";
 import { dashboardInlineKeyboard } from "../dashboard-keyboard.js";
-import { dashboardWebLink } from "../../utils/web-links.js";
 
 const HELP_TEXT = [
   "안녕하세요, MyOwn 업무 관리 개인 비서 봇입니다.",
@@ -42,25 +41,22 @@ function replyOptions() {
   return keyboard ? { reply_markup: keyboard } : undefined;
 }
 
+/** 텔레그램 sendMessage 최소 본문 */
+const INLINE_BUTTON_ONLY_TEXT = "아래 버튼을 누르면 이동해요.";
+
 export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
   bot.command("web", async (ctx) => {
-    const url = dashboardWebLink();
     const keyboard = dashboardInlineKeyboard();
-    if (!url || !keyboard) {
+    if (!keyboard) {
       await ctx.reply(
         "웹 대시보드 URL이 설정되지 않았습니다. WEB_APP_URL(HTTPS)을 확인해 주세요.",
       );
       return;
     }
-    await ctx.reply(
-      [
-        "웹 대시보드:",
-        url,
-        "",
-        "아래 버튼을 누르거나, 링크를 복사해 Chrome·Edge 등에서 열어 주세요.",
-      ].join("\n"),
-      { reply_markup: keyboard },
-    );
+    await ctx.reply(INLINE_BUTTON_ONLY_TEXT, {
+      reply_markup: keyboard,
+      link_preview_options: { is_disabled: true },
+    });
   });
 
   bot.command("help", async (ctx) => {

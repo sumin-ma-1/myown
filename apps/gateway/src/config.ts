@@ -78,8 +78,6 @@ export const config = {
   webApiPort: Number(process.env.WEB_API_PORT ?? "4000"),
   webCorsOrigin: process.env.WEB_CORS_ORIGIN ?? "http://localhost:5173",
   webAppUrl: process.env.WEB_APP_URL ?? "http://localhost:5173",
-  /** 텔레그램 '웹에서 보기' 버튼용 (미설정 시 WEB_APP_URL) */
-  taskWebUrl: (process.env.TASK_WEB_URL ?? process.env.WEB_APP_URL ?? "http://localhost:5173").trim(),
   sessionTtlDays: Number(process.env.SESSION_TTL_DAYS ?? "30"),
   adminEmails: parseEmailList(process.env.ADMIN_EMAILS ?? ""),
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",

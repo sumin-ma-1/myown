@@ -13,9 +13,9 @@ export function dashboardLinkLabel(): string {
   return DASHBOARD_LINK_LABEL;
 }
 
-/** 텔레그램·카카오 등에서 업무 상세로 연결하는 웹 URL */
+/** 텔레그램·카카오 알림 '웹에서 보기' 등 업무 상세 웹 URL */
 export function taskWebLink(taskId: string): string | null {
-  const base = config.taskWebUrl.trim().replace(/\/$/, "");
-  if (!base) return null;
+  const base = config.webAppUrl.trim().replace(/\/$/, "");
+  if (!base.startsWith("https://")) return null;
   return `${base}/tasks?open=${encodeURIComponent(taskId)}`;
 }
