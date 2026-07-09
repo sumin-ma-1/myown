@@ -10,7 +10,7 @@ export function ChatFab() {
   return (
     <Link
       to="/chat"
-      className="group fixed bottom-8 right-8 z-50 h-14 w-14 overflow-hidden rounded-full border border-slate-200/70 shadow-md transition-all duration-200 hover:border-brand/40 hover:shadow-lg dark:border-slate-600/70 dark:hover:border-blue-500/40"
+      className="chat-fab-float group fixed bottom-8 right-8 z-50 h-14 w-14 overflow-hidden rounded-full border border-slate-200/70 shadow-md transition-[border-color,box-shadow,opacity] duration-200 hover:border-brand/40 hover:shadow-lg dark:border-slate-600/70 dark:hover:border-blue-500/40"
       aria-label="마이온 챗"
       title="마이온 챗과 대화해보세요."
     >
