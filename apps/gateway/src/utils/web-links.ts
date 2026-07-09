@@ -1,6 +1,6 @@
 import { config } from "../config.js";
 
-const DASHBOARD_LINK_LABEL = "웹 대시보드";
+const DASHBOARD_LINK_LABEL = "웹 바로가기";
 
 /** 공개 HTTPS 대시보드 URL (메뉴 버튼·바로가기용) */
 export function dashboardWebLink(): string | null {
