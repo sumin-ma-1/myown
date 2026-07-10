@@ -172,7 +172,7 @@ export function IntegrationsPanel({ compact = false }: IntegrationsPanelProps) {
           {needsLink && !compact && (
             <Link
               to="/integrations"
-              className="mt-2 block rounded-lg bg-brand-muted px-3 py-2 text-center text-xs font-medium text-brand hover:opacity-90"
+              className="mt-2 block rounded-lg bg-brand-muted px-3 py-2 text-center text-xs font-medium text-brand hover:opacity-90 dark:bg-blue-950/50 dark:text-blue-300"
             >
               Telegram 연결하기
             </Link>
