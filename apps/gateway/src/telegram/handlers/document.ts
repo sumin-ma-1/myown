@@ -5,10 +5,9 @@ import type { BotContext } from "../bot.js";
 import {
   clearCompose,
   composeContinueKeyboard,
-  COMPOSE_HINT_REPLY,
+  COMPOSE_HINT,
   setCompose,
   getCompose,
-  isReplyToComposeAnchor,
 } from "../compose-session.js";
 import { titleFromFileName } from "../../services/attachment.js";
 import { draftFromMemo, formatDraftSummary, mergeFileIntoComposeTask } from "../helpers/compose-merge.js";
@@ -73,6 +72,7 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
         telegramFileId: fileId,
       });
       if (merged.ok) {
+        const compose = getCompose(ctx.session);
         await ctx.reply(
           [
             "✅ 첨부를 추가했습니다.",
@@ -81,18 +81,16 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
             "",
             "[등록 완료]를 눌러 업무를 등록해 주세요.",
           ].join("\n"),
+          {
+            reply_markup: compose
+              ? composeContinueKeyboard(compose.composeKey)
+              : undefined,
+          },
         );
         return;
       }
-      if (merged.message !== "not_anchor" && merged.message !== "no_compose") {
+      if (merged.message !== "no_compose") {
         await ctx.reply(`⚠️ ${merged.message}`);
-        return;
-      }
-
-      if (getCompose(ctx.session) && !isReplyToComposeAnchor(ctx, ctx.session)) {
-        await ctx.reply(
-          "⚠️ [답장하기]를 누르거나 안내 메시지에 답장해서 첨부해 주세요.",
-        );
         return;
       }
 
@@ -129,7 +127,7 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
       const composeKey = randomUUID();
       const lines = userHint
         ? formatDraftSummary(draft)
-        : ["파일을 받았습니다.", `📎 ${saved.fileName}`, "", COMPOSE_HINT_REPLY].join("\n");
+        : ["파일을 받았습니다.", `📎 ${saved.fileName}`, "", COMPOSE_HINT].join("\n");
 
       if (chatId) {
         await ctx.api.editMessageText(chatId, status.message_id, lines, {

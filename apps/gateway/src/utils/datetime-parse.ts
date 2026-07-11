@@ -127,6 +127,63 @@ export function parseKoreanRemindPhrase(text: string): Date | undefined {
   return parseDateAndTime(dateStr, `${hour}:${String(minute).padStart(2, "0")}`);
 }
 
+function koreanClockHour(ampm: string | undefined, hour: number, text: string): number {
+  if (ampm === "오후" && hour < 12) return hour + 12;
+  if (ampm === "오전" && hour === 12) return 0;
+  if (!ampm && hour >= 1 && hour <= 11 && /오후/.test(text)) return hour + 12;
+  return hour;
+}
+
+/** compose 보충 메모: "오후 6시에", "내일 15시까지", "14:00" */
+export function parseKoreanDueSupplement(
+  text: string,
+  existingDue?: Date | null,
+): Date | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+
+  const isoMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}))?$/);
+  if (isoMatch) {
+    return parseDateAndTime(isoMatch[1], isoMatch[2]);
+  }
+
+  const koreanMatch = trimmed.match(
+    /^(?:(오늘|내일|모레)\s*)?(?:(오전|오후)\s*)?(\d{1,2})(?::(\d{2}))?\s*시(?:에|까지|쯤|반)?\.?$/,
+  );
+  if (koreanMatch) {
+    const dayWord = koreanMatch[1];
+    const hour = koreanClockHour(koreanMatch[2], Number(koreanMatch[3]), trimmed);
+    const minute = koreanMatch[4] ? Number(koreanMatch[4]) : 0;
+    if (hour > 23 || minute > 59) return undefined;
+
+    const dayOffset = dayWord ? (RELATIVE_DAYS[dayWord] ?? 0) : 0;
+    const dateStr = dayWord
+      ? todayDateString(addDays(startOfDayInTimezone(), dayOffset))
+      : existingDue
+        ? todayDateString(existingDue)
+        : todayDateString();
+    return parseDateAndTime(dateStr, `${hour}:${String(minute).padStart(2, "0")}`);
+  }
+
+  const timeOnly = trimmed.match(/^(?:(오전|오후)\s*)?(\d{1,2}):(\d{2})(?:까지)?\.?$/);
+  if (timeOnly) {
+    const hour = koreanClockHour(timeOnly[1], Number(timeOnly[2]), trimmed);
+    const minute = Number(timeOnly[3]);
+    if (hour > 23 || minute > 59) return undefined;
+    const dateStr = existingDue ? todayDateString(existingDue) : todayDateString();
+    return parseDateAndTime(dateStr, `${hour}:${String(minute).padStart(2, "0")}`);
+  }
+
+  return parseKoreanRemindPhrase(trimmed);
+}
+
+export function looksLikeDueSupplementOnly(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (parseKoreanDueSupplement(trimmed) !== undefined) return true;
+  return /^(\d{4}-\d{2}-\d{2})(\s+\d{1,2}:\d{2})?$/.test(trimmed);
+}
+
 export interface ParsedAddCommand {
   title: string;
   dueAt?: Date;

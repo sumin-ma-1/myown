@@ -1,10 +1,8 @@
 import type { TaskPriority } from "@myown/database";
 import { InlineKeyboard } from "grammy";
 import type { SessionData } from "./bot.js";
-import type { BotContext } from "./bot.js";
 
 export type ComposeMode = "awaiting_text" | "awaiting_attachment";
-
 /** 등록 완료 전 초안 (DB에 업무 없음) */
 export interface ComposeDraft {
   attachmentIds: string[];
@@ -20,10 +18,8 @@ export interface ComposeState {
   ownerUserId: string;
   mode: ComposeMode;
   anchorMessageId: number;
-  promptMessageId?: number;
   /** [등록 완료] 전까지 DB에 업무 없음 */
-  draft: ComposeDraft;
-}
+  draft: ComposeDraft;}
 
 export function getCompose(session: SessionData): ComposeState | undefined {
   return session.compose;
@@ -57,58 +53,16 @@ export function clearCompose(session: SessionData): void {
   delete session.compose;
 }
 
-export function replyToMessageId(ctx: BotContext): number | undefined {
-  return ctx.message?.reply_to_message?.message_id;
-}
-
-export function isReplyToComposeAnchor(ctx: BotContext, session: SessionData): boolean {
-  const compose = getCompose(session);
-  const replyId = replyToMessageId(ctx);
-  if (!compose || !ownsCompose(session, compose) || replyId === undefined) return false;
-  if (replyId === compose.anchorMessageId) return true;
-  if (compose.promptMessageId !== undefined && replyId === compose.promptMessageId) {
-    return true;
-  }
-  return false;
-}
-
 export function composeContinueKeyboard(composeKey: string) {
   return new InlineKeyboard()
-    .text("답장하기", `compose:reply:${composeKey}`)
     .text("등록 완료", `compose:register:${composeKey}`)
-    .row()
     .text("등록 취소", `compose:cancel:${composeKey}`);
 }
 
-export const COMPOSE_HINT_REPLY =
-  "[답장하기]로 메모 입력 후 [등록 완료]. 취소는 [등록 취소].";
+export const COMPOSE_HINT =
+  "메모를 입력하거나 파일을 첨부한 뒤 [등록 완료]. 취소는 [등록 취소].";
 
-export async function requestComposeReply(
-  ctx: BotContext,
-  compose: ComposeState,
-): Promise<number | undefined> {
-  const chatId = ctx.chat?.id;
-  if (!chatId) return undefined;
-
-  const placeholder =
-    compose.mode === "awaiting_attachment"
-      ? "파일 또는 사진 첨부"
-      : "업무 메모";
-
-  const sent = await ctx.api.sendMessage(chatId, "이어서 입력해 주세요.", {
-    reply_parameters: {
-      message_id: compose.anchorMessageId,
-    },
-    reply_markup: {
-      force_reply: true,
-      input_field_placeholder: placeholder,
-    },
-  });
-  return sent.message_id;
-}
-
-export function parseComposeText(text: string): { title: string; description?: string } {
-  const lines = text.trim().split("\n");
+export function parseComposeText(text: string): { title: string; description?: string } {  const lines = text.trim().split("\n");
   const title = lines[0]?.trim() ?? text.trim();
   const rest = lines.slice(1).join("\n").trim();
   return { title, description: rest || undefined };

@@ -9,13 +9,12 @@ import { registerMessageHandlers } from "./handlers/message.js";
 
 export interface SessionData {
   userId?: string;
-  /** 첨부·텍스트를 하나의 업무로 이어 받기 (답장 앵커) */
+  /** 첨부·텍스트를 하나의 업무로 이어 받기 */
   compose?: {
     composeKey: string;
     ownerUserId: string;
     mode: "awaiting_text" | "awaiting_attachment";
     anchorMessageId: number;
-    promptMessageId?: number;
     draft: {
       attachmentIds: string[];
       title: string;

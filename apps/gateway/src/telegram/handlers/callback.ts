@@ -3,9 +3,7 @@ import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
 import {
   clearCompose,
-  requestComposeReply,
   resolveCompose,
-  setCompose,
 } from "../compose-session.js";
 import { cancelComposeRegistration } from "../helpers/compose-cancel.js";
 import { finalizeComposeRegistration } from "../helpers/compose-finalize.js";
@@ -70,25 +68,6 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
     await ctx.answerCallbackQuery();
     if (detail) {
       await ctx.reply(detail, { reply_markup: taskActionKeyboard(taskId) });
-    }
-  });
-
-  bot.callbackQuery(/^compose:reply:(.+)$/, async (ctx) => {
-    const composeKey = ctx.match[1];
-    const compose = resolveCompose(ctx.session, composeKey);
-
-    if (!compose) {
-      await ctx.answerCallbackQuery({
-        text: "이어쓰기가 종료되었습니다. 파일이나 메시지를 다시 보내주세요.",
-        show_alert: true,
-      });
-      return;
-    }
-
-    await ctx.answerCallbackQuery();
-    const promptMessageId = await requestComposeReply(ctx, compose);
-    if (promptMessageId) {
-      setCompose(ctx.session, { ...compose, promptMessageId });
     }
   });
 

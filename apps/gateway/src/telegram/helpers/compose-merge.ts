@@ -5,14 +5,16 @@ import {
   clearCompose,
   draftMemoContext,
   getCompose,
-  isReplyToComposeAnchor,
   ownsCompose,
-  parseComposeText,
   setCompose,
   type ComposeDraft,
 } from "../compose-session.js";
 import { formatDate, formatDateTime } from "../../utils/date.js";
 import { isDateOnlyDue } from "../../utils/datetime-parse.js";
+import {
+  applyComposeMemoPatch,
+  inferOfflineComposeMemoPatch,
+} from "./compose-memo-infer.js";
 
 const priorityLabelKo = {
   urgent: "최우선",
@@ -53,12 +55,7 @@ async function applyMemoPatch(
   const parsed = await app.agent.parseComposeMemo(context, text);
   if (parsed.ok) return parsed;
 
-  if (parsed.message === "llm_disabled") {
-    const { title, description } = parseComposeText(text);
-    return { ok: true, patch: { title, description: description ?? null } };
-  }
-
-  return parsed;
+  return { ok: true, patch: inferOfflineComposeMemoPatch(text, context) };
 }
 
 export async function draftFromMemo(
@@ -66,19 +63,12 @@ export async function draftFromMemo(
   base: ComposeDraft,
   text: string,
 ): Promise<ComposeDraft> {
-  const result = await applyMemoPatch(app, draftMemoContext(base), text);
-  if (!result.ok) {
-    const { title, description } = parseComposeText(text);
-    return { ...base, title, description: description ?? base.description };
-  }
-
-  return {
-    ...base,
-    title: result.patch.title,
-    description: result.patch.description ?? base.description,
-    priority: result.patch.priority ?? base.priority,
-    dueAt: result.patch.dueAt !== undefined ? result.patch.dueAt : base.dueAt,
-  };
+  const context = draftMemoContext(base);
+  const result = await applyMemoPatch(app, context, text);
+  const patch = result.ok
+    ? result.patch
+    : inferOfflineComposeMemoPatch(text, context);
+  return applyComposeMemoPatch(base, patch);
 }
 
 export async function discardActiveTask(
@@ -96,10 +86,6 @@ export async function mergeTextIntoComposeTask(
   userId: string,
   text: string,
 ): Promise<{ ok: true; reply: string } | { ok: false; message: string }> {
-  if (!isReplyToComposeAnchor(ctx, ctx.session)) {
-    return { ok: false, message: "not_anchor" };
-  }
-
   const compose = getCompose(ctx.session);
   if (!compose || !ownsCompose(ctx.session, compose)) {
     return { ok: false, message: "no_compose" };
@@ -116,10 +102,6 @@ export async function mergeFileIntoComposeTask(
   userId: string,
   file: { fileName: string; mimeType?: string; data: Buffer; telegramFileId?: string },
 ): Promise<{ ok: true; fileName: string; title: string } | { ok: false; message: string }> {
-  if (!isReplyToComposeAnchor(ctx, ctx.session)) {
-    return { ok: false, message: "not_anchor" };
-  }
-
   const compose = getCompose(ctx.session);
   if (!compose || !ownsCompose(ctx.session, compose)) {
     return { ok: false, message: "no_compose" };

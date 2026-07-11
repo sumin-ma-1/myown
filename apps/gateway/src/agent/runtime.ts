@@ -11,6 +11,9 @@ import {
   parseFlexibleRemindRequest,
   parseRemindDateTime,
   parseRemindPhrase,
+  parseKoreanDueSupplement,
+  looksLikeDueSupplementOnly,
+  todayDateString,
 } from "../utils/datetime-parse.js";
 import {
   type CompleteTaskArgs,
@@ -23,6 +26,9 @@ import {
   type ComposeMemoArgs,
   composeMemoTool,
 } from "./compose-memo.js";
+import {
+  sanitizeComposeMemoPatch,
+} from "../telegram/helpers/compose-memo-infer.js";
 
 function formatDueLabel(dueAt: Date): string {
   return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
@@ -132,16 +138,22 @@ export class AgentRuntime {
           {
             role: "system",
             content: [
-              "사용자가 첨부 파일과 함께 등록 중인 업무에 메모를 남겼습니다.",
-              "메모에서 제목, 설명, 마감일·시각, 우선순위를 추출해 fill_task_from_memo를 한 번 호출하세요.",
+              "사용자가 첨부 파일 업무 등록 중에 후속 메모를 보냈습니다.",
+              "메모 의도를 파악해 fill_task_from_memo로 변경할 필드만 채우세요.",
               `타임존: ${config.timezone}`,
               `오늘: ${formatDate(new Date())}`,
               `현재 제목: ${context.title}`,
               `현재 설명: ${context.description ?? "(없음)"}`,
               `현재 마감: ${currentDue}`,
               `현재 우선순위: ${context.priority}`,
-              "마감·우선순위가 메모에 없으면 해당 필드는 생략하세요.",
-              "제목은 메모 의도에 맞게 간결하게 정리하세요.",
+              "",
+              "규칙:",
+              "- 마감·시각 보충이면 due_date/due_time만, title 생략 (예: '오후 6시에', '내일까지')",
+              "- 우선순위 보충이면 priority만 (예: '급해요', '최우선으로')",
+              "- 설명·메모 추가면 description만 (예: '팀장님 검토 필요')",
+              "- 제목 변경은 사용자가 분명히 바꾸려 할 때만 title (예: '분기 보고서로 할게', '제목은 회의록')",
+              "- 메모 전체를 title로 복사하지 마세요",
+              "- 언급되지 않은 필드는 생략",
             ].join("\n"),
           },
           { role: "user", content: memo },
@@ -156,17 +168,14 @@ export class AgentRuntime {
       }
 
       const args = JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs;
-      const title = args.title?.trim();
-      if (!title) {
-        return { ok: false, message: "제목을 추출하지 못했습니다." };
-      }
-
-      const patch: {
+      let patch: {
         title: string;
         description?: string | null;
         priority?: TaskPriority;
         dueAt?: Date | null;
-      } = { title };
+      } = {
+        title: args.title?.trim() || context.title,
+      };
 
       if (args.description !== undefined) {
         patch.description = args.description.trim() || null;
@@ -176,6 +185,19 @@ export class AgentRuntime {
       }
       if (args.due_date?.trim()) {
         patch.dueAt = resolveDueAt(args.due_date, args.due_time) ?? null;
+      } else if (args.due_time?.trim()) {
+        const dateStr = context.dueAt
+          ? todayDateString(context.dueAt)
+          : todayDateString();
+        patch.dueAt = resolveDueAt(dateStr, args.due_time) ?? null;
+      } else if (looksLikeDueSupplementOnly(memo)) {
+        patch.dueAt = parseKoreanDueSupplement(memo, context.dueAt) ?? null;
+      }
+
+      patch = sanitizeComposeMemoPatch(memo, context, patch);
+
+      if (!patch.title) {
+        return { ok: false, message: "제목을 추출하지 못했습니다." };
       }
 
       return { ok: true, patch };
