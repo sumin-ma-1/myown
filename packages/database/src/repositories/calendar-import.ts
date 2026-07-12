@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gt, gte, lt, lte, or } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { calendarImports } from "../schema.js";
 import type { CalendarImport } from "../schema.js";
@@ -153,6 +153,24 @@ export class CalendarImportRepository {
       .where(and(eq(calendarImports.userId, userId), eq(calendarImports.id, id)))
       .returning();
     return row;
+  }
+
+  async deletePendingOutsideRange(
+    userId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    const rows = await this.db
+      .delete(calendarImports)
+      .where(
+        and(
+          eq(calendarImports.userId, userId),
+          eq(calendarImports.enabled, false),
+          or(lt(calendarImports.startsAt, from), gt(calendarImports.startsAt, to)),
+        ),
+      )
+      .returning({ id: calendarImports.id });
+    return rows.length;
   }
 
   async deleteByUserId(userId: string): Promise<void> {

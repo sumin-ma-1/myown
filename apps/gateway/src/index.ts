@@ -6,6 +6,7 @@ import { config } from "./config.js";
 import { createBot } from "./telegram/bot.js";
 import { setupTelegramMenuButton } from "./telegram/menu-button.js";
 import { handleReminderJob } from "./workers/reminder-worker.js";
+import { startGoogleCalendarAutoSyncWorker } from "./workers/google-calendar-auto-sync-worker.js";
 
 async function main() {
   const redis = createRedisConnection();
@@ -21,6 +22,8 @@ async function main() {
     console.error(`Reminder job failed: ${job?.id}`, err);
   });
 
+  const stopGoogleCalendarAutoSync = startGoogleCalendarAutoSyncWorker(app);
+
   const api = createApiApp(app);
   serve({ fetch: api.fetch, port: config.webApiPort }, () => {
     console.log(`Web API: http://localhost:${config.webApiPort}`);
@@ -28,6 +31,7 @@ async function main() {
 
   const shutdown = async () => {
     console.log("Shutting down...");
+    stopGoogleCalendarAutoSync();
     await worker.close();
     await app.reminderQueue.close();
     await redis.quit();

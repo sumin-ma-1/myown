@@ -16,6 +16,7 @@ import type {
   KakaoLinkDto,
   KakaoLinkStatus,
   CalendarImportDto,
+  GoogleCalendarAutoSyncSettingsDto,
   GoogleCalendarStatusDto,
 } from "./types";
 
@@ -170,8 +171,22 @@ export const api = {
   getGoogleCalendarStatus: () =>
     request<GoogleCalendarStatusDto>("/api/integrations/google-calendar/status"),
 
+  updateGoogleCalendarSettings: (body: {
+    autoSyncEnabled?: boolean;
+    autoSyncIntervalHours?: number;
+    autoSyncPastDays?: number;
+    autoSyncFutureDays?: number;
+  }) =>
+    request<{ autoSync: GoogleCalendarAutoSyncSettingsDto }>(
+      "/api/integrations/google-calendar/settings",
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    ),
+
   syncGoogleCalendar: (options?: { pastDays?: number; futureDays?: number }) =>
-    request<{ imported: number; updated: number; items: CalendarImportDto[] }>(
+    request<{ imported: number; updated: number; pruned: number; items: CalendarImportDto[] }>(
       "/api/integrations/google-calendar/sync",
       {
         method: "POST",

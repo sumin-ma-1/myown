@@ -125,6 +125,15 @@ export interface GoogleCalendarStatusDto {
   googleEmail?: string | null;
   importCount?: number;
   enabledCount?: number;
+  autoSync?: GoogleCalendarAutoSyncSettingsDto | null;
+}
+
+export interface GoogleCalendarAutoSyncSettingsDto {
+  autoSyncEnabled: boolean;
+  autoSyncIntervalHours: 6 | 12 | 24 | 48 | 168;
+  autoSyncPastDays: number;
+  autoSyncFutureDays: number;
+  lastAutoSyncedAt: string | null;
 }
 
 export interface AuthMeDto {

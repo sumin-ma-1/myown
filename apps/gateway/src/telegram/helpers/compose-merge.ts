@@ -68,7 +68,7 @@ export async function draftFromMemo(
   const patch = result.ok
     ? result.patch
     : inferOfflineComposeMemoPatch(text, context);
-  return applyComposeMemoPatch(base, patch);
+  return { ...base, ...applyComposeMemoPatch(base, patch) };
 }
 
 export async function discardActiveTask(

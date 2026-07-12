@@ -85,6 +85,10 @@ export const config = {
   googleRedirectUri:
     process.env.GOOGLE_REDIRECT_URI ??
     `${process.env.WEB_APP_URL ?? "http://localhost:5173"}/api/auth/google/callback`,
+  /** 자동 가져오기 대상 확인 주기(ms). 사용자별 주기와 별개 */
+  googleCalendarAutoSyncCheckIntervalMs: Number(
+    process.env.GOOGLE_CALENDAR_AUTO_SYNC_CHECK_INTERVAL_MS ?? "900000",
+  ),
   /** Kakao Open Builder (카카오톡 채널 + 스킬 서버) */
   kakaoChannelUrl: process.env.KAKAO_CHANNEL_URL ?? "",
   kakaoBotName: process.env.KAKAO_BOT_NAME ?? "MyOwn",

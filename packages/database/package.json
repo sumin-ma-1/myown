@@ -17,7 +17,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:migrate-priority": "tsx scripts/migrate-priority-low.ts",
-    "db:migrate-task-attachments": "tsx scripts/migrate-task-attachments.ts"
+    "db:migrate-task-attachments": "tsx scripts/migrate-task-attachments.ts",
+    "db:migrate-gcal-auto-sync": "tsx scripts/migrate-google-calendar-auto-sync.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.3",

@@ -59,6 +59,26 @@ googleCalendarRoute.get("/connect", async (c) => {
   }
 });
 
+googleCalendarRoute.patch("/settings", async (c) => {
+  const userId = c.get("userId")!;
+  const body = await c.req
+    .json<{
+      autoSyncEnabled?: boolean;
+      autoSyncIntervalHours?: number;
+      autoSyncPastDays?: number;
+      autoSyncFutureDays?: number;
+    }>()
+    .catch(() => ({}));
+
+  try {
+    const autoSync = await c.get("app").googleCalendar.updateAutoSyncSettings(userId, body);
+    return c.json({ autoSync });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "설정 저장에 실패했습니다.";
+    return c.json({ error: message }, 400);
+  }
+});
+
 googleCalendarRoute.post("/disconnect", async (c) => {
   const userId = c.get("userId")!;
   await c.get("app").googleCalendar.disconnect(userId);
@@ -67,7 +87,9 @@ googleCalendarRoute.post("/disconnect", async (c) => {
 
 googleCalendarRoute.post("/sync", async (c) => {
   const userId = c.get("userId")!;
-  const body = await c.req.json<{ pastDays?: number; futureDays?: number }>().catch(() => ({}));
+  const body = (await c.req
+    .json<{ pastDays?: number; futureDays?: number }>()
+    .catch(() => undefined)) ?? {};
   try {
     const result = await c.get("app").googleCalendar.sync(userId, {
       pastDays: body.pastDays,

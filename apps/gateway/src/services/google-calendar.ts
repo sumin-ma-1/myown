@@ -61,6 +61,18 @@ export interface CalendarImportDto {
   lastSyncedAt: string;
 }
 
+export const GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS = [6, 12, 24, 48, 168] as const;
+export type GoogleCalendarAutoSyncIntervalHours =
+  (typeof GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS)[number];
+
+export interface GoogleCalendarAutoSyncSettingsDto {
+  autoSyncEnabled: boolean;
+  autoSyncIntervalHours: GoogleCalendarAutoSyncIntervalHours;
+  autoSyncPastDays: number;
+  autoSyncFutureDays: number;
+  lastAutoSyncedAt: string | null;
+}
+
 export class GoogleCalendarService {
   constructor(
     private readonly redis: Redis,
@@ -87,6 +99,7 @@ export class GoogleCalendarService {
     googleEmail: string | null;
     importCount: number;
     enabledCount: number;
+    autoSync: GoogleCalendarAutoSyncSettingsDto | null;
   }> {
     const conn = await this.connections.findByUserId(userId);
     const all = await this.imports.listByUserId(userId);
@@ -95,6 +108,124 @@ export class GoogleCalendarService {
       googleEmail: conn?.googleEmail ?? null,
       importCount: all.length,
       enabledCount: all.filter((i) => i.enabled).length,
+      autoSync: conn ? this.toAutoSyncDto(conn) : null,
+    };
+  }
+
+  async updateAutoSyncSettings(
+    userId: string,
+    input: Partial<{
+      autoSyncEnabled: boolean;
+      autoSyncIntervalHours: number;
+      autoSyncPastDays: number;
+      autoSyncFutureDays: number;
+    }>,
+  ): Promise<GoogleCalendarAutoSyncSettingsDto> {
+    const conn = await this.connections.findByUserId(userId);
+    if (!conn) {
+      throw new Error("Google Calendar가 연결되지 않았습니다.");
+    }
+
+    const next = {
+      autoSyncEnabled: input.autoSyncEnabled ?? conn.autoSyncEnabled,
+      autoSyncIntervalHours: normalizeAutoSyncIntervalHours(
+        input.autoSyncIntervalHours ?? conn.autoSyncIntervalHours,
+      ),
+      autoSyncPastDays: clampDays(input.autoSyncPastDays ?? conn.autoSyncPastDays, 0, 365),
+      autoSyncFutureDays: clampDays(input.autoSyncFutureDays ?? conn.autoSyncFutureDays, 1, 365),
+    };
+
+    const updated = await this.connections.updateAutoSyncSettings(userId, next);
+    if (!updated) {
+      throw new Error("자동 가져오기 설정을 저장하지 못했습니다.");
+    }
+
+    if (next.autoSyncEnabled && this.isAutoSyncDue(updated, Date.now())) {
+      void this.runAutoSyncForUser(userId).catch((err) => {
+        console.error(`[gcal-auto] initial sync for ${userId}:`, err);
+      });
+    }
+
+    return this.toAutoSyncDto(updated);
+  }
+
+  async runDueAutoSyncs(): Promise<{ checked: number; synced: number; errors: number }> {
+    const connections = await this.connections.listAutoSyncEnabled();
+    const now = Date.now();
+    let synced = 0;
+    let errors = 0;
+
+    for (const conn of connections) {
+      if (!this.isAutoSyncDue(conn, now)) continue;
+      try {
+        await this.runAutoSyncForUser(conn.userId);
+        synced += 1;
+      } catch (err) {
+        errors += 1;
+        console.error(`[gcal-auto] user ${conn.userId}:`, err);
+      }
+    }
+
+    return { checked: connections.length, synced, errors };
+  }
+
+  private async runAutoSyncForUser(userId: string): Promise<void> {
+    const conn = await this.connections.findByUserId(userId);
+    if (!conn?.autoSyncEnabled) return;
+
+    await this.sync(userId, {
+      pastDays: conn.autoSyncPastDays,
+      futureDays: conn.autoSyncFutureDays,
+      activateNewImports: true,
+    });
+    await this.connections.markAutoSynced(userId);
+  }
+
+  private async activateImport(userId: string, row: CalendarImport): Promise<void> {
+    const taskId = await this.ensureTaskForImport(userId, row);
+    await this.imports.setEnabled(userId, row.id, true, taskId);
+  }
+
+  private async syncImportToLinkedTask(userId: string, row: CalendarImport): Promise<void> {
+    if (!row.enabled || !row.taskId) return;
+
+    const task = await this.tasks.findById(userId, row.taskId);
+    if (!task || task.status !== "active") return;
+
+    await this.tasks.update(userId, row.taskId, {
+      title: row.title,
+      description: row.description,
+      dueAt: row.startsAt,
+    });
+  }
+
+  private isAutoSyncDue(
+    conn: {
+      autoSyncEnabled: boolean;
+      autoSyncIntervalHours: number;
+      lastAutoSyncedAt: Date | null;
+    },
+    nowMs: number,
+  ): boolean {
+    if (!conn.autoSyncEnabled) return false;
+    if (!conn.lastAutoSyncedAt) return true;
+    const intervalMs = conn.autoSyncIntervalHours * 60 * 60 * 1000;
+    return nowMs - conn.lastAutoSyncedAt.getTime() >= intervalMs;
+  }
+
+  private toAutoSyncDto(conn: {
+    autoSyncEnabled: boolean;
+    autoSyncIntervalHours: number;
+    autoSyncPastDays: number;
+    autoSyncFutureDays: number;
+    lastAutoSyncedAt: Date | null;
+  }): GoogleCalendarAutoSyncSettingsDto {
+    return {
+      autoSyncEnabled: conn.autoSyncEnabled,
+      autoSyncIntervalHours: normalizeAutoSyncIntervalHours(conn.autoSyncIntervalHours),
+      autoSyncPastDays: conn.autoSyncPastDays,
+      autoSyncFutureDays: conn.autoSyncFutureDays,
+      lastAutoSyncedAt: conn.lastAutoSyncedAt?.toISOString() ?? null,
     };
   }
 
@@ -164,14 +295,26 @@ export class GoogleCalendarService {
       };
     }
 
+    let accessToken = token.access_token;
+    let accessTokenExpiresAt = token.expires_in
+      ? new Date(Date.now() + token.expires_in * 1000)
+      : undefined;
+
+    if (!token.refresh_token && existing) {
+      const refreshed = await this.requestRefreshToken(refreshToken);
+      if (!refreshed.ok) {
+        return { ok: false, message: mapGoogleOAuthError(refreshed.errorCode) };
+      }
+      accessToken = refreshed.accessToken;
+      accessTokenExpiresAt = refreshed.expiresAt;
+    }
+
     await this.connections.upsert({
       userId: oauthState.userId,
       googleEmail: profile.email,
       refreshToken,
-      accessToken: token.access_token,
-      accessTokenExpiresAt: token.expires_in
-        ? new Date(Date.now() + token.expires_in * 1000)
-        : undefined,
+      accessToken,
+      accessTokenExpiresAt,
     });
 
     return { ok: true };
@@ -184,8 +327,8 @@ export class GoogleCalendarService {
 
   async sync(
     userId: string,
-    options?: { pastDays?: number; futureDays?: number },
-  ): Promise<{ imported: number; updated: number }> {
+    options?: { pastDays?: number; futureDays?: number; activateNewImports?: boolean },
+  ): Promise<{ imported: number; updated: number; pruned: number }> {
     const conn = await this.connections.findByUserId(userId);
     if (!conn) {
       throw new Error("Google Calendar가 연결되지 않았습니다.");
@@ -193,33 +336,53 @@ export class GoogleCalendarService {
 
     const pastDays = clampDays(options?.pastDays ?? 7, 0, 365);
     const futureDays = clampDays(options?.futureDays ?? 90, 1, 365);
+    const { from: timeMin, to: timeMax } = manualSyncRange(pastDays, futureDays);
 
     const accessToken = await this.getAccessToken(userId);
-    const timeMin = new Date();
-    timeMin.setDate(timeMin.getDate() - pastDays);
-    const timeMax = new Date();
-    timeMax.setDate(timeMax.getDate() + futureDays);
 
-    const events = await this.fetchEvents(accessToken, timeMin, timeMax);
+    let events: GoogleCalendarEvent[];
+    try {
+      events = await this.fetchEvents(accessToken, timeMin, timeMax);
+    } catch (err) {
+      if (!isGoogleCalendarAuthError(err)) throw err;
+      const refreshedToken = await this.getAccessToken(userId, { forceRefresh: true });
+      events = await this.fetchEvents(refreshedToken, timeMin, timeMax);
+    }
     let imported = 0;
     let updated = 0;
+
+    const activateNew = options?.activateNewImports ?? false;
 
     for (const event of events) {
       if (!event.id || event.status === "cancelled") continue;
       const parsed = this.parseEvent(event);
       if (!parsed) continue;
 
-      const { outcome } = await this.imports.upsertFromGoogle({
+      const { row, outcome } = await this.imports.upsertFromGoogle({
         userId,
         googleEventId: event.id,
         googleCalendarId: "primary",
         ...parsed,
       });
-      if (outcome === "inserted") imported += 1;
-      else if (outcome === "updated") updated += 1;
+      if (outcome === "inserted") {
+        imported += 1;
+        if (activateNew) {
+          await this.activateImport(userId, row);
+        }
+      } else if (outcome === "updated") {
+        updated += 1;
+        if (activateNew && row.enabled) {
+          await this.syncImportToLinkedTask(userId, row);
+        }
+      }
     }
 
-    return { imported, updated };
+    let pruned = 0;
+    if (!activateNew) {
+      pruned = await this.imports.deletePendingOutsideRange(userId, timeMin, timeMax);
+    }
+
+    return { imported, updated, pruned };
   }
 
   async listImports(
@@ -373,11 +536,15 @@ export class GoogleCalendarService {
     };
   }
 
-  private async getAccessToken(userId: string): Promise<string> {
+  private async getAccessToken(
+    userId: string,
+    options?: { forceRefresh?: boolean },
+  ): Promise<string> {
     const conn = await this.connections.findByUserId(userId);
     if (!conn) throw new Error("Google Calendar가 연결되지 않았습니다.");
 
     if (
+      !options?.forceRefresh &&
       conn.accessToken &&
       conn.accessTokenExpiresAt &&
       conn.accessTokenExpiresAt.getTime() > Date.now() + 60_000
@@ -385,29 +552,47 @@ export class GoogleCalendarService {
       return conn.accessToken;
     }
 
-    const body = new URLSearchParams({
-      client_id: config.googleClientId,
-      client_secret: config.googleClientSecret,
-      refresh_token: conn.refreshToken,
-      grant_type: "refresh_token",
-    });
+    const refreshed = await this.requestRefreshToken(conn.refreshToken);
+    if (!refreshed.ok) {
+      if (refreshed.errorCode === "invalid_grant") {
+        await this.connections.clearAccessTokens(userId);
+      }
+      throw new Error(mapGoogleOAuthError(refreshed.errorCode));
+    }
 
+    await this.connections.updateTokens(userId, {
+      accessToken: refreshed.accessToken,
+      accessTokenExpiresAt: refreshed.expiresAt,
+    });
+    return refreshed.accessToken;
+  }
+
+  private async requestRefreshToken(
+    refreshToken: string,
+  ): Promise<
+    | { ok: true; accessToken: string; expiresAt: Date }
+    | { ok: false; errorCode?: string }
+  > {
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
+      body: new URLSearchParams({
+        client_id: config.googleClientId,
+        client_secret: config.googleClientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
     });
     const data = (await res.json()) as GoogleTokenResponse;
     if (!res.ok || !data.access_token) {
-      throw new Error(data.error ?? "Google 토큰 갱신에 실패했습니다.");
+      return { ok: false, errorCode: data.error };
     }
 
-    const expiresAt = new Date(Date.now() + (data.expires_in ?? 3600) * 1000);
-    await this.connections.updateTokens(userId, {
+    return {
+      ok: true,
       accessToken: data.access_token,
-      accessTokenExpiresAt: expiresAt,
-    });
-    return data.access_token;
+      expiresAt: new Date(Date.now() + (data.expires_in ?? 3600) * 1000),
+    };
   }
 
   private async exchangeCode(code: string): Promise<GoogleTokenResponse> {
@@ -451,6 +636,9 @@ export class GoogleCalendarService {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const data = (await res.json()) as GoogleEventsListResponse;
+    if (res.status === 401) {
+      throw new GoogleCalendarAuthError("Google Calendar access token expired");
+    }
     if (!res.ok) {
       throw new Error(data.error?.message ?? "Google Calendar 일정을 가져오지 못했습니다.");
     }
@@ -458,7 +646,48 @@ export class GoogleCalendarService {
   }
 }
 
+class GoogleCalendarAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GoogleCalendarAuthError";
+  }
+}
+
+function isGoogleCalendarAuthError(err: unknown): err is GoogleCalendarAuthError {
+  return err instanceof GoogleCalendarAuthError;
+}
+
+function mapGoogleOAuthError(code?: string): string {
+  switch (code) {
+    case "invalid_grant":
+      return "Google Calendar 연결이 만료되었습니다. 연결 해제 후 Google 계정에서 앱 권한을 해제하고 다시 연결해 주세요.";
+    default:
+      return "Google Calendar 연결에 문제가 있습니다. 다시 연결해 주세요.";
+  }
+}
+
+function manualSyncRange(
+  pastDays: number,
+  futureDays: number,
+): { from: Date; to: Date } {
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  from.setDate(from.getDate() - pastDays);
+  const to = new Date();
+  to.setHours(23, 59, 59, 999);
+  to.setDate(to.getDate() + futureDays);
+  return { from, to };
+}
+
 function clampDays(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function normalizeAutoSyncIntervalHours(value: number): GoogleCalendarAutoSyncIntervalHours {
+  const allowed = GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS;
+  if (allowed.includes(value as GoogleCalendarAutoSyncIntervalHours)) {
+    return value as GoogleCalendarAutoSyncIntervalHours;
+  }
+  return 24;
 }
