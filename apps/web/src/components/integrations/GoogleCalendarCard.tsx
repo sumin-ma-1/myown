@@ -741,15 +741,15 @@ export function GoogleCalendarCard() {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm text-slate-800 dark:text-slate-100">
-                가져온 일정을 MyOwn 업무로 자동 활성화
+                MyOwn 업무로 자동 활성화
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                끄면 검토 대기 목록에만 추가돼요.
+                끄면 검토 대기 목록에 추가돼요.
               </p>
             </div>
             <Switch
               checked={autoSyncDraft.autoSyncActivateImports}
-              aria-label="가져온 일정을 MyOwn 업무로 자동 활성화"
+              aria-label="MyOwn 업무로 자동 활성화"
               onCheckedChange={(enabled) =>
                 setAutoSyncDraft((prev) => ({ ...prev, autoSyncActivateImports: enabled }))
               }
@@ -757,7 +757,7 @@ export function GoogleCalendarCard() {
           </div>
 
           <label className="block space-y-1 text-sm">
-            <span className="text-slate-700 dark:text-slate-200">가져오기 주기</span>
+            <span className="text-slate-700 dark:text-slate-200">동기화 주기</span>
             <select
               className="block w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={autoSyncDraft.autoSyncIntervalHours}
