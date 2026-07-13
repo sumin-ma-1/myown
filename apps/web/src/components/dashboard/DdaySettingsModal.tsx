@@ -6,9 +6,14 @@ import { Modal } from "@/components/ui/Modal";
 interface DdaySettingsModalProps {
   open: boolean;
   onClose: () => void;
+  onSaved?: (message: string) => void;
 }
 
-export function DdaySettingsModal({ open, onClose }: DdaySettingsModalProps) {
+function offsetsEqual(a: number[], b: number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+export function DdaySettingsModal({ open, onClose, onSaved }: DdaySettingsModalProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("3,1,0");
 
@@ -34,6 +39,7 @@ export function DdaySettingsModal({ open, onClose }: DdaySettingsModalProps) {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["settings"] });
+      onSaved?.("D-DAY 알림 설정이 저장되었습니다.");
       onClose();
     },
   });
@@ -78,7 +84,12 @@ export function DdaySettingsModal({ open, onClose }: DdaySettingsModalProps) {
               .split(",")
               .map((s) => Number(s.trim()))
               .filter((n) => Number.isInteger(n) && n >= 0);
-            if (parsed.length > 0) mutation.mutate(parsed);
+            if (parsed.length === 0) return;
+            if (offsetsEqual(parsed, offsets)) {
+              onClose();
+              return;
+            }
+            mutation.mutate(parsed);
           }}
         >
           저장

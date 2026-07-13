@@ -89,7 +89,11 @@ export function DashboardPage() {
         onSaved={setFlashMessage}
       />
 
-      <DdaySettingsModal open={ddayModalOpen} onClose={() => setDdayModalOpen(false)} />
+      <DdaySettingsModal
+        open={ddayModalOpen}
+        onClose={() => setDdayModalOpen(false)}
+        onSaved={setFlashMessage}
+      />
 
       <FlashMessage message={flashMessage} onDismiss={() => setFlashMessage(null)} />
     </div>
