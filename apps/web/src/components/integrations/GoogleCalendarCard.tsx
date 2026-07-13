@@ -5,6 +5,8 @@ import { api } from "@/api/client";
 import type { CalendarImportDto } from "@/api/types";
 import { IntegrationTitle } from "@/components/integrations/IntegrationIcon";
 import { Card } from "@/components/ui/Card";
+import { FlashMessage } from "@/components/ui/FlashMessage";
+import { Modal } from "@/components/ui/Modal";
 import { Switch } from "@/components/ui/Switch";
 import { formatDateTime } from "@/lib/dates";
 
@@ -17,6 +19,9 @@ function statusClass(connected: boolean): string {
     ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
     : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
+
+const actionChipClass =
+  "shrink-0 rounded-full bg-brand-muted px-2 py-0.5 text-[10px] font-medium text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 
@@ -54,6 +59,28 @@ function isInManualSyncWindow(
   return start >= rangeFrom && start <= rangeTo;
 }
 
+type AutoSyncDraft = {
+  autoSyncIntervalHours: 6 | 12 | 24 | 48 | 168;
+  autoSyncPastDays: string;
+  autoSyncFutureDays: string;
+  autoSyncActivateImports: boolean;
+};
+
+function clampDays(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function parseDayInput(value: string, fallback: number, min: number, max: number): number {
+  const trimmed = value.trim();
+  if (!trimmed) return clampDays(fallback, min, max);
+  return clampDays(Number(trimmed), min, max);
+}
+
+function sanitizeDayInput(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export function GoogleCalendarCard() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -65,11 +92,19 @@ export function GoogleCalendarCard() {
   const [autoSyncFutureDays, setAutoSyncFutureDays] = useState(90);
   const [autoSyncActivateImports, setAutoSyncActivateImports] = useState(true);
   const [message, setMessage] = useState<ReactNode>(null);
+  const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showEnabledImports, setShowEnabledImports] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(20);
+  const [autoSyncModalOpen, setAutoSyncModalOpen] = useState(false);
+  const [autoSyncDraft, setAutoSyncDraft] = useState<AutoSyncDraft>({
+    autoSyncIntervalHours: 24,
+    autoSyncPastDays: "7",
+    autoSyncFutureDays: "90",
+    autoSyncActivateImports: true,
+  });
 
   const status = useQuery({
     queryKey: ["google-calendar-status"],
@@ -306,6 +341,56 @@ export function GoogleCalendarCard() {
     setEnabled.mutate({ id: item.id, enabled: true });
   };
 
+  const openAutoSyncModal = () => {
+    setAutoSyncDraft({
+      autoSyncIntervalHours,
+      autoSyncPastDays: String(autoSyncPastDays),
+      autoSyncFutureDays: String(autoSyncFutureDays),
+      autoSyncActivateImports,
+    });
+    setAutoSyncModalOpen(true);
+  };
+
+  const applyAutoSyncDraft = () => {
+    const nextPastDays = parseDayInput(autoSyncDraft.autoSyncPastDays, autoSyncPastDays, 0, 365);
+    const nextFutureDays = parseDayInput(
+      autoSyncDraft.autoSyncFutureDays,
+      autoSyncFutureDays,
+      1,
+      365,
+    );
+    const changed =
+      autoSyncDraft.autoSyncIntervalHours !== autoSyncIntervalHours ||
+      nextPastDays !== autoSyncPastDays ||
+      nextFutureDays !== autoSyncFutureDays ||
+      autoSyncDraft.autoSyncActivateImports !== autoSyncActivateImports;
+
+    if (!changed) {
+      setAutoSyncModalOpen(false);
+      return;
+    }
+
+    saveAutoSync.mutate(
+      {
+        autoSyncEnabled,
+        autoSyncIntervalHours: autoSyncDraft.autoSyncIntervalHours,
+        autoSyncPastDays: nextPastDays,
+        autoSyncFutureDays: nextFutureDays,
+        autoSyncActivateImports: autoSyncDraft.autoSyncActivateImports,
+      },
+      {
+        onSuccess: () => {
+          setAutoSyncIntervalHours(autoSyncDraft.autoSyncIntervalHours);
+          setAutoSyncPastDays(nextPastDays);
+          setAutoSyncFutureDays(nextFutureDays);
+          setAutoSyncActivateImports(autoSyncDraft.autoSyncActivateImports);
+          setFlashMessage("자동 가져오기 설정이 저장되었습니다.");
+          setAutoSyncModalOpen(false);
+        },
+      },
+    );
+  };
+
   if (!available) {
     return (
       <Card title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}>
@@ -389,103 +474,35 @@ export function GoogleCalendarCard() {
         </div>
 
         {connected && (
-          <div className="space-y-3 rounded-xl border border-surface-border bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1">
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-surface-border bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
                   자동 일정 가져오기
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Google Calendar 일정을 자동으로 가져와요.
+                <button
+                  type="button"
+                  className={actionChipClass}
+                  onClick={openAutoSyncModal}
+                >
+                  설정
+                </button>
+              </div>
+              {status.data?.autoSync?.lastAutoSyncedAt && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  최근 동기화: {formatDateTime(status.data.autoSync.lastAutoSyncedAt)}
                 </p>
-              </div>
-              <Switch
-                checked={autoSyncEnabled}
-                disabled={saveAutoSync.isPending}
-                aria-label="자동 일정 가져오기"
-                onCheckedChange={(enabled) => {
-                  setAutoSyncEnabled(enabled);
-                  saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: enabled }));
-                }}
-              />
+              )}
             </div>
-            {autoSyncEnabled && (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="text-xs text-slate-700 dark:text-slate-200">
-                      가져온 일정 MyOwn 업무로 자동 활성화
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      끄면 검토 대기 목록에 추가돼요.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={autoSyncActivateImports}
-                    disabled={saveAutoSync.isPending}
-                    aria-label="가져온 일정을 MyOwn 업무로 자동 활성화"
-                    onCheckedChange={(enabled) => {
-                      setAutoSyncActivateImports(enabled);
-                      saveAutoSync.mutate(autoSyncSettings({ autoSyncActivateImports: enabled }));
-                    }}
-                  />
-                </div>
-                <div className="flex flex-wrap items-end gap-3 text-xs">
-                <label className="space-y-1">
-                  <span className="text-slate-600 dark:text-slate-300">주기</span>
-                  <select
-                    className="block rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={autoSyncIntervalHours}
-                    disabled={saveAutoSync.isPending}
-                    onChange={(e) => {
-                      const hours = Number(e.target.value) as 6 | 12 | 24 | 48 | 168;
-                      setAutoSyncIntervalHours(hours);
-                      saveAutoSync.mutate(
-                        autoSyncSettings({ autoSyncEnabled: true, autoSyncIntervalHours: hours }),
-                      );
-                    }}
-                  >
-                    {AUTO_SYNC_INTERVAL_OPTIONS.map((opt) => (
-                      <option key={opt.hours} value={opt.hours}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-600 dark:text-slate-300">과거 (일)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={365}
-                    className="block w-20 rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={autoSyncPastDays}
-                    disabled={saveAutoSync.isPending}
-                    onChange={(e) => setAutoSyncPastDays(Number(e.target.value))}
-                    onBlur={() => saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: true }))}
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-slate-600 dark:text-slate-300">앞으로 (일)</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={365}
-                    className="block w-20 rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={autoSyncFutureDays}
-                    disabled={saveAutoSync.isPending}
-                    onChange={(e) => setAutoSyncFutureDays(Number(e.target.value))}
-                    onBlur={() => saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: true }))}
-                  />
-                </label>
-              </div>
-              </>
-            )}
-            {status.data?.autoSync?.lastAutoSyncedAt && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                마지막 자동 가져오기: {formatDateTime(status.data.autoSync.lastAutoSyncedAt)}
-              </p>
-            )}
+            <Switch
+              checked={autoSyncEnabled}
+              disabled={saveAutoSync.isPending}
+              aria-label="자동 일정 가져오기"
+              onCheckedChange={(enabled) => {
+                setAutoSyncEnabled(enabled);
+                saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: enabled }));
+              }}
+            />
           </div>
         )}
 
@@ -653,7 +670,7 @@ export function GoogleCalendarCard() {
                             {item.enabled && item.taskId && (
                               <Link
                                 to={`/tasks?open=${item.taskId}`}
-                                className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                                className={actionChipClass}
                               >
                                 등록됨
                               </Link>
@@ -714,6 +731,107 @@ export function GoogleCalendarCard() {
           </div>
         )}
       </div>
+
+      <Modal
+        open={autoSyncModalOpen}
+        title="자동 일정 가져오기 설정"
+        onClose={() => setAutoSyncModalOpen(false)}
+      >
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm text-slate-800 dark:text-slate-100">
+                가져온 일정을 MyOwn 업무로 자동 활성화
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                끄면 검토 대기 목록에만 추가돼요.
+              </p>
+            </div>
+            <Switch
+              checked={autoSyncDraft.autoSyncActivateImports}
+              aria-label="가져온 일정을 MyOwn 업무로 자동 활성화"
+              onCheckedChange={(enabled) =>
+                setAutoSyncDraft((prev) => ({ ...prev, autoSyncActivateImports: enabled }))
+              }
+            />
+          </div>
+
+          <label className="block space-y-1 text-sm">
+            <span className="text-slate-700 dark:text-slate-200">가져오기 주기</span>
+            <select
+              className="block w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              value={autoSyncDraft.autoSyncIntervalHours}
+              onChange={(e) =>
+                setAutoSyncDraft((prev) => ({
+                  ...prev,
+                  autoSyncIntervalHours: Number(e.target.value) as AutoSyncDraft["autoSyncIntervalHours"],
+                }))
+              }
+            >
+              {AUTO_SYNC_INTERVAL_OPTIONS.map((opt) => (
+                <option key={opt.hours} value={opt.hours}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1 text-sm">
+              <span className="text-slate-700 dark:text-slate-200">과거 (일)</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                className="block w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                value={autoSyncDraft.autoSyncPastDays}
+                onChange={(e) =>
+                  setAutoSyncDraft((prev) => ({
+                    ...prev,
+                    autoSyncPastDays: sanitizeDayInput(e.target.value),
+                  }))
+                }
+              />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span className="text-slate-700 dark:text-slate-200">앞으로 (일)</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                className="block w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                value={autoSyncDraft.autoSyncFutureDays}
+                onChange={(e) =>
+                  setAutoSyncDraft((prev) => ({
+                    ...prev,
+                    autoSyncFutureDays: sanitizeDayInput(e.target.value),
+                  }))
+                }
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <button
+              type="button"
+              className="rounded-lg border border-surface-border px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+              onClick={() => setAutoSyncModalOpen(false)}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              disabled={saveAutoSync.isPending}
+              onClick={applyAutoSyncDraft}
+            >
+              {saveAutoSync.isPending ? "저장 중…" : "저장"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <FlashMessage message={flashMessage} onDismiss={() => setFlashMessage(null)} />
     </Card>
   );
 }
