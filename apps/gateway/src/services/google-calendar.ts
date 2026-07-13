@@ -185,6 +185,35 @@ export class GoogleCalendarService {
     await this.connections.markAutoSynced(userId);
   }
 
+  private async reconcileImportWithExistingTask(
+    userId: string,
+    row: CalendarImport,
+  ): Promise<boolean> {
+    if (row.enabled && row.taskId) return true;
+
+    const task = await this.tasks.findUnlinkedCalendarMatch(userId, {
+      title: row.title,
+      dueAt: row.startsAt,
+    });
+    if (!task) return false;
+
+    await this.imports.setEnabled(userId, row.id, true, task.id);
+    return true;
+  }
+
+  private async saveGoogleCalendarEmail(
+    userId: string,
+    email: string | null,
+  ): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user) return;
+    const prefs = (user.preferences ?? {}) as UserPreferences;
+    await this.users.updatePreferences(userId, {
+      ...prefs,
+      googleCalendar: { ...prefs.googleCalendar, email },
+    });
+  }
+
   private async activateImport(userId: string, row: CalendarImport): Promise<void> {
     const taskId = await this.ensureTaskForImport(userId, row);
     await this.imports.setEnabled(userId, row.id, true, taskId);
@@ -315,6 +344,14 @@ export class GoogleCalendarService {
       accessTokenExpiresAt = refreshed.expiresAt;
     }
 
+    const user = await this.users.findById(oauthState.userId);
+    const prefs = (user?.preferences ?? {}) as UserPreferences;
+    const previousEmail = existing?.googleEmail ?? prefs.googleCalendar?.email ?? null;
+    const newEmail = profile.email ?? null;
+    if (previousEmail && newEmail && previousEmail !== newEmail) {
+      await this.imports.deleteByUserId(oauthState.userId);
+    }
+
     await this.connections.upsert({
       userId: oauthState.userId,
       googleEmail: profile.email,
@@ -323,12 +360,17 @@ export class GoogleCalendarService {
       accessTokenExpiresAt,
     });
 
+    await this.saveGoogleCalendarEmail(oauthState.userId, newEmail);
+
     return { ok: true };
   }
 
   async disconnect(userId: string): Promise<void> {
+    const conn = await this.connections.findByUserId(userId);
+    if (conn?.googleEmail) {
+      await this.saveGoogleCalendarEmail(userId, conn.googleEmail);
+    }
     await this.connections.deleteByUserId(userId);
-    await this.imports.deleteByUserId(userId);
   }
 
   async sync(
@@ -371,15 +413,21 @@ export class GoogleCalendarService {
         ...parsed,
       });
       if (outcome === "inserted") {
-        imported += 1;
         if (activateNew) {
           await this.activateImport(userId, row);
+          imported += 1;
+        } else {
+          const relinked = await this.reconcileImportWithExistingTask(userId, row);
+          if (relinked) updated += 1;
+          else imported += 1;
         }
       } else if (outcome === "updated") {
         updated += 1;
         if (activateNew && row.enabled) {
           await this.syncImportToLinkedTask(userId, row);
         }
+      } else if (!activateNew) {
+        await this.reconcileImportWithExistingTask(userId, row);
       }
     }
 

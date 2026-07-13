@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "@/api/client";
@@ -19,6 +19,8 @@ function statusClass(connected: boolean): string {
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+const mutedCountClass = "font-normal text-slate-400 dark:text-slate-500";
 
 const AUTO_SYNC_INTERVAL_OPTIONS = [
   { hours: 6 as const, label: "6시간마다" },
@@ -62,7 +64,7 @@ export function GoogleCalendarCard() {
   const [autoSyncPastDays, setAutoSyncPastDays] = useState(7);
   const [autoSyncFutureDays, setAutoSyncFutureDays] = useState(90);
   const [autoSyncActivateImports, setAutoSyncActivateImports] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<ReactNode>(null);
   const [error, setError] = useState<string | null>(null);
   const [showEnabledImports, setShowEnabledImports] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -144,7 +146,14 @@ export function GoogleCalendarCard() {
     mutationFn: () => api.syncGoogleCalendar({ pastDays, futureDays }),
     onSuccess: (data) => {
       setError(null);
-      setMessage(`가져오기 완료 (신규 ${data.imported}건, 갱신 ${data.updated}건)`);
+      setMessage(
+        <>
+          가져오기 완료{" "}
+          <span className="font-normal text-emerald-600/60 dark:text-emerald-400/60">
+            (신규 {data.imported}건, 갱신 {data.updated}건)
+          </span>
+        </>,
+      );
       void queryClient.invalidateQueries({ queryKey: ["google-calendar-imports"] });
       void queryClient.invalidateQueries({ queryKey: ["google-calendar-status"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -485,18 +494,24 @@ export function GoogleCalendarCard() {
 
         {connected && (
           <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
-            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-              가져온 일정 (검토 대기 {pendingItems.length}건)
-            </p>
-
-            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={showEnabledImports}
-                onChange={(e) => setShowEnabledImports(e.target.checked)}
-              />
-              이미 등록된 일정 보기
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                가져온 일정{" "}
+                <span className={mutedCountClass}>(검토 대기 {pendingItems.length}건)</span>
+              </p>
+              <button
+                type="button"
+                className={`rounded-md border px-2 py-1 text-xs ${
+                  showEnabledImports
+                    ? "border-brand bg-brand text-white"
+                    : "border-surface-border text-slate-600 dark:border-slate-600 dark:text-slate-300"
+                }`}
+                onClick={() => setShowEnabledImports((value) => !value)}
+                aria-pressed={showEnabledImports}
+              >
+                이미 등록된 일정 포함
+              </button>
+            </div>
 
             {visibleItems.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -516,7 +531,10 @@ export function GoogleCalendarCard() {
                         disabled={selectedIds.length === 0 || batchPending}
                         onClick={() => batchSetEnabled.mutate({ ids: selectedIds, enabled: true })}
                       >
-                        선택 항목 활성화 ({selectedIds.length})
+                        선택 항목 활성화{" "}
+                        <span className="font-normal text-brand/60 dark:text-blue-300/60">
+                          ({selectedIds.length})
+                        </span>
                       </button>
                     </>
                   )}

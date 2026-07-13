@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Database } from "../client.js";
-import { tasks } from "../schema.js";
+import { calendarImports, tasks } from "../schema.js";
 import type { Task, TaskPriority } from "../schema.js";
 import { normalizeTaskPriority } from "../priority.js";
 
@@ -94,6 +94,44 @@ export class TaskRepository {
       )
       .limit(1);
     return task;
+  }
+
+  async findUnlinkedCalendarMatch(
+    userId: string,
+    input: { title: string; dueAt: Date },
+  ): Promise<Task | undefined> {
+    const dueAt = input.dueAt;
+    const windowStart = new Date(dueAt.getTime() - 60_000);
+    const windowEnd = new Date(dueAt.getTime() + 60_000);
+
+    const [row] = await this.db
+      .select({ task: tasks })
+      .from(tasks)
+      .leftJoin(
+        calendarImports,
+        and(
+          eq(calendarImports.taskId, tasks.id),
+          eq(calendarImports.userId, userId),
+          eq(calendarImports.enabled, true),
+        ),
+      )
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          inArray(tasks.status, ["active", "completed"]),
+          isNotNull(tasks.dueAt),
+          sql`lower(trim(${tasks.title})) = lower(trim(${input.title}))`,
+          gte(tasks.dueAt, windowStart),
+          lte(tasks.dueAt, windowEnd),
+          isNull(calendarImports.id),
+        ),
+      )
+      .orderBy(
+        sql`case ${tasks.status} when 'active' then 0 else 1 end`,
+        desc(tasks.createdAt),
+      )
+      .limit(1);
+    return row?.task;
   }
 
   async findActiveByTitle(userId: string, title: string): Promise<Task | undefined> {

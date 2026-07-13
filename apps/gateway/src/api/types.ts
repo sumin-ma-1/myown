@@ -22,6 +22,9 @@ export interface UserPreferences {
   taskReminderSkipDefaults?: Record<string, boolean>;
   /** 사용자가 개별 취소한 알림 시각 (taskId → fireAt ms) */
   taskReminderSuppressedAt?: Record<string, number[]>;
+  googleCalendar?: {
+    email?: string | null;
+  };
 }
 
 export interface ExtraReminderRule {
