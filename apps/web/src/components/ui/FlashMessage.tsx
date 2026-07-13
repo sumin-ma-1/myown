@@ -9,7 +9,7 @@ interface FlashMessageProps {
 }
 
 /** 화면 중앙에 잠깐 떴다 사라지는 안내 토스트 */
-export function FlashMessage({ message, onDismiss, autoHideMs = 2600 }: FlashMessageProps) {
+export function FlashMessage({ message, onDismiss, autoHideMs = 2200 }: FlashMessageProps) {
   useEffect(() => {
     if (!message || !onDismiss || autoHideMs <= 0) return;
     const timer = window.setTimeout(onDismiss, autoHideMs);

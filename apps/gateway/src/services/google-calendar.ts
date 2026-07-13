@@ -61,7 +61,7 @@ export interface CalendarImportDto {
   lastSyncedAt: string;
 }
 
-export const GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS = [6, 12, 24, 48, 168] as const;
+export const GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS = [1, 6, 12, 24, 48, 168] as const;
 export type GoogleCalendarAutoSyncIntervalHours =
   (typeof GOOGLE_CALENDAR_AUTO_SYNC_INTERVALS)[number];
 

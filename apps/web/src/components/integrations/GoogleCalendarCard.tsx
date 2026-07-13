@@ -28,6 +28,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 const mutedCountClass = "font-normal text-slate-400 dark:text-slate-500";
 
 const AUTO_SYNC_INTERVAL_OPTIONS = [
+  { hours: 1 as const, label: "1시간마다" },
   { hours: 6 as const, label: "6시간마다" },
   { hours: 12 as const, label: "12시간마다" },
   { hours: 24 as const, label: "하루에 한 번" },
@@ -60,7 +61,7 @@ function isInManualSyncWindow(
 }
 
 type AutoSyncDraft = {
-  autoSyncIntervalHours: 6 | 12 | 24 | 48 | 168;
+  autoSyncIntervalHours: 1 | 6 | 12 | 24 | 48 | 168;
   autoSyncPastDays: string;
   autoSyncFutureDays: string;
   autoSyncActivateImports: boolean;
@@ -87,7 +88,7 @@ export function GoogleCalendarCard() {
   const [pastDays, setPastDays] = useState(7);
   const [futureDays, setFutureDays] = useState(90);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
-  const [autoSyncIntervalHours, setAutoSyncIntervalHours] = useState<6 | 12 | 24 | 48 | 168>(24);
+  const [autoSyncIntervalHours, setAutoSyncIntervalHours] = useState<1 | 6 | 12 | 24 | 48 | 168>(24);
   const [autoSyncPastDays, setAutoSyncPastDays] = useState(7);
   const [autoSyncFutureDays, setAutoSyncFutureDays] = useState(90);
   const [autoSyncActivateImports, setAutoSyncActivateImports] = useState(true);
@@ -463,7 +464,7 @@ export function GoogleCalendarCard() {
               </button>
               <button
                 type="button"
-                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
                 disabled={disconnect.isPending}
                 onClick={() => disconnect.mutate()}
               >

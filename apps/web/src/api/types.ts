@@ -130,7 +130,7 @@ export interface GoogleCalendarStatusDto {
 
 export interface GoogleCalendarAutoSyncSettingsDto {
   autoSyncEnabled: boolean;
-  autoSyncIntervalHours: 6 | 12 | 24 | 48 | 168;
+  autoSyncIntervalHours: 1 | 6 | 12 | 24 | 48 | 168;
   autoSyncPastDays: number;
   autoSyncFutureDays: number;
   autoSyncActivateImports: boolean;
