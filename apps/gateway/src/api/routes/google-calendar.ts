@@ -67,6 +67,7 @@ googleCalendarRoute.patch("/settings", async (c) => {
       autoSyncIntervalHours?: number;
       autoSyncPastDays?: number;
       autoSyncFutureDays?: number;
+      autoSyncActivateImports?: boolean;
     }>()
     .catch(() => ({}));
 

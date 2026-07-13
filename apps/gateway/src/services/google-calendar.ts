@@ -70,6 +70,7 @@ export interface GoogleCalendarAutoSyncSettingsDto {
   autoSyncIntervalHours: GoogleCalendarAutoSyncIntervalHours;
   autoSyncPastDays: number;
   autoSyncFutureDays: number;
+  autoSyncActivateImports: boolean;
   lastAutoSyncedAt: string | null;
 }
 
@@ -119,6 +120,7 @@ export class GoogleCalendarService {
       autoSyncIntervalHours: number;
       autoSyncPastDays: number;
       autoSyncFutureDays: number;
+      autoSyncActivateImports: boolean;
     }>,
   ): Promise<GoogleCalendarAutoSyncSettingsDto> {
     const conn = await this.connections.findByUserId(userId);
@@ -133,6 +135,8 @@ export class GoogleCalendarService {
       ),
       autoSyncPastDays: clampDays(input.autoSyncPastDays ?? conn.autoSyncPastDays, 0, 365),
       autoSyncFutureDays: clampDays(input.autoSyncFutureDays ?? conn.autoSyncFutureDays, 1, 365),
+      autoSyncActivateImports:
+        input.autoSyncActivateImports ?? conn.autoSyncActivateImports,
     };
 
     const updated = await this.connections.updateAutoSyncSettings(userId, next);
@@ -176,7 +180,7 @@ export class GoogleCalendarService {
     await this.sync(userId, {
       pastDays: conn.autoSyncPastDays,
       futureDays: conn.autoSyncFutureDays,
-      activateNewImports: true,
+      activateNewImports: conn.autoSyncActivateImports,
     });
     await this.connections.markAutoSynced(userId);
   }
@@ -218,6 +222,7 @@ export class GoogleCalendarService {
     autoSyncIntervalHours: number;
     autoSyncPastDays: number;
     autoSyncFutureDays: number;
+    autoSyncActivateImports: boolean;
     lastAutoSyncedAt: Date | null;
   }): GoogleCalendarAutoSyncSettingsDto {
     return {
@@ -225,6 +230,7 @@ export class GoogleCalendarService {
       autoSyncIntervalHours: normalizeAutoSyncIntervalHours(conn.autoSyncIntervalHours),
       autoSyncPastDays: conn.autoSyncPastDays,
       autoSyncFutureDays: conn.autoSyncFutureDays,
+      autoSyncActivateImports: conn.autoSyncActivateImports,
       lastAutoSyncedAt: conn.lastAutoSyncedAt?.toISOString() ?? null,
     };
   }

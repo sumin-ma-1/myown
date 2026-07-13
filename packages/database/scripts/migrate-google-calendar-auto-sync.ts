@@ -33,6 +33,10 @@ async function main() {
     ALTER TABLE google_calendar_connections
       ALTER COLUMN auto_sync_enabled SET DEFAULT false
   `;
+  await sql`
+    ALTER TABLE google_calendar_connections
+      ADD COLUMN IF NOT EXISTS auto_sync_activate_imports boolean NOT NULL DEFAULT true
+  `;
 
   console.log("google_calendar_connections auto-sync columns ready");
   await sql.end();

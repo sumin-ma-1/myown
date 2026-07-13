@@ -8,6 +8,7 @@ export interface GoogleCalendarAutoSyncSettings {
   autoSyncIntervalHours: number;
   autoSyncPastDays: number;
   autoSyncFutureDays: number;
+  autoSyncActivateImports: boolean;
 }
 
 export class GoogleCalendarConnectionRepository {
@@ -100,6 +101,7 @@ export class GoogleCalendarConnectionRepository {
         autoSyncIntervalHours: settings.autoSyncIntervalHours,
         autoSyncPastDays: settings.autoSyncPastDays,
         autoSyncFutureDays: settings.autoSyncFutureDays,
+        autoSyncActivateImports: settings.autoSyncActivateImports,
         updatedAt: new Date(),
       })
       .where(eq(googleCalendarConnections.userId, userId))

@@ -133,6 +133,7 @@ export interface GoogleCalendarAutoSyncSettingsDto {
   autoSyncIntervalHours: 6 | 12 | 24 | 48 | 168;
   autoSyncPastDays: number;
   autoSyncFutureDays: number;
+  autoSyncActivateImports: boolean;
   lastAutoSyncedAt: string | null;
 }
 

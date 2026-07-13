@@ -176,6 +176,7 @@ export const api = {
     autoSyncIntervalHours?: number;
     autoSyncPastDays?: number;
     autoSyncFutureDays?: number;
+    autoSyncActivateImports?: boolean;
   }) =>
     request<{ autoSync: GoogleCalendarAutoSyncSettingsDto }>(
       "/api/integrations/google-calendar/settings",

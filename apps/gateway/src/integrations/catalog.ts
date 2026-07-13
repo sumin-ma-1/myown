@@ -24,7 +24,7 @@ export const INTEGRATION_CATALOG: IntegrationCatalogItem[] = [
   {
     provider: "slack",
     name: "Slack",
-    description: "워크스페이스 앱 연동 (준비 중)",
+    description: "워크스페이스 앱 연동",
     available: false,
   },
 ];

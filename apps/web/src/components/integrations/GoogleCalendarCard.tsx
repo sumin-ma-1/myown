@@ -61,6 +61,7 @@ export function GoogleCalendarCard() {
   const [autoSyncIntervalHours, setAutoSyncIntervalHours] = useState<6 | 12 | 24 | 48 | 168>(24);
   const [autoSyncPastDays, setAutoSyncPastDays] = useState(7);
   const [autoSyncFutureDays, setAutoSyncFutureDays] = useState(90);
+  const [autoSyncActivateImports, setAutoSyncActivateImports] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showEnabledImports, setShowEnabledImports] = useState(false);
@@ -103,7 +104,23 @@ export function GoogleCalendarCard() {
     setAutoSyncIntervalHours(auto.autoSyncIntervalHours);
     setAutoSyncPastDays(auto.autoSyncPastDays);
     setAutoSyncFutureDays(auto.autoSyncFutureDays);
+    setAutoSyncActivateImports(auto.autoSyncActivateImports);
   }, [status.data?.autoSync]);
+
+  const autoSyncSettings = (overrides?: {
+    autoSyncEnabled?: boolean;
+    autoSyncIntervalHours?: number;
+    autoSyncPastDays?: number;
+    autoSyncFutureDays?: number;
+    autoSyncActivateImports?: boolean;
+  }) => ({
+    autoSyncEnabled,
+    autoSyncIntervalHours,
+    autoSyncPastDays,
+    autoSyncFutureDays,
+    autoSyncActivateImports,
+    ...overrides,
+  });
 
   const saveAutoSync = useMutation({
     mutationFn: (body: {
@@ -111,6 +128,7 @@ export function GoogleCalendarCard() {
       autoSyncIntervalHours?: number;
       autoSyncPastDays?: number;
       autoSyncFutureDays?: number;
+      autoSyncActivateImports?: boolean;
     }) => api.updateGoogleCalendarSettings(body),
     onSuccess: () => {
       setError(null);
@@ -294,7 +312,7 @@ export function GoogleCalendarCard() {
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Google Calendar 일정을 가져온 뒤, 원하는 항목만 MyOwn 업무로 활성화합니다.
+            Google Calendar 일정을 가져온 뒤, 원하는 항목만 MyOwn 업무로 활성화해요.
           </p>
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusClass(connected)}`}
@@ -369,8 +387,7 @@ export function GoogleCalendarCard() {
                   자동 일정 가져오기
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Google Calendar 일정을 주기적으로 가져옵니다. 자동으로 가져온 일정은 MyOwn 업무로
-                  바로 활성화됩니다.
+                  Google Calendar 일정을 자동으로 가져와요.
                 </p>
               </div>
               <Switch
@@ -379,19 +396,34 @@ export function GoogleCalendarCard() {
                 aria-label="자동 일정 가져오기"
                 onCheckedChange={(enabled) => {
                   setAutoSyncEnabled(enabled);
-                  saveAutoSync.mutate({
-                    autoSyncEnabled: enabled,
-                    autoSyncIntervalHours,
-                    autoSyncPastDays,
-                    autoSyncFutureDays,
-                  });
+                  saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: enabled }));
                 }}
               />
             </div>
             {autoSyncEnabled && (
-              <div className="flex flex-wrap items-end gap-3 text-xs">
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs text-slate-700 dark:text-slate-200">
+                      가져온 일정 MyOwn 업무로 자동 활성화
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      끄면 검토 대기 목록에 추가돼요.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={autoSyncActivateImports}
+                    disabled={saveAutoSync.isPending}
+                    aria-label="가져온 일정을 MyOwn 업무로 자동 활성화"
+                    onCheckedChange={(enabled) => {
+                      setAutoSyncActivateImports(enabled);
+                      saveAutoSync.mutate(autoSyncSettings({ autoSyncActivateImports: enabled }));
+                    }}
+                  />
+                </div>
+                <div className="flex flex-wrap items-end gap-3 text-xs">
                 <label className="space-y-1">
-                  <span className="text-slate-600 dark:text-slate-300">가져오기 주기</span>
+                  <span className="text-slate-600 dark:text-slate-300">주기</span>
                   <select
                     className="block rounded-lg border border-surface-border bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={autoSyncIntervalHours}
@@ -399,12 +431,9 @@ export function GoogleCalendarCard() {
                     onChange={(e) => {
                       const hours = Number(e.target.value) as 6 | 12 | 24 | 48 | 168;
                       setAutoSyncIntervalHours(hours);
-                      saveAutoSync.mutate({
-                        autoSyncEnabled: true,
-                        autoSyncIntervalHours: hours,
-                        autoSyncPastDays,
-                        autoSyncFutureDays,
-                      });
+                      saveAutoSync.mutate(
+                        autoSyncSettings({ autoSyncEnabled: true, autoSyncIntervalHours: hours }),
+                      );
                     }}
                   >
                     {AUTO_SYNC_INTERVAL_OPTIONS.map((opt) => (
@@ -424,14 +453,7 @@ export function GoogleCalendarCard() {
                     value={autoSyncPastDays}
                     disabled={saveAutoSync.isPending}
                     onChange={(e) => setAutoSyncPastDays(Number(e.target.value))}
-                    onBlur={() =>
-                      saveAutoSync.mutate({
-                        autoSyncEnabled: true,
-                        autoSyncIntervalHours,
-                        autoSyncPastDays,
-                        autoSyncFutureDays,
-                      })
-                    }
+                    onBlur={() => saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: true }))}
                   />
                 </label>
                 <label className="space-y-1">
@@ -444,17 +466,11 @@ export function GoogleCalendarCard() {
                     value={autoSyncFutureDays}
                     disabled={saveAutoSync.isPending}
                     onChange={(e) => setAutoSyncFutureDays(Number(e.target.value))}
-                    onBlur={() =>
-                      saveAutoSync.mutate({
-                        autoSyncEnabled: true,
-                        autoSyncIntervalHours,
-                        autoSyncPastDays,
-                        autoSyncFutureDays,
-                      })
-                    }
+                    onBlur={() => saveAutoSync.mutate(autoSyncSettings({ autoSyncEnabled: true }))}
                   />
                 </label>
               </div>
+              </>
             )}
             {status.data?.autoSync?.lastAutoSyncedAt && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400">

@@ -299,10 +299,6 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
         {item.provider === "kakao" && item.available && (
           <KakaoActions item={item} />
         )}
-
-        {item.status === "unavailable" && (
-          <p className="text-xs text-slate-400 dark:text-slate-500">추후 지원 예정입니다.</p>
-        )}
       </div>
     </Card>
   );

@@ -165,6 +165,7 @@ export const googleCalendarConnections = pgTable(
     autoSyncIntervalHours: integer("auto_sync_interval_hours").notNull().default(24),
     autoSyncPastDays: integer("auto_sync_past_days").notNull().default(7),
     autoSyncFutureDays: integer("auto_sync_future_days").notNull().default(90),
+    autoSyncActivateImports: boolean("auto_sync_activate_imports").notNull().default(true),
     lastAutoSyncedAt: timestamp("last_auto_synced_at", { withTimezone: true }),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
