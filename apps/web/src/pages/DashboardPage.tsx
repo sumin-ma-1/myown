@@ -73,7 +73,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
         <DueTodayCard tasks={today} onTaskClick={openEdit} />
         <InProgressCard tasks={active} onTaskClick={openEdit} />
         <PlannedCard tasks={active} onTaskClick={openEdit} />

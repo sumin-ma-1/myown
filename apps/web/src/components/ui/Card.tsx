@@ -12,12 +12,12 @@ export function Card({ id, title, action, children, className = "" }: CardProps)
   return (
     <section
       id={id}
-      className={`rounded-xl border border-surface-border bg-surface-card p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none ${className}`}
+      className={`min-w-0 rounded-xl border border-surface-border bg-surface-card p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none ${className}`}
     >
       {(title || action) && (
-        <header className="mb-3 flex items-center justify-between gap-2">
+        <header className="mb-3 flex min-w-0 items-center justify-between gap-2">
           {title ? (
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
               {title}
             </h2>
           ) : (

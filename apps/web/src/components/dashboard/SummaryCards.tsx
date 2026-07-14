@@ -72,11 +72,13 @@ function SummaryCardTitle({
   count: number;
 }) {
   return (
-    <CardTitle icon={icon} iconClassName={iconClassName}>
-      {label}
-      {count > 0 && (
-        <span className="font-normal text-slate-500 dark:text-slate-400"> {count}건</span>
-      )}
+    <CardTitle icon={icon} iconClassName={`${iconClassName} shrink-0`}>
+      <span className="min-w-0 truncate">
+        {label}
+        {count > 0 && (
+          <span className="font-normal text-slate-500 dark:text-slate-400"> {count}건</span>
+        )}
+      </span>
     </CardTitle>
   );
 }
@@ -98,7 +100,7 @@ function SummaryCard({
 }) {
   return (
     <Card
-      className="transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
+      className="min-w-0 overflow-hidden transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
       title={
         <SummaryCardTitle
           icon={icon}
