@@ -168,10 +168,10 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
             aria-label="알림 목록"
           >
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-700">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">알림 센터</p>
+              <p className="text-base font-semibold text-slate-800 dark:text-slate-100">알림 센터</p>
               <button
                 type="button"
-                className="text-[11px] text-brand hover:underline disabled:opacity-50 dark:text-blue-300"
+                className="text-xs text-brand hover:underline disabled:opacity-50 dark:text-blue-300"
                 disabled={unreadCount === 0 || markAllRead.isPending}
                 onClick={() => markAllRead.mutate()}
               >
@@ -181,9 +181,9 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               {notifications.isLoading ? (
-                <p className="px-3 py-6 text-center text-xs text-slate-500">불러오는 중…</p>
+                <p className="px-3 py-6 text-center text-sm text-slate-500">불러오는 중…</p>
               ) : items.length === 0 ? (
-                <p className="px-3 py-6 text-center text-xs text-slate-500">알림을 모두 확인하였어요.</p>
+                <p className="px-3 py-6 text-center text-sm text-slate-500">알림을 모두 확인하였어요.</p>
               ) : (
                 <ul>
                   {items.map((item) => (
@@ -210,13 +210,13 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
             </div>
 
             <div className="shrink-0 space-y-3 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
-              <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
                 채널 알림
               </p>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs text-slate-800 dark:text-slate-100">Telegram</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-800 dark:text-slate-100">Telegram</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {telegramLinked ? "연결됨" : "연동 APP에서 연결 필요"}
                   </p>
                 </div>
@@ -231,8 +231,8 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
               </div>
               <div className="flex items-center justify-between gap-2 opacity-70">
                 <div className="min-w-0">
-                  <p className="text-xs text-slate-800 dark:text-slate-100">KakaoTalk</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">준비 중</p>
+                  <p className="text-sm text-slate-800 dark:text-slate-100">KakaoTalk</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">준비 중</p>
                 </div>
                 <Switch
                   checked={false}
@@ -267,9 +267,10 @@ function NotificationRow({
             : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
         }`}
         onClick={onSelect}
-      >        <div className="flex items-start justify-between gap-2">
+      >
+        <div className="flex items-start justify-between gap-2">
           <p
-            className={`text-xs ${
+            className={`text-sm ${
               unread
                 ? "font-semibold text-slate-900 dark:text-slate-50"
                 : "font-medium text-slate-700 dark:text-slate-200"
@@ -278,11 +279,11 @@ function NotificationRow({
             {item.title}
           </p>
           {unread && (
-            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" aria-hidden />
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" aria-hidden />
           )}
         </div>
-        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">{item.body}</p>
-        <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{item.body}</p>
+        <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
           {formatDateTime(item.createdAt)}
         </p>
       </button>
