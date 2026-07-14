@@ -98,6 +98,7 @@ function SummaryCard({
 }) {
   return (
     <Card
+      className="transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
       title={
         <SummaryCardTitle
           icon={icon}

@@ -227,9 +227,21 @@ export function CalendarPanel({
                   inMonth
                     ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                     : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
-                } ${isToday ? "ring-2 ring-brand/30" : ""}`}
+                } ${
+                  isToday
+                    ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
+                    : ""
+                }`}
               >
-                <div className="mb-1 text-[11px] font-medium">{day.getDate()}</div>
+                <div
+                  className={`mb-1 text-[11px] font-medium ${
+                    isToday
+                      ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 font-semibold text-white"
+                      : ""
+                  }`}
+                >
+                  {day.getDate()}
+                </div>
                 <ul className="space-y-1">
                   {dayTasks.slice(0, MONTH_DAY_TASK_PREVIEW).map((t) => (
                     <li key={t.id}>
@@ -263,11 +275,17 @@ export function CalendarPanel({
                 key={key}
                 className={`min-h-32 rounded-lg border p-2 text-left ${
                   isToday
-                    ? "border-brand/40 bg-brand-muted/30 ring-2 ring-brand/20 dark:bg-blue-950/30"
+                    ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
                     : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                 }`}
               >
-                <p className="mb-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                <p
+                  className={`mb-2 text-[11px] font-semibold ${
+                    isToday
+                      ? "text-brand dark:text-blue-300"
+                      : "text-slate-600 dark:text-slate-300"
+                  }`}
+                >
                   {new Intl.DateTimeFormat("ko-KR", {
                     weekday: "short",
                     month: "numeric",
