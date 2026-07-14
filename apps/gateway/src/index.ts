@@ -13,6 +13,9 @@ async function main() {
   const app = createContext(redis);
   const bot = createBot(app);
   await setupTelegramMenuButton(bot);
+  app.notifications.setTelegramSender(async (telegramUserId, text) => {
+    await bot.api.sendMessage(telegramUserId, text);
+  });
 
   const worker = createReminderWorker(async (job) => {
     await handleReminderJob(bot, app, job);

@@ -15,6 +15,7 @@ import { adminRoute } from "./routes/admin.js";
 import { kakaoRoute } from "./routes/kakao.js";
 import { googleCalendarRoute } from "./routes/google-calendar.js";
 import { chatRoute } from "./routes/chat.js";
+import { notificationsRoute } from "./routes/notifications.js";
 
 export function createApiApp(appContext: AppContext) {
   const app = new Hono<ApiEnv>();
@@ -49,6 +50,7 @@ export function createApiApp(appContext: AppContext) {
   app.route("/api/calendar", calendarRoute);
   app.route("/api/chat", chatRoute);
   app.route("/api/settings", settingsRoute);
+  app.route("/api/notifications", notificationsRoute);
   app.route("/api/integrations", integrationsRoute);
 
   return app;

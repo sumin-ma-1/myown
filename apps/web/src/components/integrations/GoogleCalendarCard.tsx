@@ -21,7 +21,7 @@ function statusClass(connected: boolean): string {
 }
 
 const actionChipClass =
-  "shrink-0 rounded-full bg-brand-muted px-2 py-0.5 text-[10px] font-medium text-brand hover:bg-brand/10 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50";
+  "shrink-0 rounded-full border border-sky-200/80 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 hover:bg-sky-100 dark:border-sky-700/60 dark:bg-sky-950/50 dark:text-sky-300 dark:hover:bg-sky-900/50";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 
@@ -394,7 +394,11 @@ export function GoogleCalendarCard() {
 
   if (!available) {
     return (
-      <Card title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}>
+      <Card
+        id="google-calendar"
+        className="scroll-mt-6"
+        title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}
+      >
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Google OAuth가 설정되지 않아 Calendar 연동을 사용할 수 없습니다.
         </p>
@@ -403,7 +407,11 @@ export function GoogleCalendarCard() {
   }
 
   return (
-    <Card title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}>
+    <Card
+      id="google-calendar"
+      className="scroll-mt-6"
+      title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}
+    >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm text-slate-600 dark:text-slate-300">

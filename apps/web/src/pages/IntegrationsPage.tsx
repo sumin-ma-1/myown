@@ -1,14 +1,28 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { api } from "@/api/client";
 import { IntegrationCard } from "@/components/integrations/IntegrationCard";
 import { GoogleCalendarCard } from "@/components/integrations/GoogleCalendarCard";
 import { INTEGRATIONS_SUBTITLE_MESSAGES, RotatingSubtitle } from "@/components/ui/RotatingSubtitle";
 
 export function IntegrationsPage() {
+  const location = useLocation();
   const { data, isLoading, error } = useQuery({
     queryKey: ["integrations"],
     queryFn: api.listIntegrations,
   });
+
+  useEffect(() => {
+    if (location.hash !== "#google-calendar") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("google-calendar")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [location.hash, data, isLoading]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

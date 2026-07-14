@@ -9,6 +9,7 @@ import {
   SessionRepository,
   TaskAttachmentRepository,
   TaskRepository,
+  UserNotificationRepository,
   UserRepository,
   WebAccountRepository,
   getDb,
@@ -25,6 +26,7 @@ import { TaskService } from "./services/task.js";
 import { TelegramLinkService } from "./services/telegram-link.js";
 import { KakaoLinkService } from "./services/kakao-link.js";
 import { GoogleCalendarService } from "./services/google-calendar.js";
+import { NotificationService } from "./services/notification.js";
 
 export interface AppContext {
   users: UserRepository;
@@ -39,9 +41,11 @@ export interface AppContext {
   channelConnections: ChannelConnectionRepository;
   googleCalendarConnections: GoogleCalendarConnectionRepository;
   calendarImports: CalendarImportRepository;
+  userNotifications: UserNotificationRepository;
   taskService: TaskService;
   attachmentService: AttachmentService;
   reminderService: ReminderService;
+  notifications: NotificationService;
   agent: AgentRuntime;
   reminderQueue: Queue<ReminderJobData>;
   redis: Redis;
@@ -65,10 +69,12 @@ export function createContext(redis: Redis): AppContext {
   const channelConnections = new ChannelConnectionRepository(db);
   const googleCalendarConnections = new GoogleCalendarConnectionRepository(db);
   const calendarImports = new CalendarImportRepository(db);
+  const userNotifications = new UserNotificationRepository(db);
   const reminderQueue = createReminderQueue();
   const reminderService = new ReminderService(reminders, reminderQueue);
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
   const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);
+  const notifications = new NotificationService(userNotifications, users);
   const agent = new AgentRuntime(taskService);
   const auth = new AuthService(redis, webAccounts, users, inviteCodes, sessions, loginEvents);
   const telegramLink = new TelegramLinkService(redis, users, channelConnections);
@@ -80,6 +86,7 @@ export function createContext(redis: Redis): AppContext {
     users,
     tasks,
     taskService,
+    notifications,
   );
 
   return {
@@ -95,9 +102,11 @@ export function createContext(redis: Redis): AppContext {
     channelConnections,
     googleCalendarConnections,
     calendarImports,
+    userNotifications,
     taskService,
     attachmentService,
     reminderService,
+    notifications,
     agent,
     reminderQueue,
     redis,

@@ -10,6 +10,7 @@ import type {
 import { config, isGoogleAuthEnabled } from "../config.js";
 import type { TaskWorkflowStatus, UserPreferences } from "../api/types.js";
 import type { TaskService } from "./task.js";
+import type { NotificationService } from "./notification.js";
 
 const OAUTH_STATE_PREFIX = "gcal:oauth:";
 const OAUTH_STATE_TTL_SEC = 600;
@@ -82,6 +83,7 @@ export class GoogleCalendarService {
     private readonly users: UserRepository,
     private readonly tasks: TaskRepository,
     private readonly taskService: TaskService,
+    private readonly notifications: NotificationService,
   ) {}
 
   static isAvailable(): boolean {
@@ -177,12 +179,24 @@ export class GoogleCalendarService {
     const conn = await this.connections.findByUserId(userId);
     if (!conn?.autoSyncEnabled) return;
 
-    await this.sync(userId, {
-      pastDays: conn.autoSyncPastDays,
-      futureDays: conn.autoSyncFutureDays,
-      activateNewImports: conn.autoSyncActivateImports,
-    });
-    await this.connections.markAutoSynced(userId);
+    try {
+      const result = await this.sync(userId, {
+        pastDays: conn.autoSyncPastDays,
+        futureDays: conn.autoSyncFutureDays,
+        activateNewImports: conn.autoSyncActivateImports,
+      });
+      await this.connections.markAutoSynced(userId);
+      await this.notifications.notifyGcalAutoSync(userId, {
+        imported: result.imported,
+        updated: result.updated,
+        activateImports: conn.autoSyncActivateImports,
+      });
+    } catch (err) {
+      if (isGoogleCalendarAuthExpiredError(err)) {
+        await this.notifications.notifyGcalAuthExpired(userId);
+      }
+      throw err;
+    }
   }
 
   private async reconcileImportWithExistingTask(
@@ -610,6 +624,7 @@ export class GoogleCalendarService {
     if (!refreshed.ok) {
       if (refreshed.errorCode === "invalid_grant") {
         await this.connections.clearAccessTokens(userId);
+        throw new GoogleCalendarAuthExpiredError(mapGoogleOAuthError(refreshed.errorCode));
       }
       throw new Error(mapGoogleOAuthError(refreshed.errorCode));
     }
@@ -707,8 +722,19 @@ class GoogleCalendarAuthError extends Error {
   }
 }
 
+class GoogleCalendarAuthExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GoogleCalendarAuthExpiredError";
+  }
+}
+
 function isGoogleCalendarAuthError(err: unknown): err is GoogleCalendarAuthError {
   return err instanceof GoogleCalendarAuthError;
+}
+
+function isGoogleCalendarAuthExpiredError(err: unknown): err is GoogleCalendarAuthExpiredError {
+  return err instanceof GoogleCalendarAuthExpiredError;
 }
 
 function mapGoogleOAuthError(code?: string): string {

@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { IntegrationsPanel } from "@/components/integrations/IntegrationsPanel";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -48,36 +49,42 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
                 />
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100">MyOwn</p>
               </NavLink>
-              <button
-                type="button"
-                onClick={onToggle}
-                className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                aria-label="사이드바 접기"
-              >
-                <span className="material-icons text-[20px] leading-none" aria-hidden>
-                  chevron_left
-                </span>
-              </button>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <NotificationBell />
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label="사이드바 접기"
+                >
+                  <span className="material-icons text-[20px] leading-none" aria-hidden>
+                    chevron_left
+                  </span>
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="group relative h-8 w-8 shrink-0">
-              <img
-                src="/favicon.png"
-                alt="MyOwn"
-                className="h-8 w-8 rounded-lg transition-opacity group-hover:opacity-0"
-                width={32}
-                height={32}
-              />
-              <button
-                type="button"
-                onClick={onToggle}
-                className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                aria-label="사이드바 펼치기"
-              >
-                <span className="material-icons text-[20px] leading-none" aria-hidden>
-                  menu
-                </span>
-              </button>
+            <div className="flex w-full flex-col items-center gap-2">
+              <div className="group relative h-8 w-8 shrink-0">
+                <img
+                  src="/favicon.png"
+                  alt="MyOwn"
+                  className="h-8 w-8 rounded-lg transition-opacity group-hover:opacity-0"
+                  width={32}
+                  height={32}
+                />
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  aria-label="사이드바 펼치기"
+                >
+                  <span className="material-icons text-[20px] leading-none" aria-hidden>
+                    menu
+                  </span>
+                </button>
+              </div>
+              <NotificationBell compact />
             </div>
           )}
           {expanded && (

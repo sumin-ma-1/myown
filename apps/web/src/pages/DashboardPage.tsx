@@ -56,9 +56,9 @@ export function DashboardPage() {
             onClick={() => setDdayModalOpen(true)}
           >
             <span className="material-icons text-[18px] leading-none" aria-hidden>
-              notifications
+              alarm
             </span>
-            D-DAY 알림
+            D-DAY
           </button>
           <button
             type="button"

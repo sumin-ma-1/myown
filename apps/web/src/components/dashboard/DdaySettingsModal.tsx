@@ -39,13 +39,13 @@ export function DdaySettingsModal({ open, onClose, onSaved }: DdaySettingsModalP
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["settings"] });
-      onSaved?.("D-DAY 알림 설정이 저장되었습니다.");
+      onSaved?.("D-DAY 설정이 저장되었습니다.");
       onClose();
     },
   });
 
   return (
-    <Modal open={open} title="D-DAY 알림 설정" onClose={onClose}>
+    <Modal open={open} title="D-DAY 설정" onClose={onClose}>
       <p className="text-sm text-slate-600 dark:text-slate-300">
         마감일이 있는 새 업무 등록 시에 자동으로 예약해요.
       </p>
@@ -57,7 +57,7 @@ export function DdaySettingsModal({ open, onClose, onSaved }: DdaySettingsModalP
       </p>
 
       <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">
-        D-DAY 오프셋 (쉼표 구분)
+        D-DAY Offset
       </label>
       <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">예: 7,3,1,0 (0은 마감 당일)</p>
       <input

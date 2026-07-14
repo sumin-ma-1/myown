@@ -18,6 +18,7 @@ import type {
   CalendarImportDto,
   GoogleCalendarAutoSyncSettingsDto,
   GoogleCalendarStatusDto,
+  UserNotificationDto,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -223,11 +224,37 @@ export const api = {
     }),
 
   updateSettings: (body: {
-    notification?: Partial<SettingsDto["notification"]>;
+    notification?: {
+      ddayOffsets?: number[];
+      reminderHour?: number;
+      channels?: {
+        telegram?: boolean;
+        kakao?: boolean;
+      };
+    };
   }) =>
     request<SettingsDto>("/api/settings", {
       method: "PATCH",
       body: JSON.stringify(body),
+    }),
+
+  listNotifications: (params?: { limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return request<{ items: UserNotificationDto[]; unreadCount: number }>(
+      `/api/notifications${qs ? `?${qs}` : ""}`,
+    );
+  },
+
+  markNotificationRead: (id: string) =>
+    request<{ item: UserNotificationDto }>(`/api/notifications/${id}/read`, {
+      method: "POST",
+    }),
+
+  markAllNotificationsRead: () =>
+    request<{ ok: boolean; marked: number }>("/api/notifications/read-all", {
+      method: "POST",
     }),
 
   adminListUsers: () => request<{ items: AdminUserDto[] }>("/api/admin/users"),

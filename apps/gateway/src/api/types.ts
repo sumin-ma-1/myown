@@ -16,6 +16,10 @@ export interface UserPreferences {
   notification?: {
     ddayOffsets?: number[];
     reminderHour?: number;
+    channels?: {
+      telegram?: boolean;
+      kakao?: boolean;
+    };
   };
   taskWorkflow?: Record<string, TaskWorkflowStatus>;
   taskReminderRules?: Record<string, ExtraReminderRule[]>;

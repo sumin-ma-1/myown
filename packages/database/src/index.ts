@@ -14,3 +14,4 @@ export * from "./repositories/web-account.js";
 export * from "./repositories/invite-code.js";
 export * from "./repositories/session.js";
 export * from "./repositories/login-event.js";
+export * from "./repositories/user-notification.js";

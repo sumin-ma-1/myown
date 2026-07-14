@@ -43,7 +43,21 @@ export interface SettingsDto {
   notification: {
     ddayOffsets: number[];
     reminderHour: number;
+    channels: {
+      telegram: boolean;
+      kakao: boolean;
+    };
   };
+}
+
+export interface UserNotificationDto {
+  id: string;
+  type: "gcal_auto_sync" | "gcal_auth_expired" | string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface ExtraReminderRule {

@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 
 interface CardProps {
+  id?: string;
   title?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
 }
 
-export function Card({ title, action, children, className = "" }: CardProps) {
+export function Card({ id, title, action, children, className = "" }: CardProps) {
   return (
     <section
+      id={id}
       className={`rounded-xl border border-surface-border bg-surface-card p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none ${className}`}
     >
       {(title || action) && (

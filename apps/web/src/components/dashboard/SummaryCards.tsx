@@ -122,7 +122,7 @@ export function DueTodayCard({
 }) {
   return (
     <SummaryCard
-      icon="alarm"
+      icon="emergency"
       iconClassName="text-amber-600 dark:text-amber-400"
       label="금일 종료"
       tasks={tasks}
@@ -145,8 +145,8 @@ export function InProgressCard({
 
   return (
     <SummaryCard
-      icon="play_circle"
-      iconClassName="text-brand dark:text-blue-400"
+      icon="more_horiz"
+      iconClassName="text-emerald-600 dark:text-emerald-400"
       label="진행 중"
       tasks={items}
       emptyMessage="진행 중인 업무가 없어요."

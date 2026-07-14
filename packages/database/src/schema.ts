@@ -292,6 +292,31 @@ export const reminders = pgTable(
   ],
 );
 
+export const userNotificationTypeEnum = pgEnum("user_notification_type", [
+  "gcal_auto_sync",
+  "gcal_auth_expired",
+]);
+
+export const userNotifications = pgTable(
+  "user_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: userNotificationTypeEnum("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().default({}),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("user_notifications_user_created_idx").on(table.userId, table.createdAt),
+    index("user_notifications_user_read_idx").on(table.userId, table.readAt),
+  ],
+);
+
 export type TaskStatus = (typeof taskStatusEnum.enumValues)[number];
 export type TaskPriority = (typeof taskPriorityEnum.enumValues)[number];
 export type ReminderStatus = (typeof reminderStatusEnum.enumValues)[number];
@@ -321,3 +346,6 @@ export type Session = typeof sessions.$inferSelect;
 export type LoginEvent = typeof loginEvents.$inferSelect;
 export type AccountRole = (typeof accountRoleEnum.enumValues)[number];
 export type LoginEventType = (typeof loginEventTypeEnum.enumValues)[number];
+export type UserNotificationType = (typeof userNotificationTypeEnum.enumValues)[number];
+export type UserNotification = typeof userNotifications.$inferSelect;
+export type NewUserNotification = typeof userNotifications.$inferInsert;
