@@ -71,12 +71,12 @@ export class AgentRuntime {
         "자연어 처리를 위해 LLM 설정이 필요합니다.",
         "(LLM_BASE_URL 원격 Ollama 또는 OPENAI_API_KEY)",
         "지금은 명령어를 사용해 주세요:",
-        "/list — 업무 목록",
-        "/today — 오늘 마감",
+        "/list: 업무 목록",
+        "/today: 오늘 마감",
         "/add <제목> [YYYY-MM-DD] [HH:MM]",
         "/remind <번호> [YYYY-MM-DD] HH:MM",
         "/remind <번호> 5분",
-        '/done <번호> — 완료',
+        '/done <번호>: 완료',
       ].join("\n");
     }
 

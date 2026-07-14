@@ -735,7 +735,7 @@ export function GoogleCalendarCard() {
 
       <Modal
         open={autoSyncModalOpen}
-        title="자동 일정 가져오기 설정"
+        title="상세 설정"
         onClose={() => setAutoSyncModalOpen(false)}
       >
         <div className="space-y-5">

@@ -47,7 +47,7 @@ export function DdaySettingsModal({ open, onClose, onSaved }: DdaySettingsModalP
   return (
     <Modal open={open} title="D-DAY 알림 설정" onClose={onClose}>
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        마감일이 있는 새 업무 등록 시에 자동으로 예약되는 알림입니다.
+        마감일이 있는 새 업무 등록 시에 자동으로 예약해요.
       </p>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         현재: 마감{" "}
