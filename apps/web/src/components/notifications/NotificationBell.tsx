@@ -143,7 +143,12 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="material-icons text-[19px] leading-none" aria-hidden>
+        <span
+          className={`material-icons text-[19px] leading-none ${
+            unreadCount > 0 && !open ? "notification-bell-ring" : ""
+          }`}
+          aria-hidden
+        >
           notifications
         </span>
         {unreadCount > 0 && (
