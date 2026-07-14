@@ -89,7 +89,7 @@ export class NotificationService {
       userId,
       type: "gcal_auth_expired",
       title: "Google Calendar 연결 만료",
-      body: "연결이 만료되었습니다. 연동 APP에서 다시 연결해 주세요.",
+      body: "연결이 만료되어 자동으로 해지되었습니다. 연동 APP에서 다시 연결해 주세요.",
     });
   }
 

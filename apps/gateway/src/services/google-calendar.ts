@@ -623,7 +623,7 @@ export class GoogleCalendarService {
     const refreshed = await this.requestRefreshToken(conn.refreshToken);
     if (!refreshed.ok) {
       if (refreshed.errorCode === "invalid_grant") {
-        await this.connections.clearAccessTokens(userId);
+        await this.disconnect(userId);
         throw new GoogleCalendarAuthExpiredError(mapGoogleOAuthError(refreshed.errorCode));
       }
       throw new Error(mapGoogleOAuthError(refreshed.errorCode));
@@ -740,7 +740,7 @@ function isGoogleCalendarAuthExpiredError(err: unknown): err is GoogleCalendarAu
 function mapGoogleOAuthError(code?: string): string {
   switch (code) {
     case "invalid_grant":
-      return "Google Calendar 연결이 만료되었습니다. 연결 해제 후 Google 계정에서 앱 권한을 해제하고 다시 연결해 주세요.";
+      return "Google Calendar 연결이 만료되어 자동으로 해지되었습니다. 연동 APP에서 다시 연결해 주세요.";
     default:
       return "Google Calendar 연결에 문제가 있습니다. 다시 연결해 주세요.";
   }
