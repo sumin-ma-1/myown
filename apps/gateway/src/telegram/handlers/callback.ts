@@ -146,11 +146,13 @@ export async function sendReminderMessage(
   title: string,
   dueLabel: string,
   taskId: string,
+  ddayLabel?: string | null,
 ) {
   const keyboard = taskActionKeyboard(taskId);
-  await bot.api.sendMessage(
-    telegramUserId,
-    ["🔔 업무 알림", "", `📌 ${title}`, dueLabel].join("\n"),
-    { reply_markup: keyboard },
-  );
+  const lines = ["🔔 업무 알림", "", `📌 ${title}`];
+  if (ddayLabel) lines.push(`⏰ ${ddayLabel}`);
+  lines.push(dueLabel);
+  await bot.api.sendMessage(telegramUserId, lines.join("\n"), {
+    reply_markup: keyboard,
+  });
 }

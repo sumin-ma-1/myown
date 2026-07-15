@@ -55,3 +55,10 @@ export function daysUntil(dueAt: Date): number {
   const dueStart = startOfDayInTimezone(dueAt);
   return Math.round((dueStart.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000));
 }
+
+/** D-3 / D-DAY / D+1 표기 (웹 formatDday와 동일) */
+export function formatDday(days: number): string {
+  if (days === 0) return "D-DAY";
+  if (days > 0) return `D-${days}`;
+  return `D+${Math.abs(days)}`;
+}
