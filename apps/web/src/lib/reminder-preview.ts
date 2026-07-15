@@ -191,7 +191,7 @@ export function describeExtraRuleSchedule(
     const times = futureDefaultDupes.map((t) => formatDateTime(t.toISOString())).join(" · ");
     const dLabel =
       rule.daysBefore === 0 ? "당일" : rule.daysBefore !== undefined ? `D-${rule.daysBefore}` : "기본";
-    return `${times} - 기본 알림(${dLabel})과 같은 시각이라 별도 예약되지 않습니다.`;
+    return `${times} · 기본 알림(${dLabel})과 같은 시각이라 별도 예약되지 않습니다.`;
   }
 
   const pastTimes = allExtraTimes.filter((t) => t.getTime() <= now);
@@ -200,9 +200,9 @@ export function describeExtraRuleSchedule(
     const matchesDefault = pastTimes.some((t) => defaultTimes.some((d) => timesMatch(t, d)));
     if (matchesDefault && rule.daysBefore !== undefined) {
       const dLabel = rule.daysBefore === 0 ? "당일" : `D-${rule.daysBefore}`;
-      return `${times} - 기본 ${dLabel} 알림 시각이며, 이미 지나 예약되지 않습니다.`;
+      return `${times} · 기본 ${dLabel} 알림 시각이며, 이미 지나 예약되지 않습니다.`;
     }
-    return `${times} - 이미 지난 시각이라 예약되지 않습니다.`;
+    return `${times} · 이미 지난 시각이라 예약되지 않습니다.`;
   }
 
   return "예약 가능한 시각이 없습니다.";

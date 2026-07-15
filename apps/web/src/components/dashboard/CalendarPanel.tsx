@@ -26,6 +26,8 @@ type CalendarView = "month" | "week";
 /** Max task chips shown per day in month view before "+N more". */
 const MONTH_DAY_TASK_PREVIEW = 3;
 const CALENDAR_TASK_TEXT_CLASS = "text-xs";
+const DAY_CELL_HOVER_CLASS =
+  "relative transition-transform duration-200 ease-out hover:z-10 hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20";
 
 const PRIORITY_RANK: Record<TaskDto["priority"], number> = {
   urgent: 0,
@@ -257,7 +259,7 @@ export function CalendarPanel({
                 key={key}
                 role={onEmptyDayClick ? "button" : undefined}
                 tabIndex={onEmptyDayClick ? 0 : undefined}
-                className={`min-h-20 rounded-lg border p-1 text-left ${
+                className={`min-h-20 rounded-lg border p-1 text-left ${DAY_CELL_HOVER_CLASS} ${
                   onEmptyDayClick ? "cursor-pointer" : ""
                 } ${
                   inMonth
@@ -325,7 +327,7 @@ export function CalendarPanel({
                 key={key}
                 role={onEmptyDayClick ? "button" : undefined}
                 tabIndex={onEmptyDayClick ? 0 : undefined}
-                className={`min-h-32 rounded-lg border p-2 text-left ${
+                className={`min-h-32 rounded-lg border p-2 text-left ${DAY_CELL_HOVER_CLASS} ${
                   onEmptyDayClick ? "cursor-pointer" : ""
                 } ${
                   isToday
@@ -360,7 +362,7 @@ export function CalendarPanel({
                   }).format(day)}
                 </p>
                 {dayTasks.length === 0 ? (
-                  <p className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-400 dark:text-slate-500`}>업무 없음</p>
+                  <p className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-400 dark:text-slate-500`}>일정 없음</p>
                 ) : (
                   <ul className="space-y-1">
                     {dayTasks.map((t) => (
