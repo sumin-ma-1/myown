@@ -170,12 +170,14 @@ export function IntegrationsPanel({ compact = false }: IntegrationsPanelProps) {
             )}
           </ul>
           {needsLink && !compact && (
-            <Link
-              to="/integrations"
-              className="mt-2 block rounded-lg bg-brand-muted px-3 py-2 text-center text-xs font-medium text-brand hover:opacity-90 dark:bg-blue-950/50 dark:text-blue-300"
-            >
-              Telegram 연결하기
-            </Link>
+            <div className="btn-glow-wrap">
+              <Link
+                to="/integrations"
+                className="rounded-full bg-slate-800 px-8 py-2.5 text-center text-xs font-medium leading-none text-white hover:bg-slate-700 dark:bg-cyan-950 dark:text-cyan-50 dark:hover:bg-cyan-900"
+              >
+                Telegram 연결하기
+              </Link>
+            </div>
           )}
         </>
       )}

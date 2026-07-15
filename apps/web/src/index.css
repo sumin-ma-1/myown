@@ -99,6 +99,19 @@ html.dark body {
   }
 }
 
+/* Soft expanding glow for CTA buttons (tightly around the button) */
+@keyframes button-glow-aura {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: var(--btn-glow-peak, 0.4);
+    transform: scale(1.06);
+  }
+}
+
 @layer utilities {
   .notification-bell-ring {
     display: inline-block;
@@ -106,9 +119,60 @@ html.dark body {
     animation: notification-bell-ring 4.5s ease-in-out infinite;
   }
 
+  .btn-glow-wrap {
+    position: relative;
+    display: flex;
+    width: fit-content;
+    margin-top: 0.5rem;
+    margin-inline: auto;
+    /* room so glow around the button is not clipped by sidebar overflow */
+    padding: 0.85rem;
+    /* light mode: softer sky blue glow on white sidebar */
+    --btn-glow-peak: 0.38;
+    --btn-glow-color: 14 165 233;
+  }
+
+  html.dark .btn-glow-wrap {
+    /* dark mode: subtle cyan glow, similar strength to light mode */
+    --btn-glow-peak: 0.35;
+    --btn-glow-color: 34 211 238;
+  }
+
+  .btn-glow-wrap::before {
+    content: "";
+    position: absolute;
+    /* hug the button: same as padding so aura sits just outside button edges */
+    inset: 0.55rem;
+    z-index: 0;
+    border-radius: 9999px;
+    background: rgb(var(--btn-glow-color) / 0.5);
+    filter: blur(7px);
+    pointer-events: none;
+    animation: button-glow-aura 2.6s ease-in-out infinite;
+  }
+
+  html.dark .btn-glow-wrap::before {
+    background: rgb(var(--btn-glow-color) / 0.32);
+  }
+
+  .btn-glow-wrap > * {
+    position: relative;
+    z-index: 1;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .notification-bell-ring {
       animation: none;
+    }
+
+    .btn-glow-wrap::before {
+      animation: none;
+      opacity: 0.22;
+      transform: none;
+    }
+
+    html.dark .btn-glow-wrap::before {
+      opacity: 0.2;
     }
   }
 

@@ -166,7 +166,7 @@ export function Sidebar({
                 {({ isActive }) => (
                   <span className={navLinkClass(expanded, isActive)}>
                     <span className={navIconClass} aria-hidden>
-                      admin_panel_settings
+                      bolt
                     </span>
                     {expanded && "관리자"}
                   </span>
