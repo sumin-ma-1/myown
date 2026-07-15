@@ -397,6 +397,12 @@ export function GoogleCalendarCard() {
       <Card
         id="google-calendar"
         className="scroll-mt-6"
+        onClick={() => {
+          document.getElementById("google-calendar")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }}
         title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}
       >
         <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -410,9 +416,23 @@ export function GoogleCalendarCard() {
     <Card
       id="google-calendar"
       className="scroll-mt-6"
+      onClick={() => {
+        document.getElementById("google-calendar")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }}
       title={<IntegrationTitle id="google-calendar" name="Google Calendar" />}
     >
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        onClick={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest("button, a, input, select, textarea, label")) {
+            event.stopPropagation();
+          }
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm text-slate-600 dark:text-slate-300">
             Google Calendar 일정을 가져온 뒤, 원하는 항목만 MyOwn 업무로 활성화해요.

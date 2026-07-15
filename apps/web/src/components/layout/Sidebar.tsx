@@ -135,7 +135,7 @@ export function Sidebar({
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
                   <span className={navIconClass} aria-hidden>
-                    bug_report
+                    notes
                   </span>
                   {expanded && "등록 업무 목록"}
                 </span>

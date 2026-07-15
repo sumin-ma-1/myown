@@ -16,7 +16,10 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
         className={`flex w-full items-start justify-between gap-2 border-b border-slate-100 py-2 text-left last:border-0 dark:border-slate-700 ${
           onClick ? "cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50" : ""
         }`}
-        onClick={() => onClick?.(task)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick?.(task);
+        }}
         disabled={!onClick}
       >
         <div className="min-w-0">
@@ -83,7 +86,15 @@ function SummaryCardTitle({
   );
 }
 
+function scrollCardIntoView(id: string) {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
 function SummaryCard({
+  id,
   icon,
   iconClassName,
   label,
@@ -91,6 +102,7 @@ function SummaryCard({
   emptyMessage,
   onTaskClick,
 }: {
+  id: string;
   icon: string;
   iconClassName: string;
   label: string;
@@ -100,7 +112,9 @@ function SummaryCard({
 }) {
   return (
     <Card
-      className="min-w-0 overflow-hidden transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
+      id={id}
+      onClick={() => scrollCardIntoView(id)}
+      className="min-w-0 scroll-mt-6 overflow-hidden transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
       title={
         <SummaryCardTitle
           icon={icon}
@@ -124,6 +138,7 @@ export function DueTodayCard({
 }) {
   return (
     <SummaryCard
+      id="summary-due-today"
       icon="emergency"
       iconClassName="text-amber-600 dark:text-amber-400"
       label="금일 종료"
@@ -147,7 +162,8 @@ export function InProgressCard({
 
   return (
     <SummaryCard
-      icon="more_horiz"
+      id="summary-in-progress"
+      icon="code"
       iconClassName="text-emerald-600 dark:text-emerald-400"
       label="진행 중"
       tasks={items}
@@ -170,6 +186,7 @@ export function PlannedCard({
 
   return (
     <SummaryCard
+      id="summary-planned"
       icon="event_note"
       iconClassName="text-slate-500 dark:text-slate-400"
       label="계획"

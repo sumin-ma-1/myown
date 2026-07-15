@@ -270,9 +270,20 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
 export function IntegrationCard({ item }: { item: IntegrationDto }) {
   const connectedAt = formatConnectedAt(item.connectedAt);
   const muted = item.status === "unavailable";
+  const cardId = `integration-${item.provider}`;
 
   return (
-    <Card title={<IntegrationTitle id={item.provider} name={item.name} />}>
+    <Card
+      id={cardId}
+      className="scroll-mt-6"
+      onClick={() => {
+        document.getElementById(cardId)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }}
+      title={<IntegrationTitle id={item.provider} name={item.name} />}
+    >
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <p className={`text-sm ${muted ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-300"}`}>
@@ -293,11 +304,15 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
         )}
 
         {item.provider === "telegram" && item.available && (
-          <TelegramActions item={item} />
+          <div onClick={(event) => event.stopPropagation()}>
+            <TelegramActions item={item} />
+          </div>
         )}
 
         {item.provider === "kakao" && item.available && (
-          <KakaoActions item={item} />
+          <div onClick={(event) => event.stopPropagation()}>
+            <KakaoActions item={item} />
+          </div>
         )}
       </div>
     </Card>
