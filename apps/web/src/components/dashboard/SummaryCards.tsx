@@ -121,7 +121,7 @@ function SummaryCard({
     <Card
       id={id}
       onClick={() => scrollCardIntoView(id)}
-      className="min-w-0 scroll-mt-6 overflow-hidden transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
+      className="min-w-0 scroll-mt-6 overflow-hidden"
       title={
         <SummaryCardTitle
           icon={icon}

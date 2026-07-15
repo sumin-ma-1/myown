@@ -44,11 +44,14 @@ function CalendarTaskChip({
 }) {
   const dueTime = formatDueTime(task.dueAt);
   const isCompleted = task.status === "completed";
+  const chipClass = isCompleted
+    ? "bg-slate-100 text-slate-500 hover:bg-slate-200/80 dark:bg-slate-700/50 dark:text-slate-400 dark:hover:bg-slate-700/70"
+    : priorityCalendarChipClass(task.priority);
 
   return (
     <button
       type="button"
-      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${priorityCalendarChipClass(task.priority)} ${isCompleted ? "opacity-60" : ""}`}
+      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${chipClass}`}
       title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
       onClick={(event) => {
         event.stopPropagation();
@@ -240,7 +243,7 @@ export function CalendarPanel({
           </button>
         </div>
       }
-      className="col-span-full scroll-mt-6 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
+      className="col-span-full scroll-mt-6"
     >
       {view === "month" ? (
         <div className="grid grid-cols-7 gap-1 text-center text-xs">
@@ -262,13 +265,11 @@ export function CalendarPanel({
                 className={`min-h-20 rounded-lg border p-1 text-left ${DAY_CELL_HOVER_CLASS} ${
                   onEmptyDayClick ? "cursor-pointer" : ""
                 } ${
-                  inMonth
-                    ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
-                    : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
-                } ${
                   isToday
                     ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
-                    : ""
+                    : inMonth
+                      ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
+                      : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
                 }`}
                 onClick={(event) => {
                   if (!onEmptyDayClick) return;
@@ -285,10 +286,12 @@ export function CalendarPanel({
                 }}
               >
                 <div
-                  className={`mb-1 text-[11px] font-medium ${
+                  className={`mb-1 text-[11px] font-semibold ${
                     isToday
-                      ? "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 font-semibold text-white"
-                      : ""
+                      ? "text-brand dark:text-blue-300"
+                      : inMonth
+                        ? "font-medium text-slate-700 dark:text-slate-200"
+                        : "font-medium"
                   }`}
                 >
                   {day.getDate()}
