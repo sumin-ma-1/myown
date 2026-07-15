@@ -400,6 +400,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
       void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      onSaved?.("업무를 삭제했습니다.");
       onClose();
     },
     onError: (err) => {
@@ -414,6 +415,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
       void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
       void queryClient.invalidateQueries({ queryKey: ["calendar"] });
       if (taskId) void queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      onSaved?.("업무를 완료 처리했습니다.");
       onClose();
     },
     onError: (err) => {

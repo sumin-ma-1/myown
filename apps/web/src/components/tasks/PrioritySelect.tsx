@@ -3,12 +3,21 @@ import { api } from "@/api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PRIORITY_OPTIONS, priorityClass } from "@/lib/priority";
 
-export function PrioritySelect({ task }: { task: TaskDto }) {
+export function PrioritySelect({
+  task,
+  onSaved,
+}: {
+  task: TaskDto;
+  onSaved?: (message: string) => void;
+}) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (priority: TaskDto["priority"]) => api.updateTask(task.id, { priority }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      onSaved?.("우선순위를 변경했습니다.");
+    },
   });
 
   return (

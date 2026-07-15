@@ -75,33 +75,35 @@ export function TaskListPage() {
         </button>
       </header>
 
-      <div className="flex gap-2 text-sm">
-        {[
-          { value: "active", label: "진행" },
-          { value: "completed", label: "완료" },
-          { value: "all", label: "전체" },
-        ].map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            className={`rounded-lg px-3 py-1.5 ${
-              status === opt.value
-                ? "bg-brand text-white"
-                : "border border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-300"
-            }`}
-            onClick={() => setStatus(opt.value)}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
       <TaskTable
         tasks={data?.items ?? []}
         sort={sort}
         onSortChange={setSort}
         showCompletedAt={status !== "active"}
         onTaskClick={openEdit}
+        onSaved={setFlashMessage}
+        toolbarStart={
+          <div className="flex gap-2 text-sm">
+            {[
+              { value: "active", label: "진행" },
+              { value: "completed", label: "완료" },
+              { value: "all", label: "전체" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`rounded-lg px-3 py-1.5 ${
+                  status === opt.value
+                    ? "bg-brand text-white"
+                    : "border border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-300"
+                }`}
+                onClick={() => setStatus(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        }
       />
 
       <TaskFormModal

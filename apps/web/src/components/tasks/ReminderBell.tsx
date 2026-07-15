@@ -116,14 +116,22 @@ export function ReminderBell({ taskId, pendingCount }: ReminderBellProps) {
       <button
         ref={buttonRef}
         type="button"
-        className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+        className={`inline-flex items-center rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 ${
+          pendingCount > 0
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-slate-500 dark:text-slate-400"
+        }`}
         title="알림 로그"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        🔔
+        <span className="material-icons text-[18px] leading-none" aria-hidden>
+          alarm
+        </span>
         {pendingCount > 0 && (
-          <span className="ml-0.5 text-xs text-amber-600 dark:text-amber-400">{pendingCount}</span>
+          <span className="ml-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+            {pendingCount}
+          </span>
         )}
       </button>
 
