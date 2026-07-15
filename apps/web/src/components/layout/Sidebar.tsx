@@ -8,7 +8,10 @@ const navIconClass = "material-icons shrink-0 text-[18px] leading-none";
 
 interface SidebarProps {
   expanded: boolean;
+  width: number;
+  resizing?: boolean;
   onToggle: () => void;
+  onResizeStart: () => void;
 }
 
 function navLinkClass(expanded: boolean, isActive: boolean) {
@@ -21,14 +24,21 @@ function navLinkClass(expanded: boolean, isActive: boolean) {
   }`;
 }
 
-export function Sidebar({ expanded, onToggle }: SidebarProps) {
+export function Sidebar({
+  expanded,
+  width,
+  resizing = false,
+  onToggle,
+  onResizeStart,
+}: SidebarProps) {
   const { me, isAdmin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
 
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
-        expanded ? "w-56" : "w-14"
+      style={{ width: expanded ? width : 56 }}
+      className={`relative flex h-full shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white dark:border-slate-800 dark:bg-slate-900 ${
+        resizing ? "" : "transition-[width] duration-300 ease-in-out"
       }`}
     >
       <div
@@ -196,6 +206,20 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           </button>
         </div>
       </div>
+
+      {expanded && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="사이드바 너비 조절"
+          title="드래그해서 너비 조절"
+          className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-brand/20 active:bg-brand/30"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            onResizeStart();
+          }}
+        />
+      )}
     </aside>
   );
 }
