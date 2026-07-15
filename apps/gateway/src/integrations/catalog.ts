@@ -12,7 +12,7 @@ export const INTEGRATION_CATALOG: IntegrationCatalogItem[] = [
   {
     provider: "telegram",
     name: "Telegram",
-    description: "봇으로 업무 등록·알림 수신",
+    description: "봇으로 업무 등록·조회·알림 수신",
     available: true,
   },
   {

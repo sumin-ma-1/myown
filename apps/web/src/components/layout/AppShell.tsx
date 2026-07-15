@@ -7,7 +7,7 @@ export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <Sidebar
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}

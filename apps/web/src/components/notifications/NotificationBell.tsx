@@ -7,7 +7,7 @@ import type { UserNotificationDto } from "@/api/types";
 import { Switch } from "@/components/ui/Switch";
 import { formatDateTime } from "@/lib/dates";
 
-const PANEL_WIDTH = 320;
+const PANEL_WIDTH = 380;
 const GOOGLE_CALENDAR_HASH_PATH = "/integrations#google-calendar";
 
 function linksToGoogleCalendar(item: UserNotificationDto): boolean {
