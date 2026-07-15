@@ -91,8 +91,11 @@ function formatWeekLabel(days: Date[]): string {
 
 export function CalendarPanel({
   onTaskClick,
+  onEmptyDayClick,
 }: {
   onTaskClick?: (task: TaskDto) => void;
+  /** 날짜 칸 빈 곳 클릭 시 (YYYY-MM-DD) */
+  onEmptyDayClick?: (dateKey: string) => void;
 }) {
   const [cursor, setCursor] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>("month");
@@ -252,7 +255,11 @@ export function CalendarPanel({
             return (
               <div
                 key={key}
+                role={onEmptyDayClick ? "button" : undefined}
+                tabIndex={onEmptyDayClick ? 0 : undefined}
                 className={`min-h-20 rounded-lg border p-1 text-left ${
+                  onEmptyDayClick ? "cursor-pointer" : ""
+                } ${
                   inMonth
                     ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                     : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
@@ -261,6 +268,19 @@ export function CalendarPanel({
                     ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
                     : ""
                 }`}
+                onClick={(event) => {
+                  if (!onEmptyDayClick) return;
+                  event.stopPropagation();
+                  onEmptyDayClick(key);
+                }}
+                onKeyDown={(event) => {
+                  if (!onEmptyDayClick) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onEmptyDayClick(key);
+                  }
+                }}
               >
                 <div
                   className={`mb-1 text-[11px] font-medium ${
@@ -284,6 +304,7 @@ export function CalendarPanel({
                         .slice(MONTH_DAY_TASK_PREVIEW)
                         .map((t) => t.title)
                         .join(", ")}
+                      onClick={(event) => event.stopPropagation()}
                     >
                       +{dayTasks.length - MONTH_DAY_TASK_PREVIEW}
                     </li>
@@ -302,11 +323,28 @@ export function CalendarPanel({
             return (
               <div
                 key={key}
+                role={onEmptyDayClick ? "button" : undefined}
+                tabIndex={onEmptyDayClick ? 0 : undefined}
                 className={`min-h-32 rounded-lg border p-2 text-left ${
+                  onEmptyDayClick ? "cursor-pointer" : ""
+                } ${
                   isToday
                     ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
                     : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
                 }`}
+                onClick={(event) => {
+                  if (!onEmptyDayClick) return;
+                  event.stopPropagation();
+                  onEmptyDayClick(key);
+                }}
+                onKeyDown={(event) => {
+                  if (!onEmptyDayClick) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onEmptyDayClick(key);
+                  }
+                }}
               >
                 <p
                   className={`mb-2 text-[11px] font-semibold ${

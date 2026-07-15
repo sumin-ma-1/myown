@@ -14,6 +14,7 @@ export function DashboardPage() {
   const [ddayModalOpen, setDdayModalOpen] = useState(false);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
+  const [createDueDate, setCreateDueDate] = useState<string | undefined>();
 
   const { data: todayData, isLoading: todayLoading } = useQuery({
     queryKey: ["tasks-today"],
@@ -25,14 +26,21 @@ export function DashboardPage() {
     queryFn: () => api.listTasks({ status: "active", sort: "priority" }),
   });
 
-  const openCreate = () => {
+  const openCreate = (dueDate?: string) => {
     setEditingTaskId(undefined);
+    setCreateDueDate(dueDate);
     setModalOpen(true);
   };
 
   const openEdit = (task: TaskDto) => {
     setEditingTaskId(task.id);
+    setCreateDueDate(undefined);
     setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setCreateDueDate(undefined);
   };
 
   if (todayLoading || activeLoading) {
@@ -63,7 +71,7 @@ export function DashboardPage() {
           <button
             type="button"
             className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white"
-            onClick={openCreate}
+            onClick={() => openCreate()}
           >
             <span className="material-icons text-[18px] leading-none" aria-hidden>
               add_circle
@@ -79,13 +87,17 @@ export function DashboardPage() {
         <PlannedCard tasks={active} onTaskClick={openEdit} />
       </div>
 
-      <CalendarPanel onTaskClick={openEdit} />
+      <CalendarPanel
+        onTaskClick={openEdit}
+        onEmptyDayClick={(dateKey) => openCreate(dateKey)}
+      />
 
       <TaskFormModal
         open={modalOpen}
         mode={editingTaskId ? "edit" : "create"}
         taskId={editingTaskId}
-        onClose={() => setModalOpen(false)}
+        initialDueDate={createDueDate}
+        onClose={closeModal}
         onSaved={setFlashMessage}
       />
 

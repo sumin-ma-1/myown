@@ -118,12 +118,21 @@ interface TaskFormModalProps {
   open: boolean;
   mode: "create" | "edit";
   taskId?: string;
+  /** 생성 모드에서 미리 채울 마감일 (YYYY-MM-DD) */
+  initialDueDate?: string;
   onClose: () => void;
   /** 저장 성공 시 부모 페이지에 표시할 안내 (모달 닫힌 뒤) */
   onSaved?: (message: string) => void;
 }
 
-export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskFormModalProps) {
+export function TaskFormModal({
+  open,
+  mode,
+  taskId,
+  initialDueDate,
+  onClose,
+  onSaved,
+}: TaskFormModalProps) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -184,7 +193,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
     if (mode === "create") {
       setTitle("");
       setDescription("");
-      setDueDate("");
+      setDueDate(initialDueDate ?? "");
       setDueTime("");
       setPriority("medium");
       setUiWorkflowStatus("planned");
@@ -213,7 +222,7 @@ export function TaskFormModal({ open, mode, taskId, onClose, onSaved }: TaskForm
       useDefaultReminders: taskData.reminderConfig.useDefaultReminders,
       extraRules: taskData.reminderConfig.extraRules,
     };
-  }, [open, mode, taskData, taskId]);
+  }, [open, mode, taskData, taskId, initialDueDate]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
