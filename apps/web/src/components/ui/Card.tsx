@@ -6,12 +6,14 @@ interface CardProps {
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-export function Card({ id, title, action, children, className = "" }: CardProps) {
+export function Card({ id, title, action, children, className = "", onClick }: CardProps) {
   return (
     <section
       id={id}
+      onClick={onClick}
       className={`min-w-0 rounded-xl border border-surface-border bg-surface-card p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none ${className}`}
     >
       {(title || action) && (

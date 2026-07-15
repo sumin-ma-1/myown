@@ -48,7 +48,10 @@ function CalendarTaskChip({
       type="button"
       className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${priorityCalendarChipClass(task.priority)} ${isCompleted ? "opacity-60" : ""}`}
       title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
-      onClick={() => onClick?.(task)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.(task);
+      }}
     >
       {dueTime && (
         <span className="shrink-0 tabular-nums opacity-80">{dueTime}</span>
@@ -155,15 +158,27 @@ export function CalendarPanel({
 
   const goToday = () => setCursor(new Date());
 
+  const scrollCalendarIntoView = () => {
+    document.getElementById("schedule-calendar")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <Card
+      id="schedule-calendar"
+      onClick={scrollCalendarIntoView}
       title={
         <CardTitle icon="calendar_month" iconClassName="text-brand dark:text-blue-400">
           일정 캘린더
         </CardTitle>
       }
       action={
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div
+          className="flex flex-wrap items-center justify-end gap-2"
+          onClick={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
             className={`rounded-md border px-2 py-1 text-xs ${
@@ -220,7 +235,7 @@ export function CalendarPanel({
           </button>
         </div>
       }
-      className="col-span-full"
+      className="col-span-full scroll-mt-6"
     >
       {view === "month" ? (
         <div className="grid grid-cols-7 gap-1 text-center text-xs">
