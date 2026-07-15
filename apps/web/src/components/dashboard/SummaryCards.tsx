@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { CardTitle } from "@/components/ui/CardTitle";
 import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
-import { formatDday, formatDateTime } from "@/lib/dates";
+import { formatDateTime, formatDday, dueDateToneClass } from "@/lib/dates";
 
 /** Roughly eight task rows visible before the list scrolls. */
 const SUMMARY_LIST_MAX_HEIGHT = "max-h-[28rem]";
@@ -22,17 +22,24 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
         }}
         disabled={!onClick}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{task.title}</p>
           {task.dueAt && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(task.dueAt)}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {formatDateTime(task.dueAt)}
+              {task.dday !== null && (
+                <>
+                  <span className="text-slate-400 dark:text-slate-500"> · </span>
+                  <span className={dueDateToneClass(task.dday)}>
+                    {formatDday(task.dday)}
+                  </span>
+                </>
+              )}
+            </p>
           )}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="shrink-0 self-start">
           <PriorityBadge priority={task.priority} />
-          {task.dday !== null && (
-            <span className="text-xs font-semibold text-brand">{formatDday(task.dday)}</span>
-          )}
         </div>
       </button>
     </li>

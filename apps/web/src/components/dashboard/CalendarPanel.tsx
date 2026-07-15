@@ -235,7 +235,7 @@ export function CalendarPanel({
           </button>
         </div>
       }
-      className="col-span-full scroll-mt-6"
+      className="col-span-full scroll-mt-6 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20"
     >
       {view === "month" ? (
         <div className="grid grid-cols-7 gap-1 text-center text-xs">

@@ -10,7 +10,10 @@ import { finalizeComposeRegistration } from "../helpers/compose-finalize.js";
 import { formatDateTime } from "../../utils/date.js";
 import { taskWebLink } from "../../utils/web-links.js";
 
-export function taskActionKeyboard(taskId: string) {
+export function taskActionKeyboard(
+  taskId: string,
+  options?: { showDetail?: boolean },
+) {
   const kb = new InlineKeyboard()
     .text("✅ 완료", `done:${taskId}`)
     .text("⏰ 1시간 후", `snooze:60:${taskId}`);
@@ -20,7 +23,11 @@ export function taskActionKeyboard(taskId: string) {
     kb.row().url("🌐 웹에서 보기", webUrl);
   }
 
-  return kb.row().text("📋 상세", `detail:${taskId}`);
+  if (options?.showDetail) {
+    kb.row().text("📋 상세", `detail:${taskId}`);
+  }
+
+  return kb;
 }
 
 export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) {
@@ -63,11 +70,15 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
     if (!userId) return;
 
     const taskId = ctx.match[1];
-    const detail = await app.taskService.getDetail(userId, taskId);
+    const task = await app.tasks.findById(userId, taskId);
+    const detail = task ? await app.taskService.getDetail(userId, taskId) : null;
 
     await ctx.answerCallbackQuery();
     if (detail) {
-      await ctx.reply(detail, { reply_markup: taskActionKeyboard(taskId) });
+      // 상세를 이미 보여 줬으므로 설명 버튼은 숨김
+      await ctx.reply(detail, {
+        reply_markup: taskActionKeyboard(taskId, { showDetail: false }),
+      });
     }
   });
 
@@ -143,16 +154,24 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
 export async function sendReminderMessage(
   bot: Bot<BotContext>,
   telegramUserId: number,
-  title: string,
-  dueLabel: string,
-  taskId: string,
-  ddayLabel?: string | null,
+  input: {
+    taskId: string;
+    title: string;
+    dueLabel: string;
+    priorityLabel: string;
+    ddayLabel?: string | null;
+    showDetail?: boolean;
+  },
 ) {
-  const keyboard = taskActionKeyboard(taskId);
-  const lines = ["🔔 업무 알림", "", `📌 ${title}`];
-  if (ddayLabel) lines.push(`⏰ ${ddayLabel}`);
-  lines.push(dueLabel);
+  const lines: string[] = [];
+  if (input.ddayLabel) lines.push(`⏰ ${input.ddayLabel}`);
+  lines.push(`📌 ${input.title}`);
+  lines.push(input.dueLabel);
+  lines.push(`우선순위: ${input.priorityLabel}`);
+
   await bot.api.sendMessage(telegramUserId, lines.join("\n"), {
-    reply_markup: keyboard,
+    reply_markup: taskActionKeyboard(input.taskId, {
+      showDetail: Boolean(input.showDetail),
+    }),
   });
 }

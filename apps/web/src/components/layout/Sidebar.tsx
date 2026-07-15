@@ -102,7 +102,7 @@ export function Sidebar({
           {expanded && (
             <>
               <p className="mt-1 pl-10 text-xs text-slate-500 dark:text-slate-400">
-                개인 일정 · 업무 스마트 관리
+                일정 · 업무 스마트 관리
               </p>
               {me?.account?.email && (
                 <p className="mt-2 truncate pl-10 text-xs text-slate-400 dark:text-slate-500">
@@ -125,9 +125,19 @@ export function Sidebar({
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
                   <span className={navIconClass} aria-hidden>
-                    home
+                    visibility
                   </span>
                   {expanded && "업무 현황"}
+                </span>
+              )}
+            </NavLink>
+            <NavLink to="/chat" title={expanded ? undefined : "마이온 챗"} className="block w-full">
+              {({ isActive }) => (
+                <span className={navLinkClass(expanded, isActive)}>
+                  <span className={navIconClass} aria-hidden>
+                    commit
+                  </span>
+                  {expanded && "마이온 챗"}
                 </span>
               )}
             </NavLink>
@@ -135,7 +145,7 @@ export function Sidebar({
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
                   <span className={navIconClass} aria-hidden>
-                    notes
+                    menu_open
                   </span>
                   {expanded && "등록 업무 목록"}
                 </span>
@@ -148,16 +158,6 @@ export function Sidebar({
                     link
                   </span>
                   {expanded && "연동 APP"}
-                </span>
-              )}
-            </NavLink>
-            <NavLink to="/chat" title={expanded ? undefined : "채팅"} className="block w-full">
-              {({ isActive }) => (
-                <span className={navLinkClass(expanded, isActive)}>
-                  <span className={navIconClass} aria-hidden>
-                    commit
-                  </span>
-                  {expanded && "마이온 챗"}
                 </span>
               )}
             </NavLink>

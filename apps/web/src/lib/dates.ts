@@ -26,6 +26,14 @@ export function formatDday(dday: number | null): string {
   return `D+${Math.abs(dday)}`;
 }
 
+/** 요약 카드 등: D-DAY 텍스트 색 (dday 기준) */
+export function dueDateToneClass(dday: number | null): string {
+  if (dday === null) return "text-slate-500 dark:text-slate-400";
+  if (dday < 0) return "text-slate-400 dark:text-slate-500";
+  if (dday <= 7) return "text-orange-600 dark:text-orange-400";
+  return "text-emerald-600 dark:text-emerald-400";
+}
+
 /** 마감 시각(HH:mm). 날짜만 마감(23:59)이면 null */
 export function formatDueTime(iso: string | null): string | null {
   if (!iso || isDateOnlyDueIso(iso)) return null;

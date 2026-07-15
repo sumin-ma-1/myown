@@ -7,6 +7,13 @@ import { sendReminderMessage } from "../telegram/handlers/callback.js";
 import { formatDate, formatDateTime, daysUntil, formatDday } from "../utils/date.js";
 import { isDateOnlyDue } from "../utils/datetime-parse.js";
 
+const PRIORITY_LABEL: Record<string, string> = {
+  urgent: "최우선",
+  high: "우선",
+  medium: "일반",
+  low: "일반",
+};
+
 export async function handleReminderJob(
   bot: Bot<BotContext>,
   app: AppContext,
@@ -27,7 +34,15 @@ export async function handleReminderJob(
     ? `📅 마감: ${isDateOnlyDue(task.dueAt) ? formatDate(task.dueAt) : formatDateTime(task.dueAt)}`
     : "📅 마감: 없음";
   const ddayLabel = task.dueAt ? formatDday(daysUntil(task.dueAt)) : null;
+  const hasDescription = Boolean(task.description?.trim());
 
-  await sendReminderMessage(bot, telegramUserId, task.title, dueLabel, task.id, ddayLabel);
+  await sendReminderMessage(bot, telegramUserId, {
+    taskId: task.id,
+    title: task.title,
+    dueLabel,
+    ddayLabel,
+    priorityLabel: PRIORITY_LABEL[task.priority] ?? "일반",
+    showDetail: hasDescription,
+  });
   await app.reminders.markSent(reminderId);
 }
