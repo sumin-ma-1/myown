@@ -54,7 +54,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">업무 현황</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">나의 일정</h1>
           <RotatingSubtitle messages={DASHBOARD_SUBTITLE_MESSAGES} />
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -194,7 +194,7 @@ export function PlannedCard({
   return (
     <SummaryCard
       id="summary-planned"
-      icon="event_note"
+      icon="timeline"
       iconClassName="text-slate-500 dark:text-slate-400"
       label="계획"
       tasks={items}
