@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { IntegrationsPanel } from "@/components/integrations/IntegrationsPanel";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ConfirmToast } from "@/components/ui/ConfirmToast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -33,6 +35,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { me, isAdmin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   return (
     <aside
@@ -193,7 +196,7 @@ export function Sidebar({
 
           <button
             type="button"
-            onClick={() => void logout()}
+            onClick={() => setLogoutConfirmOpen(true)}
             title={expanded ? undefined : "로그아웃"}
             className={`mt-1 flex w-full items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
               expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
@@ -206,6 +209,18 @@ export function Sidebar({
           </button>
         </div>
       </div>
+
+      <ConfirmToast
+        open={logoutConfirmOpen}
+        message="정말 나가시나요?"
+        confirmLabel="네"
+        cancelLabel="아니요"
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          void logout();
+        }}
+      />
 
       {expanded && (
         <div
