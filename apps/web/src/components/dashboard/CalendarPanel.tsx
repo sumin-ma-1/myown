@@ -197,12 +197,26 @@ export function CalendarPanel({
           >
             오늘
           </button>
-          <button type="button" className="rounded-md border border-surface-border px-2 py-1 text-xs dark:border-slate-600 dark:text-slate-300" onClick={goPrev}>
-            ◀
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+            onClick={goPrev}
+            aria-label="이전"
+          >
+            <span className="material-icons text-[16px] leading-none" aria-hidden>
+              chevron_left
+            </span>
           </button>
           <span className="min-w-28 text-center text-xs font-medium dark:text-slate-200">{headerLabel}</span>
-          <button type="button" className="rounded-md border border-surface-border px-2 py-1 text-xs dark:border-slate-600 dark:text-slate-300" onClick={goNext}>
-            ▶
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+            onClick={goNext}
+            aria-label="다음"
+          >
+            <span className="material-icons text-[16px] leading-none" aria-hidden>
+              chevron_right
+            </span>
           </button>
         </div>
       }

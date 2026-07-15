@@ -46,7 +46,10 @@ export class NotificationService {
       payload: input.payload,
     });
 
-    void this.pushToTelegram(input.userId, `${input.title}\n${input.body}`).catch((err) => {
+    void this.pushToTelegram(
+      input.userId,
+      input.type === "gcal_auto_sync" ? input.body : `${input.title}\n${input.body}`,
+    ).catch((err) => {
       console.error(`[notify] telegram push failed for ${input.userId}:`, err);
     });
 

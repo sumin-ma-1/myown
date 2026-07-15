@@ -272,17 +272,17 @@ function NotificationRow({
           <p
             className={`text-sm ${
               unread
-                ? "font-semibold text-slate-900 dark:text-slate-50"
-                : "font-medium text-slate-700 dark:text-slate-200"
+                ? "text-slate-900 dark:text-slate-50"
+                : "text-slate-700 dark:text-slate-200"
             }`}
           >
-            {item.title}
+            {item.body}
           </p>
           {unread && (
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" aria-hidden />
           )}
         </div>
-        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{item.body}</p>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.title}</p>
         <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
           {formatDateTime(item.createdAt)}
         </p>
