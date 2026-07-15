@@ -12,7 +12,7 @@ interface SidebarProps {
 }
 
 function navLinkClass(expanded: boolean, isActive: boolean) {
-  return `flex items-center rounded-lg text-sm transition ${
+  return `flex w-full items-center rounded-lg text-sm transition ${
     expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
   } ${
     isActive
@@ -27,12 +27,14 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`flex shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
+      className={`flex h-full shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
         expanded ? "w-56" : "w-14"
       }`}
     >
-      <div className={`flex h-full flex-col ${expanded ? "p-4" : "items-center p-2"}`}>
-        <div className={`mb-6 ${expanded ? "" : "flex w-full justify-center"}`}>
+      <div
+        className={`flex h-full min-h-0 flex-col ${expanded ? "p-4" : "items-center p-2"}`}
+      >
+        <div className={`shrink-0 ${expanded ? "mb-4" : "mb-4 flex w-full justify-center"}`}>
           {expanded ? (
             <div className="flex items-start justify-between gap-2">
               <NavLink
@@ -101,90 +103,98 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           )}
         </div>
 
-        <IntegrationsPanel compact={!expanded} />
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto scrollbar-subtle ${
+            expanded ? "" : "w-full"
+          }`}
+        >
+          <IntegrationsPanel compact={!expanded} />
 
-        <nav className={`flex flex-1 flex-col gap-1 ${expanded ? "" : "w-full"}`}>
-          <NavLink to="/" end title={expanded ? undefined : "업무 현황"}>
-            {({ isActive }) => (
-              <span className={navLinkClass(expanded, isActive)}>
-                <span className={navIconClass} aria-hidden>
-                  home
-                </span>
-                {expanded && "업무 현황"}
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/tasks" title={expanded ? undefined : "등록 업무 목록"}>
-            {({ isActive }) => (
-              <span className={navLinkClass(expanded, isActive)}>
-                <span className={navIconClass} aria-hidden>
-                  sort
-                </span>
-                {expanded && "등록 업무 목록"}
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/integrations" title={expanded ? undefined : "연동 APP"}>
-            {({ isActive }) => (
-              <span className={navLinkClass(expanded, isActive)}>
-                <span className={navIconClass} aria-hidden>
-                  link
-                </span>
-                {expanded && "연동 APP"}
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/chat" title={expanded ? undefined : "채팅"}>
-            {({ isActive }) => (
-              <span className={navLinkClass(expanded, isActive)}>
-                <span className={navIconClass} aria-hidden>
-                  commit
-                </span>
-                {expanded && "마이온 챗"}
-              </span>
-            )}
-          </NavLink>
-          {isAdmin && (
-            <NavLink to="/admin" title={expanded ? undefined : "관리자"}>
+          <nav className={`flex flex-col gap-1 ${expanded ? "" : "w-full"}`}>
+            <NavLink to="/" end title={expanded ? undefined : "업무 현황"} className="block w-full">
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
                   <span className={navIconClass} aria-hidden>
-                    admin_panel_settings
+                    home
                   </span>
-                  {expanded && "관리자"}
+                  {expanded && "업무 현황"}
                 </span>
               )}
             </NavLink>
-          )}
-        </nav>
+            <NavLink to="/tasks" title={expanded ? undefined : "등록 업무 목록"} className="block w-full">
+              {({ isActive }) => (
+                <span className={navLinkClass(expanded, isActive)}>
+                  <span className={navIconClass} aria-hidden>
+                    sort
+                  </span>
+                  {expanded && "등록 업무 목록"}
+                </span>
+              )}
+            </NavLink>
+            <NavLink to="/integrations" title={expanded ? undefined : "연동 APP"} className="block w-full">
+              {({ isActive }) => (
+                <span className={navLinkClass(expanded, isActive)}>
+                  <span className={navIconClass} aria-hidden>
+                    link
+                  </span>
+                  {expanded && "연동 APP"}
+                </span>
+              )}
+            </NavLink>
+            <NavLink to="/chat" title={expanded ? undefined : "채팅"} className="block w-full">
+              {({ isActive }) => (
+                <span className={navLinkClass(expanded, isActive)}>
+                  <span className={navIconClass} aria-hidden>
+                    commit
+                  </span>
+                  {expanded && "마이온 챗"}
+                </span>
+              )}
+            </NavLink>
+            {isAdmin && (
+              <NavLink to="/admin" title={expanded ? undefined : "관리자"} className="block w-full">
+                {({ isActive }) => (
+                  <span className={navLinkClass(expanded, isActive)}>
+                    <span className={navIconClass} aria-hidden>
+                      admin_panel_settings
+                    </span>
+                    {expanded && "관리자"}
+                  </span>
+                )}
+              </NavLink>
+            )}
+          </nav>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title={expanded ? undefined : theme === "dark" ? "라이트 모드" : "다크 모드"}
-          className={`flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
-            expanded ? "mt-4 gap-1.5 px-3 py-2" : "mt-4 justify-center px-2 py-2"
-          }`}
-        >
-          <span className="material-icons text-[18px] leading-none" aria-hidden>
-            {theme === "dark" ? "light_mode" : "dark_mode"}
-          </span>
-          {expanded && (theme === "dark" ? "라이트 모드" : "다크 모드")}
-        </button>
+        <div className={`mt-3 w-full shrink-0 pt-2`}>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={expanded ? undefined : theme === "dark" ? "라이트 모드" : "다크 모드"}
+            className={`flex w-full items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
+              expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
+            }`}
+          >
+            <span className="material-icons text-[18px] leading-none" aria-hidden>
+              {theme === "dark" ? "light_mode" : "dark_mode"}
+            </span>
+            {expanded && (theme === "dark" ? "라이트 모드" : "다크 모드")}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => void logout()}
-          title={expanded ? undefined : "로그아웃"}
-          className={`flex items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
-            expanded ? "mt-1 gap-1.5 px-3 py-2" : "mt-1 justify-center px-2 py-2"
-          }`}
-        >
-          <span className="material-icons text-[18px] leading-none" aria-hidden>
-            logout
-          </span>
-          {expanded && "로그아웃"}
-        </button>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            title={expanded ? undefined : "로그아웃"}
+            className={`mt-1 flex w-full items-center rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${
+              expanded ? "gap-1.5 px-3 py-2" : "justify-center px-2 py-2"
+            }`}
+          >
+            <span className="material-icons text-[18px] leading-none" aria-hidden>
+              logout
+            </span>
+            {expanded && "로그아웃"}
+          </button>
+        </div>
       </div>
     </aside>
   );
