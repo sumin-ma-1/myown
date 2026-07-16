@@ -73,6 +73,9 @@ export class MorningBriefingService {
     const todayTasks = sortTasksForBriefing(
       await this.tasks.listDueToday(user.id, start, end),
     );
+    // 오늘 마감 일정이 없으면 보내지 않음 (빈 날 알림 생략)
+    if (todayTasks.length === 0) return false;
+
     const text = formatMorningBriefing(todayTasks, now);
 
     await this.telegramSender!(user.telegramUserId, text);
