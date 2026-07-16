@@ -298,7 +298,7 @@ export function IntegrationCard({ item }: { item: IntegrationDto }) {
 
         {item.status === "connected" && (
           <div className="text-xs text-slate-500 dark:text-slate-400">
-            {item.displayName && <p>표시 이름: {item.displayName}</p>}
+            {item.displayName && <p>이름: {item.displayName}</p>}
             {connectedAt && <p>연결: {connectedAt}</p>}
           </div>
         )}
