@@ -1,12 +1,46 @@
 import { config } from "../config.js";
 
-function datePartsInTimezone(date: Date): string {
+function datePartsInTimezone(date: Date, timezone = config.timezone): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: config.timezone,
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
+}
+
+export function dateKeyInTimezone(date: Date, timezone = config.timezone): string {
+  return datePartsInTimezone(date, timezone);
+}
+
+export function hourInTimezone(date: Date, timezone = config.timezone): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  return Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+}
+
+export function minuteInTimezone(date: Date, timezone = config.timezone): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    minute: "2-digit",
+  }).formatToParts(date);
+  return Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+}
+
+export function timeMinutesInTimezone(date: Date, timezone = config.timezone): number {
+  return hourInTimezone(date, timezone) * 60 + minuteInTimezone(date, timezone);
+}
+
+export function startOfDayForTimezone(date = new Date(), timezone = config.timezone): Date {
+  return new Date(`${datePartsInTimezone(date, timezone)}T00:00:00+09:00`);
+}
+
+export function endOfDayForTimezone(date = new Date(), timezone = config.timezone): Date {
+  const start = startOfDayForTimezone(date, timezone);
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
 export function startOfDayInTimezone(date = new Date()): Date {

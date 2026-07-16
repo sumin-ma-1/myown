@@ -2,6 +2,7 @@ import type { ReminderRepository, Task, User } from "@myown/database";
 import type { Queue } from "bullmq";
 import { config } from "../config.js";
 import type { UserPreferences } from "../api/types.js";
+import { ddayOffsetsForUser } from "../utils/notification-prefs.js";
 import {
   filterSuppressedFireTimes,
   getSuppressedFireTimes,
@@ -35,9 +36,8 @@ export class ReminderService {
     const storedExtras = prefs.taskReminderRules?.[task.id] ?? [];
     const extraRules = options?.extraRules ?? storedExtras;
 
-    const ddayOffsets = useDefaults
-      ? (prefs.notification?.ddayOffsets ?? [3, 1, 0])
-      : [];
+    const ddayOffsets =
+      useDefaults ? ddayOffsetsForUser(prefs) : [];
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
     const schedules = filterSuppressedFireTimes(
@@ -74,9 +74,8 @@ export class ReminderService {
     const useDefaults = options?.useDefaults ?? true;
     const storedExtras = prefs.taskReminderRules?.[task.id] ?? [];
     const extraRules = options?.extraRules ?? storedExtras;
-    const ddayOffsets = useDefaults
-      ? (prefs.notification?.ddayOffsets ?? [3, 1, 0])
-      : [];
+    const ddayOffsets =
+      useDefaults ? ddayOffsetsForUser(prefs) : [];
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
     const desired = filterSuppressedFireTimes(

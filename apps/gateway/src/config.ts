@@ -91,6 +91,9 @@ export const config = {
   ),
   /** Kakao Open Builder (카카오톡 채널 + 스킬 서버) */
   kakaoChannelUrl: process.env.KAKAO_CHANNEL_URL ?? "",
+  morningBriefingCheckIntervalMs: Number(
+    process.env.MORNING_BRIEFING_CHECK_INTERVAL_MS ?? "60000",
+  ),
   kakaoBotName: process.env.KAKAO_BOT_NAME ?? "MyOwn",
 };
 

@@ -7,6 +7,7 @@ import { createBot } from "./telegram/bot.js";
 import { setupTelegramMenuButton } from "./telegram/menu-button.js";
 import { handleReminderJob } from "./workers/reminder-worker.js";
 import { startGoogleCalendarAutoSyncWorker } from "./workers/google-calendar-auto-sync-worker.js";
+import { startMorningBriefingWorker } from "./workers/morning-briefing-worker.js";
 
 async function main() {
   const redis = createRedisConnection();
@@ -14,6 +15,9 @@ async function main() {
   const bot = createBot(app);
   await setupTelegramMenuButton(bot);
   app.notifications.setTelegramSender(async (telegramUserId, text) => {
+    await bot.api.sendMessage(telegramUserId, text);
+  });
+  app.morningBriefing.setTelegramSender(async (telegramUserId, text) => {
     await bot.api.sendMessage(telegramUserId, text);
   });
 
@@ -26,6 +30,7 @@ async function main() {
   });
 
   const stopGoogleCalendarAutoSync = startGoogleCalendarAutoSyncWorker(app);
+  const stopMorningBriefing = startMorningBriefingWorker(app);
 
   const api = createApiApp(app);
   serve({ fetch: api.fetch, port: config.webApiPort }, () => {
@@ -35,6 +40,7 @@ async function main() {
   const shutdown = async () => {
     console.log("Shutting down...");
     stopGoogleCalendarAutoSync();
+    stopMorningBriefing();
     await worker.close();
     await app.reminderQueue.close();
     await redis.quit();

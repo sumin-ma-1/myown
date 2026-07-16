@@ -96,6 +96,16 @@ export class NotificationService {
     });
   }
 
+  /** 설정 변경 확인 등 — 채널 토글과 무관하게 Telegram 연결만 있으면 발송 */
+  async sendTelegramToUser(userId: string, text: string): Promise<void> {
+    if (!this.telegramSender) return;
+
+    const user = await this.users.findById(userId);
+    if (!user?.telegramUserId) return;
+
+    await this.telegramSender(user.telegramUserId, text);
+  }
+
   private async pushToTelegram(userId: string, text: string): Promise<void> {
     if (!this.telegramSender) return;
 

@@ -27,6 +27,7 @@ import { TelegramLinkService } from "./services/telegram-link.js";
 import { KakaoLinkService } from "./services/kakao-link.js";
 import { GoogleCalendarService } from "./services/google-calendar.js";
 import { NotificationService } from "./services/notification.js";
+import { MorningBriefingService } from "./services/morning-briefing.js";
 
 export interface AppContext {
   users: UserRepository;
@@ -46,6 +47,7 @@ export interface AppContext {
   attachmentService: AttachmentService;
   reminderService: ReminderService;
   notifications: NotificationService;
+  morningBriefing: MorningBriefingService;
   agent: AgentRuntime;
   reminderQueue: Queue<ReminderJobData>;
   redis: Redis;
@@ -75,6 +77,7 @@ export function createContext(redis: Redis): AppContext {
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
   const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);
   const notifications = new NotificationService(userNotifications, users);
+  const morningBriefing = new MorningBriefingService(users, tasks);
   const agent = new AgentRuntime(taskService);
   const auth = new AuthService(redis, webAccounts, users, inviteCodes, sessions, loginEvents);
   const telegramLink = new TelegramLinkService(redis, users, channelConnections);
@@ -107,6 +110,7 @@ export function createContext(redis: Redis): AppContext {
     attachmentService,
     reminderService,
     notifications,
+    morningBriefing,
     agent,
     reminderQueue,
     redis,

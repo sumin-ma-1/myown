@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { CalendarPanel } from "@/components/dashboard/CalendarPanel";
-import { DdaySettingsModal } from "@/components/dashboard/DdaySettingsModal";
+import { NotificationSettingsModal } from "@/components/dashboard/NotificationSettingsModal";
 import { FlashMessage } from "@/components/ui/FlashMessage";
 import { RotatingSubtitle, DASHBOARD_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
 import { DueTodayCard, InProgressCard, PlannedCard } from "@/components/dashboard/SummaryCards";
@@ -11,7 +11,7 @@ import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 
 export function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [ddayModalOpen, setDdayModalOpen] = useState(false);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
   const [createDueDate, setCreateDueDate] = useState<string | undefined>();
@@ -61,12 +61,12 @@ export function DashboardPage() {
           <button
             type="button"
             className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={() => setDdayModalOpen(true)}
+            onClick={() => setNotificationModalOpen(true)}
           >
             <span className="material-icons text-[18px] leading-none" aria-hidden>
               alarm
             </span>
-            D-DAY
+            알림 설정
           </button>
           <button
             type="button"
@@ -101,9 +101,9 @@ export function DashboardPage() {
         onSaved={setFlashMessage}
       />
 
-      <DdaySettingsModal
-        open={ddayModalOpen}
-        onClose={() => setDdayModalOpen(false)}
+      <NotificationSettingsModal
+        open={notificationModalOpen}
+        onClose={() => setNotificationModalOpen(false)}
         onSaved={setFlashMessage}
       />
 

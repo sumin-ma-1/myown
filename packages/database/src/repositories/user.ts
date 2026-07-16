@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { users } from "../schema.js";
 import type { User } from "../schema.js";
@@ -75,6 +75,10 @@ export class UserRepository {
   async findById(id: string): Promise<User | undefined> {
     const [user] = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
     return user;
+  }
+
+  async listWithTelegram(): Promise<User[]> {
+    return this.db.select().from(users).where(isNotNull(users.telegramUserId));
   }
 
   async findFirst(): Promise<User | undefined> {

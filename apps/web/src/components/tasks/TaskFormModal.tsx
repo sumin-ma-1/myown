@@ -433,7 +433,9 @@ export function TaskFormModal({
   });
 
   const offsets = settings?.notification.ddayOffsets ?? [3, 1, 0];
-  const offsetLabel = offsets.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
+  const ddayEnabledDefault = settings?.notification.ddayEnabled !== false;
+  const offsetsForPreview = ddayEnabledDefault ? offsets : [];
+  const offsetLabel = offsetsForPreview.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
   const reminderHour = settings?.notification.reminderHour ?? 9;
   const dueAtIso = toDueAtIso(dueDate, dueTime);
   const extraApplying = applyExtraRemindersMutation.isPending;
@@ -442,7 +444,7 @@ export function TaskFormModal({
     taskData?.item.attachments.filter((a) => !removedAttachmentIds.includes(a.id)) ?? [];
   const scheduledReminders =
     remindersData?.items.filter((r) => r.status !== "cancelled") ?? [];
-  const extraScheduleOptions = { useDefaultReminders, ddayOffsets: offsets };
+  const extraScheduleOptions = { useDefaultReminders, ddayOffsets: offsetsForPreview };
   const isLoading = mode === "edit" && taskLoading;
   const canComplete = mode === "edit" && taskData?.item.status === "active";
   const footerBusy =

@@ -15,7 +15,15 @@ export type TaskWorkflowStatus = "planned" | "in_progress";
 export interface UserPreferences {
   notification?: {
     ddayOffsets?: number[];
+    ddayEnabled?: boolean;
     reminderHour?: number;
+    morningBriefing?: {
+      enabled?: boolean;
+      hour?: number;
+      minute?: number;
+      /** YYYY-MM-DD (user timezone) — last successful send */
+      lastSentDate?: string;
+    };
     channels?: {
       telegram?: boolean;
       kakao?: boolean;

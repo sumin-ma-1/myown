@@ -41,8 +41,14 @@ export interface ReminderDto {
 export interface SettingsDto {
   timezone: string;
   notification: {
+    ddayEnabled: boolean;
     ddayOffsets: number[];
     reminderHour: number;
+    morningBriefing: {
+      enabled: boolean;
+      hour: number;
+      minute: number;
+    };
     channels: {
       telegram: boolean;
       kakao: boolean;

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
+import { ddayOffsetsForUser } from "../../utils/notification-prefs.js";
 import { buildReminderFireTimes, extraRuleFireTime } from "../../services/reminder-schedule.js";
 import {
   clearSuppressedFireTimes,
@@ -122,7 +123,7 @@ tasksRoute.get("/:id", async (c) => {
 
   const reminderConfig = getTaskReminderConfig(user, taskId);
   const prefs = (user.preferences ?? {}) as UserPreferences;
-  const ddayOffsets = prefs.notification?.ddayOffsets ?? [3, 1, 0];
+  const ddayOffsets = ddayOffsetsForUser(prefs);
   const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
   let defaultPreview: string[] = [];
