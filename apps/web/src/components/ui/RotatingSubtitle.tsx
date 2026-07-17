@@ -43,7 +43,7 @@ export function RotatingSubtitle({
 export const DASHBOARD_SUBTITLE_MESSAGES = [
   "오늘의 업무와 일정을 한눈에 확인해요.",
   "구글 캘린더와 연동하여 일정을 가져오고, 텔레그램에서 업무 알림을 받을 수 있어요.",
-  "텔레그램, 카카오톡에서도 업무를 등록하고 조회할 수 있어요.",
+  "텔레그램, 카카오톡에서도 업무를 자연어로 등록하고 조회할 수 있어요.",
   "캘린더에서 일정과 업무 마감을 함께 살펴보세요.",
 ] as const;
 
@@ -55,7 +55,7 @@ export const TASK_LIST_SUBTITLE_MESSAGES = [
 ] as const;
 
 export const INTEGRATIONS_SUBTITLE_MESSAGES = [
-  "APP과 연동하여 채팅으로 업무를 등록하고 알림을 받을 수 있어요.",
+  "APP과 연동하여 채팅으로 업무를 자연어로 등록하고 알림을 받을 수 있어요.",
   "텔레그램, 카카오톡 채널과 웹 계정을 연결해 보세요.",
   "구글 캘린더 일정을 가져와 업무로 활성화할 수 있어요.",
   "알림 수신은 텔레그램 연동 시 이용할 수 있어요.",
