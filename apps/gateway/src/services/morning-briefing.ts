@@ -73,13 +73,22 @@ export class MorningBriefingService {
     const todayTasks = sortTasksForBriefing(
       await this.tasks.listDueToday(user.id, start, end),
     );
-    // 오늘 마감 일정이 없으면 보내지 않음 (빈 날 알림 생략)
-    if (todayTasks.length === 0) return false;
+    // 오늘 마감 일정이 없으면 보내지 않음 (전 유저 동일). lastSentDate는 남겨 하루 1회만 판정.
+    if (todayTasks.length === 0) {
+      console.log(
+        `[morning-briefing] skip user=${user.id}: no due tasks today (${todayKey})`,
+      );
+      await this.markSent(user, prefs, todayKey);
+      return false;
+    }
 
     const text = formatMorningBriefing(todayTasks, now);
 
     await this.telegramSender!(user.telegramUserId, text);
     await this.markSent(user, prefs, todayKey);
+    console.log(
+      `[morning-briefing] sent user=${user.id} tasks=${todayTasks.length}`,
+    );
     return true;
   }
 

@@ -172,7 +172,7 @@ export function NotificationSettingsModal({
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">아침 브리핑</h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              오늘 마감 일정이 있는 날, 아침 브리핑을 보내요.
+              오늘 일정이 있는 날, 아침 브리핑을 보내요.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
