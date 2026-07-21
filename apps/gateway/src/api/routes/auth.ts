@@ -158,8 +158,12 @@ authRoute.get("/me", async (c) => {
 
 authRoute.post("/logout", async (c) => {
   const sessionId = getCookie(c, AuthService.sessionCookieName());
+  const userId = c.get("userId");
   if (sessionId) {
     await c.var.app.auth.logout(sessionId);
+  }
+  if (userId) {
+    await c.var.app.chatMemory.clear(userId);
   }
   deleteCookie(c, AuthService.sessionCookieName(), { path: "/" });
   return c.json({ ok: true });

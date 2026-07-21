@@ -15,6 +15,7 @@ import {
   applyComposeMemoPatch,
   inferOfflineComposeMemoPatch,
 } from "./compose-memo-infer.js";
+import { resolveUserTimezone } from "../../utils/user-timezone.js";
 
 const priorityLabelKo = {
   urgent: "최우선",
@@ -28,7 +29,10 @@ function formatDueLabel(dueAt: Date): string {
 }
 
 export function formatDraftSummary(draft: ComposeDraft): string {
-  const lines = ["✅ 업무 내용을 반영했습니다.", `제목: ${draft.title}`];
+  const lines = [
+    "📝 일정 초안입니다.",
+    `제목: ${draft.title}`,
+  ];
   if (draft.description) lines.push(`📝 ${draft.description}`);
   if (draft.dueAt) lines.push(`마감: ${formatDueLabel(draft.dueAt)}`);
   lines.push(`우선순위: ${priorityLabelKo[draft.priority ?? "medium"]}`);
@@ -38,6 +42,7 @@ export function formatDraftSummary(draft: ComposeDraft): string {
 
 async function applyMemoPatch(
   app: AppContext,
+  userId: string,
   context: { title: string; description?: string | null; dueAt?: Date | null; priority: TaskPriority },
   text: string,
 ): Promise<
@@ -52,7 +57,8 @@ async function applyMemoPatch(
     }
   | { ok: false; message: string }
 > {
-  const parsed = await app.agent.parseComposeMemo(context, text);
+  const timezone = await resolveUserTimezone(app.users, userId);
+  const parsed = await app.agent.parseComposeMemo(context, text, timezone);
   if (parsed.ok) return parsed;
 
   return { ok: true, patch: inferOfflineComposeMemoPatch(text, context) };
@@ -60,11 +66,12 @@ async function applyMemoPatch(
 
 export async function draftFromMemo(
   app: AppContext,
+  userId: string,
   base: ComposeDraft,
   text: string,
 ): Promise<ComposeDraft> {
   const context = draftMemoContext(base);
-  const result = await applyMemoPatch(app, context, text);
+  const result = await applyMemoPatch(app, userId, context, text);
   const patch = result.ok
     ? result.patch
     : inferOfflineComposeMemoPatch(text, context);
@@ -91,7 +98,7 @@ export async function mergeTextIntoComposeTask(
     return { ok: false, message: "no_compose" };
   }
 
-  const draft = await draftFromMemo(app, compose.draft, text);
+  const draft = await draftFromMemo(app, userId, compose.draft, text);
   setCompose(ctx.session, { ...compose, draft });
   return { ok: true, reply: formatDraftSummary(draft) };
 }

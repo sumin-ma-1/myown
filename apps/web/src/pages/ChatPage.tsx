@@ -195,10 +195,16 @@ function ChatInputBar({
   onRemovePendingFile: (id: string) => void;
   className?: string;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const controlClass =
     "h-11 shrink-0 rounded-3xl border border-surface-border bg-white text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
 
   const canSend = input.trim().length > 0 || pendingFiles.length > 0;
+
+  useEffect(() => {
+    if (busy) return;
+    textareaRef.current?.focus();
+  }, [busy]);
 
   return (
     <div className={className}>
@@ -228,8 +234,10 @@ function ChatInputBar({
         </span>
       </button>
       <textarea
+        ref={textareaRef}
         rows={1}
-        className={`${controlClass} box-border h-11 min-h-11 max-h-32 flex-1 resize-none overflow-y-auto px-4 py-2.5 leading-5`}
+        autoFocus
+        className={`${controlClass} box-border h-11 min-h-11 max-h-32 flex-1 resize-none overflow-y-auto px-4 py-2.5 leading-5 outline-none transition-[border-color,box-shadow] duration-150 focus:border-brand/50 focus:shadow-[0_0_0_1px_rgb(37_99_235_/_0.2),0_0_12px_rgb(37_99_235_/_0.18)] dark:focus:border-blue-400/45 dark:focus:shadow-[0_0_0_1px_rgb(96_165_250_/_0.22),0_0_14px_rgb(59_130_246_/_0.22)]`}
         placeholder={compose ? "메모를 입력하세요." : "쉽게 일정을 등록해보세요."}
         value={input}
         disabled={busy}

@@ -2,7 +2,7 @@ import type { Task, TaskPriority } from "@myown/database";
 import OpenAI from "openai";
 import { config, isLlmEnabled } from "../config.js";
 import type { TaskService } from "../services/task.js";
-import { formatDate, formatDateTime } from "../utils/date.js";
+import { formatDate, formatDateTime, llmDueDateContextLines } from "../utils/date.js";
 import { displayOrderOf, formatActiveTasksHint } from "../utils/task-display-order.js";
 import {
   fireAtFromMinutes,
@@ -30,6 +30,7 @@ import {
   sanitizeComposeMemoPatch,
 } from "../telegram/helpers/compose-memo-infer.js";
 import type { ChatTurn } from "../services/chat-memory-store.js";
+import { parseTextToolCalls } from "./text-tool-call.js";
 
 function formatDueLabel(dueAt: Date): string {
   return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
@@ -48,6 +49,7 @@ export interface AgentMessageInput {
   text: string;
   activeTasks: Task[];
   recentTurns?: ChatTurn[];
+  timezone: string;
 }
 
 export class AgentRuntime {
@@ -117,6 +119,7 @@ export class AgentRuntime {
       priority: TaskPriority;
     },
     memo: string,
+    timezone: string,
   ): Promise<
     | {
         ok: true;
@@ -144,8 +147,7 @@ export class AgentRuntime {
             content: [
               "사용자가 첨부 파일 업무 등록 중에 후속 메모를 보냈습니다.",
               "메모 의도를 파악해 fill_task_from_memo로 변경할 필드만 채우세요.",
-              `타임존: ${config.timezone}`,
-              `오늘: ${formatDate(new Date())}`,
+              ...llmDueDateContextLines(timezone),
               `현재 제목: ${context.title}`,
               `현재 설명: ${context.description ?? "(없음)"}`,
               `현재 마감: ${currentDue}`,
@@ -167,11 +169,18 @@ export class AgentRuntime {
       });
 
       const toolCall = response.choices[0]?.message?.tool_calls?.[0];
-      if (!toolCall || toolCall.type !== "function") {
-        return { ok: false, message: "메모를 이해하지 못했습니다." };
+      let args: ComposeMemoArgs;
+      if (toolCall && toolCall.type === "function") {
+        args = JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs;
+      } else {
+        const content = response.choices[0]?.message?.content;
+        const textCalls = parseTextToolCalls(content);
+        const memoCall = textCalls.find((c) => c.name === "fill_task_from_memo");
+        if (!memoCall) {
+          return { ok: false, message: "메모를 이해하지 못했습니다." };
+        }
+        args = memoCall.args as ComposeMemoArgs;
       }
-
-      const args = JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs;
       let patch: {
         title: string;
         description?: string | null;
@@ -380,8 +389,7 @@ export class AgentRuntime {
         role: "system",
         content: [
           "당신은 개인 업무 비서입니다. 한국어로 답변하세요.",
-          `타임존: ${config.timezone}`,
-          `오늘: ${formatDate(new Date())}`,
+          ...llmDueDateContextLines(input.timezone),
           "활성 업무:",
           taskContext || "(없음)",
           "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
@@ -389,6 +397,9 @@ export class AgentRuntime {
           "create_reminder·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
           "최근 대화는 현재 메시지와 관련이 있을 때만 참고하세요. 직전 대화에서 업무 등록 여부를 확인했거나 필요한 추가 정보를 요청했다면, 사용자의 후속 답변을 이전 맥락과 함께 해석하세요. 등록 의도가 확인되거나 필요한 정보가 충분하면 create_task를 호출하세요.",
+          "create_task 결과는 초안 준비일 수 있습니다. '등록 완료했습니다'처럼 단정하지 말고, 확인/[등록 완료] 절차가 필요할 수 있다고 안내하세요.",
+          "일정·목록·오늘 뭐 있는지 물으면 반드시 list_tasks 또는 list_today_tasks를 호출하고, 도구 결과만 말하세요.",
+          "최근 대화에만 나온 일정·초안·미등록 내용은 실제 일정 목록에 넣지 마세요. [등록 완료] 전 초안도 일정이 아닙니다.",
           "마크다운 문법(** · * · # · ` 등)을 쓰지 말고, 줄바꿈만 쓰는 평문으로 답하세요.",
         ].join("\n"),
       },
@@ -415,6 +426,20 @@ export class AgentRuntime {
       if (!choice) return "응답을 생성하지 못했습니다.";
 
       if (!choice.tool_calls?.length) {
+        const textTools = parseTextToolCalls(choice.content);
+        if (textTools.length > 0) {
+          const results: string[] = [];
+          for (const call of textTools) {
+            const result = await this.executeTool(
+              call.name,
+              call.args,
+              input.userId,
+              input.telegramUserId,
+            );
+            results.push(result);
+          }
+          return results.join("\n");
+        }
         return choice.content ?? "처리했습니다.";
       }
 
@@ -459,7 +484,7 @@ export class AgentRuntime {
           dueAt,
         });
         const due = task.dueAt ? `, 마감 ${formatDueLabel(task.dueAt)}` : "";
-        return `등록됨: ${task.title}${due}`;
+        return `초안: ${task.title}${due} ([등록 완료] 전이면 아직 미등록)`;
       }
       case "create_reminder": {
         const a = args as unknown as CreateReminderArgs;

@@ -121,7 +121,7 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
         title: titleFromFileName(fileName),
       };
       if (userHint) {
-        draft = await draftFromMemo(app, draft, userHint);
+        draft = await draftFromMemo(app, userId, draft, userHint);
       }
 
       const composeKey = randomUUID();

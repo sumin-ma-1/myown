@@ -13,6 +13,7 @@ import {
   formatDraftSummary,
   mergeTextIntoComposeTask,
 } from "../helpers/compose-merge.js";
+import { resolveUserTimezone } from "../../utils/user-timezone.js";
 
 export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
   bot.on("message:text", async (ctx) => {
@@ -56,12 +57,14 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
       const beforeIds = new Set(activeBefore.map((t) => t.id));
       const recentTurns = await app.chatMemory.getTurns(userId);
 
+      const timezone = await resolveUserTimezone(app.users, userId);
       const reply = await app.agent.handleMessage({
         userId,
         telegramUserId,
         text,
         activeTasks: activeBefore,
         recentTurns,
+        timezone,
       });
 
       const activeAfter = await app.taskService.getActiveTasks(userId);

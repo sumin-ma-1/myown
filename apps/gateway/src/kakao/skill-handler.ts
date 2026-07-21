@@ -1,4 +1,5 @@
 import type { AppContext } from "../context.js";
+import { config } from "../config.js";
 import type { KakaoSkillRequest } from "./types.js";
 import { extractLinkToken } from "./types.js";
 import { kakaoMultiTextResponse, kakaoTextResponse } from "./response.js";
@@ -136,6 +137,7 @@ export async function handleKakaoSkill(app: AppContext, body: KakaoSkillRequest)
       text: agentText,
       activeTasks: await app.tasks.listActive(user.id),
       recentTurns,
+      timezone: user.timezone || config.timezone,
     });
 
     if (agentText.startsWith("/")) {

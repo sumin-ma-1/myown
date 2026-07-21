@@ -60,7 +60,7 @@ export function composeContinueKeyboard(composeKey: string) {
 }
 
 export const COMPOSE_HINT =
-  "메모를 입력하거나 파일을 첨부한 뒤 [등록 완료]. 취소는 [등록 취소].";
+  "메모를 입력하거나 파일을 첨부한 뒤 [등록 완료].";
 
 export function parseComposeText(text: string): { title: string; description?: string } {  const lines = text.trim().split("\n");
   const title = lines[0]?.trim() ?? text.trim();

@@ -8,6 +8,7 @@ import {
 } from "../telegram/helpers/compose-merge.js";
 import { titleFromFileName } from "./attachment.js";
 import { WebComposeStore, type WebComposeState } from "./web-compose-store.js";
+import { resolveUserTimezone } from "../utils/user-timezone.js";
 
 export interface ComposeDraftDto {
   mode: WebComposeState["mode"];
@@ -72,7 +73,7 @@ export class WebChatService {
 
     const existing = await this.store.get(userId);
     if (existing) {
-      const draft = await draftFromMemo(this.app, existing.draft, trimmed);
+      const draft = await draftFromMemo(this.app, userId, existing.draft, trimmed);
       const state: WebComposeState = { ...existing, draft };
       await this.store.set(userId, state);
       return {
@@ -86,12 +87,14 @@ export class WebChatService {
     const beforeIds = new Set(activeBefore.map((t) => t.id));
     const recentTurns = await this.app.chatMemory.getTurns(userId);
 
+    const timezone = await resolveUserTimezone(this.app.users, userId);
     const reply = await this.app.agent.handleMessage({
       userId,
       telegramUserId: telegramUserId ?? 0,
       text: trimmed,
       activeTasks: activeBefore,
       recentTurns,
+      timezone,
     });
 
     const activeAfter = await this.app.taskService.getActiveTasks(userId);
@@ -175,7 +178,7 @@ export class WebChatService {
       title: titleFromFileName(file.fileName),
     };
     if (caption?.trim()) {
-      draft = await draftFromMemo(this.app, draft, caption.trim());
+      draft = await draftFromMemo(this.app, userId, draft, caption.trim());
     }
 
     const state: WebComposeState = {
@@ -207,7 +210,7 @@ export class WebChatService {
       return { reply: "등록 중인 업무가 없습니다. 메시지를 보내거나 파일을 첨부해 주세요.", compose: null };
     }
 
-    const draft = await draftFromMemo(this.app, existing.draft, text.trim());
+    const draft = await draftFromMemo(this.app, userId, existing.draft, text.trim());
     const state: WebComposeState = { ...existing, draft };
     await this.store.set(userId, state);
     return {

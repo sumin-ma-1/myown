@@ -96,3 +96,33 @@ export function formatDday(days: number): string {
   if (days > 0) return `D-${days}`;
   return `D+${Math.abs(days)}`;
 }
+
+function dayOfWeekSun0(date: Date, timezone = config.timezone): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+  }).format(date);
+  const map: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return map[weekday] ?? date.getUTCDay();
+}
+
+/** LLM 시스템 프롬프트용: 사용자 타임존 기준 오늘 */
+export function llmDueDateContextLines(timezone: string, now = new Date()): string[] {
+  const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"] as const;
+  const todayKey = dateKeyInTimezone(now, timezone);
+  const todayDow = dayOfWeekSun0(now, timezone);
+
+  return [
+    `타임존: ${timezone}`,
+    `오늘: ${todayKey} (${weekdayNames[todayDow]}요일)`,
+    "주는 월요일 시작입니다.",
+  ];
+}

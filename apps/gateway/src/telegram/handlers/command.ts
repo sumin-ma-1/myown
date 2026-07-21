@@ -3,6 +3,7 @@ import type { AppContext } from "../../context.js";
 import type { BotContext } from "../bot.js";
 import { telegramDisplayName } from "../../integrations/privacy.js";
 import { dashboardInlineKeyboard } from "../dashboard-keyboard.js";
+import { resolveUserTimezone } from "../../utils/user-timezone.js";
 
 const HELP_TEXT = [
   "안녕하세요, MyOwn 업무 관리 개인 비서 봇입니다.",
@@ -147,11 +148,13 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
     }
 
     await app.chatMemory.clear(userId);
+    const timezone = await resolveUserTimezone(app.users, userId);
     const reply = await app.agent.handleMessage({
       userId,
       telegramUserId,
       text: `/add ${raw}`,
       activeTasks: await app.tasks.listActive(userId),
+      timezone,
     });
     await ctx.reply(reply);
   });
@@ -170,11 +173,13 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
     }
 
     await app.chatMemory.clear(userId);
+    const timezone = await resolveUserTimezone(app.users, userId);
     const reply = await app.agent.handleMessage({
       userId,
       telegramUserId,
       text: `/remind ${raw}`,
       activeTasks: await app.tasks.listActive(userId),
+      timezone,
     });
     await ctx.reply(reply);
   });

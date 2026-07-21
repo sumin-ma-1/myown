@@ -12,9 +12,9 @@ Visit <a href="https://clips-satisfy-newsletter-selling.trycloudflare.com">MyOwn
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/75e096cb-6f14-4e4c-aa03-89adf5b4e862"
+    src="https://github.com/user-attachments/assets/91bf5d7b-0403-42df-9636-f96349dc09f5"
     alt="MyOwn service preview"
-    width="850"
+    width="900"
   />
 </p>
 
