@@ -112,6 +112,18 @@ html.dark body {
   }
 }
 
+@keyframes button-glow-aura-soft {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: var(--btn-glow-peak, 0.4);
+    transform: scale(0.905);
+  }
+}
+
 @layer utilities {
   .notification-bell-ring {
     display: inline-block;
@@ -138,6 +150,16 @@ html.dark body {
     --btn-glow-color: 34 211 238;
   }
 
+  /* Mint → sky CTA: color-matched soft outer glow (reference neon look) */
+  .btn-glow-wrap--aurora {
+    padding: 1.1rem;
+    --btn-glow-peak: 0.42;
+  }
+
+  html.dark .btn-glow-wrap--aurora {
+    --btn-glow-peak: 0.48;
+  }
+
   .btn-glow-wrap::before {
     content: "";
     position: absolute;
@@ -153,6 +175,26 @@ html.dark body {
 
   html.dark .btn-glow-wrap::before {
     background: rgb(var(--btn-glow-color) / 0.32);
+  }
+
+  .btn-glow-wrap--aurora::before {
+    inset: 0.45rem;
+    background: linear-gradient(
+      90deg,
+      rgb(110 231 183 / 0.9),
+      rgb(125 211 252 / 0.95)
+    );
+    filter: blur(14px);
+    animation-duration: 3.4s;
+    animation-name: button-glow-aura-soft;
+  }
+
+  html.dark .btn-glow-wrap--aurora::before {
+    background: linear-gradient(
+      90deg,
+      rgb(52 211 153 / 0.85),
+      rgb(56 189 248 / 0.9)
+    );
   }
 
   .btn-glow-wrap > * {
@@ -173,6 +215,14 @@ html.dark body {
 
     html.dark .btn-glow-wrap::before {
       opacity: 0.2;
+    }
+
+    .btn-glow-wrap--aurora::before {
+      opacity: 0.55;
+    }
+
+    html.dark .btn-glow-wrap--aurora::before {
+      opacity: 0.65;
     }
   }
 
