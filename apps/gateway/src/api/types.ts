@@ -21,7 +21,7 @@ export interface UserPreferences {
       enabled?: boolean;
       hour?: number;
       minute?: number;
-      /** YYYY-MM-DD (user timezone) — last successful send */
+      /** ISO datetime (or legacy YYYY-MM-DD) — last successful send */
       lastSentDate?: string;
     };
     channels?: {

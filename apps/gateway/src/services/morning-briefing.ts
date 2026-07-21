@@ -2,7 +2,6 @@ import type { User, UserRepository } from "@myown/database";
 import type { TaskRepository } from "@myown/database";
 import type { UserPreferences } from "../api/types.js";
 import {
-  ddayOffsetsForUser,
   isMorningBriefingEnabled,
 } from "../utils/notification-prefs.js";
 import { config } from "../config.js";
@@ -20,6 +19,18 @@ import type { TelegramTextSender } from "./notification.js";
 
 const DEFAULT_BRIEFING_HOUR = 8;
 const DEFAULT_BRIEFING_MINUTE = 0;
+
+/** Supports legacy `YYYY-MM-DD` and ISO datetime strings. */
+function lastSentDayKey(
+  lastSentDate: string | undefined,
+  timezone: string,
+): string | null {
+  if (!lastSentDate) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(lastSentDate)) return lastSentDate;
+  const parsed = new Date(lastSentDate);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return dateKeyInTimezone(parsed, timezone);
+}
 
 export class MorningBriefingService {
   private telegramSender: TelegramTextSender | null = null;
@@ -61,7 +72,7 @@ export class MorningBriefingService {
 
     const timezone = user.timezone || config.timezone;
     const todayKey = dateKeyInTimezone(now, timezone);
-    if (briefing?.lastSentDate === todayKey) return false;
+    if (lastSentDayKey(briefing?.lastSentDate, timezone) === todayKey) return false;
 
     const briefingHour = briefing?.hour ?? DEFAULT_BRIEFING_HOUR;
     const briefingMinute = briefing?.minute ?? DEFAULT_BRIEFING_MINUTE;
@@ -73,19 +84,13 @@ export class MorningBriefingService {
     const todayTasks = sortTasksForBriefing(
       await this.tasks.listDueToday(user.id, start, end),
     );
-    // 오늘 마감 일정이 없으면 보내지 않음 (전 유저 동일). lastSentDate는 남겨 하루 1회만 판정.
-    if (todayTasks.length === 0) {
-      console.log(
-        `[morning-briefing] skip user=${user.id}: no due tasks today (${todayKey})`,
-      );
-      await this.markSent(user, prefs, todayKey);
-      return false;
-    }
+    // 오늘 마감 일정이 없으면 보내지 않음. lastSentDate는 실제 발송 시에만 남김.
+    if (todayTasks.length === 0) return false;
 
     const text = formatMorningBriefing(todayTasks, now);
 
     await this.telegramSender!(user.telegramUserId, text);
-    await this.markSent(user, prefs, todayKey);
+    await this.markSent(user, prefs, now);
     console.log(
       `[morning-briefing] sent user=${user.id} tasks=${todayTasks.length}`,
     );
@@ -95,7 +100,7 @@ export class MorningBriefingService {
   private async markSent(
     user: User,
     prefs: UserPreferences,
-    todayKey: string,
+    sentAt: Date,
   ): Promise<void> {
     await this.users.updatePreferences(user.id, {
       ...prefs,
@@ -103,7 +108,7 @@ export class MorningBriefingService {
         ...prefs.notification,
         morningBriefing: {
           ...prefs.notification?.morningBriefing,
-          lastSentDate: todayKey,
+          lastSentDate: sentAt.toISOString(),
         },
       },
     });
