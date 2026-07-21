@@ -150,6 +150,7 @@ export function registerDocumentHandlers(bot: Bot<BotContext>, app: AppContext) 
           draft,
         });
       }
+      await app.chatMemory.clear(userId);
     } catch (err) {
       console.error("[document] handler error:", err);
       await ctx.reply("⚠️ 첨부파일 저장 중 오류가 발생했습니다.");

@@ -108,6 +108,7 @@ export async function handleKakaoSkill(app: AppContext, body: KakaoSkillRequest)
     if (!/^\d+$/.test(arg)) {
       return kakaoTextResponse("사용법: 완료 1");
     }
+    await app.chatMemory.clear(user.id);
     const result = await app.taskService.completeByIndex(user.id, Number(arg));
     return kakaoTextResponse(
       result.ok ? `✅ ${result.task.title} 완료 처리했습니다.` : result.message,
@@ -115,23 +116,37 @@ export async function handleKakaoSkill(app: AppContext, body: KakaoSkillRequest)
   }
 
   if (agentText === "/list") {
+    await app.chatMemory.clear(user.id);
     const text = await app.taskService.listActive(user.id);
     return kakaoMultiTextResponse(text);
   }
 
   if (agentText === "/today") {
+    await app.chatMemory.clear(user.id);
     const text = await app.taskService.listToday(user.id);
     return kakaoMultiTextResponse(text);
   }
 
   try {
     const telegramUserId = user.telegramUserId ?? 0;
+    const recentTurns = await app.chatMemory.getTurns(user.id);
     const reply = await app.agent.handleMessage({
       userId: user.id,
       telegramUserId,
       text: agentText,
       activeTasks: await app.tasks.listActive(user.id),
+      recentTurns,
     });
+
+    if (agentText.startsWith("/")) {
+      await app.chatMemory.clear(user.id);
+    } else {
+      await app.chatMemory.appendTurns(user.id, [
+        { role: "user", text: utterance },
+        { role: "assistant", text: reply },
+      ]);
+    }
+
     return kakaoMultiTextResponse(reply);
   } catch (err) {
     console.error("[kakao] skill handler error:", err);

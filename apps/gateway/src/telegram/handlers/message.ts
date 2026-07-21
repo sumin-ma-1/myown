@@ -54,12 +54,14 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
 
       const activeBefore = await app.tasks.listActive(userId);
       const beforeIds = new Set(activeBefore.map((t) => t.id));
+      const recentTurns = await app.chatMemory.getTurns(userId);
 
       const reply = await app.agent.handleMessage({
         userId,
         telegramUserId,
         text,
         activeTasks: activeBefore,
+        recentTurns,
       });
 
       const activeAfter = await app.taskService.getActiveTasks(userId);
@@ -93,10 +95,15 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
             anchorMessageId: prompt.message_id,
             draft,
           });
+          await app.chatMemory.clear(userId);
           return;
         }
       }
 
+      await app.chatMemory.appendTurns(userId, [
+        { role: "user", text },
+        { role: "assistant", text: reply },
+      ]);
       await ctx.reply(reply);
     } catch (err) {
       console.error("[message] handler error:", err);

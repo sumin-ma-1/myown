@@ -29,6 +29,7 @@ import {
 import {
   sanitizeComposeMemoPatch,
 } from "../telegram/helpers/compose-memo-infer.js";
+import type { ChatTurn } from "../services/chat-memory-store.js";
 
 function formatDueLabel(dueAt: Date): string {
   return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
@@ -39,6 +40,14 @@ export interface ComposeMemoContext {
   description?: string | null;
   dueAt?: Date | null;
   priority: TaskPriority;
+}
+
+export interface AgentMessageInput {
+  userId: string;
+  telegramUserId: number;
+  text: string;
+  activeTasks: Task[];
+  recentTurns?: ChatTurn[];
 }
 
 export class AgentRuntime {
@@ -57,12 +66,7 @@ export class AgentRuntime {
     }
   }
 
-  async handleMessage(input: {
-    userId: string;
-    telegramUserId: number;
-    text: string;
-    activeTasks: Task[];
-  }): Promise<string> {
+  async handleMessage(input: AgentMessageInput): Promise<string> {
     const commandReply = await this.tryCommand(input);
     if (commandReply) return commandReply;
 
@@ -364,12 +368,7 @@ export class AgentRuntime {
     return `⏰ ${order}번 "${result.task.title}", ${when}에 알려드릴게요.`;
   }
 
-  private async runAgent(input: {
-    userId: string;
-    telegramUserId: number;
-    text: string;
-    activeTasks: Task[];
-  }): Promise<string> {
+  private async runAgent(input: AgentMessageInput): Promise<string> {
     const taskContext = input.activeTasks
       .map((t, i) =>
         `${i + 1}. ${t.title}${t.dueAt ? ` (마감 ${formatDueLabel(t.dueAt)})` : ""}`,
@@ -389,11 +388,20 @@ export class AgentRuntime {
           "특정 시각 알림은 create_reminder 도구를 사용하세요.",
           "create_reminder·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
+          "최근 대화는 현재 메시지와 관련이 있을 때만 참고하세요. 직전 대화에서 업무 등록 여부를 확인했거나 필요한 추가 정보를 요청했다면, 사용자의 후속 답변을 이전 맥락과 함께 해석하세요. 등록 의도가 확인되거나 필요한 정보가 충분하면 create_task를 호출하세요.",
           "마크다운 문법(** · * · # · ` 등)을 쓰지 말고, 줄바꿈만 쓰는 평문으로 답하세요.",
         ].join("\n"),
       },
-      { role: "user", content: input.text },
     ];
+
+    for (const turn of input.recentTurns ?? []) {
+      if (turn.role !== "user" && turn.role !== "assistant") continue;
+      const text = turn.text.trim();
+      if (!text) continue;
+      messages.push({ role: turn.role, content: text });
+    }
+
+    messages.push({ role: "user", content: input.text });
 
     for (let step = 0; step < 5; step++) {
       const response = await this.llmCall({

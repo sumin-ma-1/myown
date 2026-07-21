@@ -110,6 +110,7 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
     }
 
     clearCompose(ctx.session);
+    await app.chatMemory.clear(userId);
     await ctx.answerCallbackQuery("업무를 등록했습니다.");
     try {
       await ctx.editMessageText(result.summary);
@@ -135,6 +136,7 @@ export function registerCallbackHandlers(bot: Bot<BotContext>, app: AppContext) 
 
     try {
       await cancelComposeRegistration(app, userId, ctx.session, compose);
+      await app.chatMemory.clear(userId);
       await ctx.answerCallbackQuery("등록을 취소했습니다.");
       try {
         await ctx.editMessageText("등록을 취소했습니다.");
