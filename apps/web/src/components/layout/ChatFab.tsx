@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 
-const CHAT_FAB_PATHS = new Set(["/", "/tasks", "/integrations"]);
+const CHAT_FAB_PATHS = new Set(["/dashboard", "/tasks", "/integrations"]);
 
 export function ChatFab() {
   const { pathname } = useLocation();
