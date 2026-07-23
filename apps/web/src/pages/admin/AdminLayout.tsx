@@ -29,13 +29,13 @@ export function AdminLayout() {
             로그인 기록
           </NavLink>
           <NavLink
-            to="/"
+            to="/chat"
             className="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             <span className="material-icons text-[18px] leading-none" aria-hidden>
               arrow_back
             </span>
-            대시보드
+            앱으로
           </NavLink>
         </nav>
         <button

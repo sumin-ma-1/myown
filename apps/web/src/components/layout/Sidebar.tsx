@@ -51,8 +51,7 @@ export function Sidebar({
           {expanded ? (
             <div className="flex items-start justify-between gap-2">
               <NavLink
-                to="/"
-                end
+                to="/chat"
                 className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-80"
               >
                 <img
@@ -124,16 +123,6 @@ export function Sidebar({
           <IntegrationsPanel compact={!expanded} />
 
           <nav className={`flex flex-col gap-1 ${expanded ? "" : "w-full"}`}>
-            <NavLink to="/" end title={expanded ? undefined : "업무 현황"} className="block w-full">
-              {({ isActive }) => (
-                <span className={navLinkClass(expanded, isActive)}>
-                  <span className={navIconClass} aria-hidden>
-                    visibility
-                  </span>
-                  {expanded && "업무 현황"}
-                </span>
-              )}
-            </NavLink>
             <NavLink to="/chat" title={expanded ? undefined : "마이온 챗"} className="block w-full">
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
@@ -141,6 +130,16 @@ export function Sidebar({
                     commit
                   </span>
                   {expanded && "마이온 챗"}
+                </span>
+              )}
+            </NavLink>
+            <NavLink to="/dashboard" title={expanded ? undefined : "업무 현황"} className="block w-full">
+              {({ isActive }) => (
+                <span className={navLinkClass(expanded, isActive)}>
+                  <span className={navIconClass} aria-hidden>
+                    visibility
+                  </span>
+                  {expanded && "업무 현황"}
                 </span>
               )}
             </NavLink>
