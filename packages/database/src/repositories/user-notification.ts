@@ -71,6 +71,14 @@ export class UserNotificationRepository {
     return rows.length;
   }
 
+  async deleteAll(userId: string): Promise<number> {
+    const rows = await this.db
+      .delete(userNotifications)
+      .where(eq(userNotifications.userId, userId))
+      .returning({ id: userNotifications.id });
+    return rows.length;
+  }
+
   async hasRecentUnreadOfType(
     userId: string,
     type: UserNotificationType,

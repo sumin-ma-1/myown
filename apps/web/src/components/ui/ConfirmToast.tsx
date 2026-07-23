@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 interface ConfirmToastProps {
   open: boolean;
   message: string;
+  icon?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void;
@@ -13,6 +14,7 @@ interface ConfirmToastProps {
 export function ConfirmToast({
   open,
   message,
+  icon = "logout",
   confirmLabel = "확인",
   cancelLabel = "취소",
   onConfirm,
@@ -22,7 +24,7 @@ export function ConfirmToast({
 
   return createPortal(
     <div
-      className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="pointer-events-none fixed inset-0 z-[70] flex items-center justify-center p-4"
       role="presentation"
     >
       <div
@@ -36,7 +38,7 @@ export function ConfirmToast({
             className="material-icons mt-0.5 text-[22px] leading-none text-slate-500 dark:text-slate-400"
             aria-hidden
           >
-            logout
+            {icon}
           </span>
           <p
             id="confirm-toast-message"

@@ -53,3 +53,9 @@ notificationsRoute.post("/read-all", async (c) => {
   const marked = await c.get("app").userNotifications.markAllRead(userId);
   return c.json({ ok: true, marked });
 });
+
+notificationsRoute.delete("/", async (c) => {
+  const userId = c.get("userId")!;
+  const deleted = await c.get("app").userNotifications.deleteAll(userId);
+  return c.json({ ok: true, deleted });
+});

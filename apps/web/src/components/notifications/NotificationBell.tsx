@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/api/client";
 import type { UserNotificationDto } from "@/api/types";
 import { Switch } from "@/components/ui/Switch";
+import { ConfirmToast } from "@/components/ui/ConfirmToast";
 import { formatDateTime } from "@/lib/dates";
 
 const PANEL_WIDTH = 380;
@@ -21,6 +22,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -52,6 +54,13 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
 
   const markAllRead = useMutation({
     mutationFn: api.markAllNotificationsRead,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const clearAll = useMutation({
+    mutationFn: api.clearNotifications,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -104,6 +113,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
+      if (clearConfirmOpen) return;
       const target = event.target as Node;
       if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) {
         return;
@@ -111,7 +121,13 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
       setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        if (clearConfirmOpen) {
+          setClearConfirmOpen(false);
+          return;
+        }
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -119,7 +135,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, clearConfirmOpen]);
 
   const unreadCount = notifications.data?.unreadCount ?? 0;
   const items = notifications.data?.items ?? [];
@@ -169,21 +185,37 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
           >
             <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-700">
               <p className="text-base font-semibold text-slate-800 dark:text-slate-100">알림 센터</p>
-              <button
-                type="button"
-                className="text-xs text-brand hover:underline disabled:opacity-50 dark:text-blue-300"
-                disabled={unreadCount === 0 || markAllRead.isPending}
-                onClick={() => markAllRead.mutate()}
-              >
-                모두 확인
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs text-brand hover:bg-brand-muted disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                  disabled={unreadCount === 0 || markAllRead.isPending}
+                  onClick={() => markAllRead.mutate()}
+                >
+                  <span className="material-icons text-[14px] leading-none" aria-hidden>
+                    done_all
+                  </span>
+                  모두 확인
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs text-red-500/70 hover:bg-red-50 disabled:opacity-50 dark:text-red-400/70 dark:hover:bg-red-950/40"
+                  disabled={items.length === 0 || clearAll.isPending}
+                  onClick={() => setClearConfirmOpen(true)}
+                >
+                  <span className="material-icons text-[14px] leading-none" aria-hidden>
+                    delete
+                  </span>
+                  비우기
+                </button>
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               {notifications.isLoading ? (
                 <p className="px-3 py-6 text-center text-sm text-slate-500">불러오는 중…</p>
               ) : items.length === 0 ? (
-                <p className="px-3 py-6 text-center text-sm text-slate-500">알림을 모두 확인하였어요.</p>
+                <p className="px-3 py-6 text-center text-sm text-slate-500">알림이 없습니다.</p>
               ) : (
                 <ul>
                   {items.map((item) => (
@@ -210,9 +242,25 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
             </div>
 
             <div className="shrink-0 space-y-3 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                채널 알림
-              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-blue-300"
+                  aria-label="연동 APP으로 이동"
+                  title="연동 APP"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/integrations");
+                  }}
+                >
+                  <span className="material-icons text-[14px] leading-none" aria-hidden>
+                    link
+                  </span>
+                </button>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                  채널 알림
+                </p>
+              </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm text-slate-800 dark:text-slate-100">Telegram</p>
@@ -245,6 +293,19 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
           </div>,
           document.body,
         )}
+
+      <ConfirmToast
+        open={clearConfirmOpen}
+        icon="delete"
+        message="정말 알림 센터를 비우시겠어요?"
+        confirmLabel="비우기"
+        cancelLabel="취소"
+        onCancel={() => setClearConfirmOpen(false)}
+        onConfirm={() => {
+          setClearConfirmOpen(false);
+          clearAll.mutate();
+        }}
+      />
     </div>
   );
 }

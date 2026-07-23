@@ -263,6 +263,11 @@ export const api = {
       method: "POST",
     }),
 
+  clearNotifications: () =>
+    request<{ ok: boolean; deleted: number }>("/api/notifications", {
+      method: "DELETE",
+    }),
+
   adminListUsers: () => request<{ items: AdminUserDto[] }>("/api/admin/users"),
 
   adminListInvites: () => request<{ items: AdminInviteDto[] }>("/api/admin/invites"),
