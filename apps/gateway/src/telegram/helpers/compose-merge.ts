@@ -30,7 +30,7 @@ function formatDueLabel(dueAt: Date): string {
 
 export function formatDraftSummary(draft: ComposeDraft): string {
   const lines = [
-    "일정 초안입니다. 아직 등록되지 않았습니다.",
+    "일정 초안입니다.",
     `제목: ${draft.title}`,
   ];
   if (draft.description) lines.push(`설명: ${draft.description}`);
