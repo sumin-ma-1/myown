@@ -9,6 +9,8 @@ import {
 import { titleFromFileName } from "./attachment.js";
 import { WebComposeStore, type WebComposeState } from "./web-compose-store.js";
 import { resolveUserTimezone } from "../utils/user-timezone.js";
+import type { DraftReminderConfig } from "./draft-reminder.js";
+import { applyDraftReminderConfig, formatReminderConfigLabel } from "./draft-reminder.js";
 
 export interface ComposeDraftDto {
   mode: WebComposeState["mode"];
@@ -18,6 +20,8 @@ export interface ComposeDraftDto {
   dueAt?: string | null;
   attachmentIds: string[];
   attachments: { id: string; fileName: string }[];
+  reminderConfig?: DraftReminderConfig;
+  reminderLabel?: string | null;
 }
 
 async function resolveTelegramId(app: AppContext, userId: string): Promise<number | null> {
@@ -46,6 +50,8 @@ async function toComposeDto(
     dueAt: state.draft.dueAt?.toISOString() ?? null,
     attachmentIds: state.draft.attachmentIds,
     attachments,
+    reminderConfig: state.draft.reminderConfig,
+    reminderLabel: formatReminderConfigLabel(state.draft.reminderConfig),
   };
 }
 
@@ -107,6 +113,7 @@ export class WebChatService {
         task.id,
         task.attachmentId,
       );
+      const reminderConfig = await this.app.pendingComposeReminder.take(userId);
       if (attachments.length === 0) {
         await discardActiveTask(this.app, userId, task.id);
         const state: WebComposeState = {
@@ -117,6 +124,7 @@ export class WebChatService {
             description: task.description,
             priority: task.priority,
             dueAt: task.dueAt,
+            reminderConfig,
           },
         };
         await this.store.set(userId, state);
@@ -126,6 +134,18 @@ export class WebChatService {
           compose: await toComposeDto(this.app, userId, state),
         };
       }
+      if (task.dueAt) {
+        await applyDraftReminderConfig({
+          users: this.app.users,
+          reminderService: this.app.reminderService,
+          userId,
+          telegramUserId: telegramUserId ?? 0,
+          task,
+          config: reminderConfig,
+        });
+      }
+    } else {
+      await this.app.pendingComposeReminder.clear(userId);
     }
 
     if (trimmed.startsWith("/")) {

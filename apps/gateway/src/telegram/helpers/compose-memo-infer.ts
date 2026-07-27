@@ -14,6 +14,7 @@ export interface ComposeMemoPatch {
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | null;
+  reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
 }
 
 const PRIORITY_PATTERNS: { re: RegExp; priority: TaskPriority }[] = [
@@ -153,6 +154,7 @@ export function applyComposeMemoPatch(
     description?: string | null;
     priority?: TaskPriority;
     dueAt?: Date | null;
+    reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
   },
   patch: ComposeMemoPatch,
 ) {
@@ -162,5 +164,7 @@ export function applyComposeMemoPatch(
     description: patch.description !== undefined ? patch.description : base.description,
     priority: patch.priority ?? base.priority,
     dueAt: patch.dueAt !== undefined ? patch.dueAt : base.dueAt,
+    reminderConfig:
+      patch.reminderConfig !== undefined ? patch.reminderConfig : base.reminderConfig,
   };
 }

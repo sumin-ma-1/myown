@@ -3,6 +3,9 @@ import { decodeLlmStringFields, decodeLlmUtf8Escapes } from "../utils/llm-text-d
 const KNOWN_TOOLS = [
   "create_task",
   "create_reminder",
+  "list_reminders",
+  "cancel_reminder",
+  "set_task_reminders",
   "complete_task",
   "list_tasks",
   "list_today_tasks",

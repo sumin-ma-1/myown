@@ -1,6 +1,7 @@
 import type { TaskPriority } from "@myown/database";
 import { InlineKeyboard } from "grammy";
 import type { SessionData } from "./bot.js";
+import type { DraftReminderConfig } from "../services/draft-reminder.js";
 
 export type ComposeMode = "awaiting_text" | "awaiting_attachment";
 /** 등록 완료 전 초안 (DB에 업무 없음) */
@@ -10,6 +11,7 @@ export interface ComposeDraft {
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | null;
+  reminderConfig?: DraftReminderConfig;
 }
 
 export interface ComposeState {

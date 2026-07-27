@@ -45,6 +45,7 @@ export class ReminderService {
         ddayOffsets,
         reminderHour,
         extraRules,
+        includeDueProximity: useDefaults,
       }),
       getSuppressedFireTimes(user, task.id),
     );
@@ -83,6 +84,7 @@ export class ReminderService {
         ddayOffsets,
         reminderHour,
         extraRules,
+        includeDueProximity: useDefaults,
       }),
       getSuppressedFireTimes(user, task.id),
     );

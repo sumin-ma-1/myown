@@ -29,6 +29,7 @@ import { GoogleCalendarService } from "./services/google-calendar.js";
 import { NotificationService } from "./services/notification.js";
 import { MorningBriefingService } from "./services/morning-briefing.js";
 import { ChatMemoryStore } from "./services/chat-memory-store.js";
+import { PendingComposeReminderStore } from "./services/pending-compose-reminder-store.js";
 
 export interface AppContext {
   users: UserRepository;
@@ -50,6 +51,7 @@ export interface AppContext {
   notifications: NotificationService;
   morningBriefing: MorningBriefingService;
   chatMemory: ChatMemoryStore;
+  pendingComposeReminder: PendingComposeReminderStore;
   agent: AgentRuntime;
   reminderQueue: Queue<ReminderJobData>;
   redis: Redis;
@@ -77,11 +79,24 @@ export function createContext(redis: Redis): AppContext {
   const reminderQueue = createReminderQueue();
   const reminderService = new ReminderService(reminders, reminderQueue);
   const taskService = new TaskService(tasks, reminderService, taskAttachments);
-  const attachmentService = new AttachmentService(attachments, taskService, taskAttachments);
+  const attachmentService = new AttachmentService(
+    attachments,
+    taskService,
+    taskAttachments,
+    users,
+    reminderService,
+  );
   const notifications = new NotificationService(userNotifications, users);
   const morningBriefing = new MorningBriefingService(users, tasks);
   const chatMemory = new ChatMemoryStore(redis);
-  const agent = new AgentRuntime(taskService);
+  const pendingComposeReminder = new PendingComposeReminderStore(redis);
+  const agent = new AgentRuntime({
+    taskService,
+    users,
+    reminders,
+    reminderService,
+    pendingComposeReminder,
+  });
   const auth = new AuthService(redis, webAccounts, users, inviteCodes, sessions, loginEvents);
   const telegramLink = new TelegramLinkService(redis, users, channelConnections);
   const kakaoLink = new KakaoLinkService(redis, users, channelConnections);
@@ -115,6 +130,7 @@ export function createContext(redis: Redis): AppContext {
     notifications,
     morningBriefing,
     chatMemory,
+    pendingComposeReminder,
     agent,
     reminderQueue,
     redis,

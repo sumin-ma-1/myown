@@ -24,6 +24,36 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
           enum: ["urgent", "high", "medium"],
           description: "최우선(urgent), 우선(high), 일반(medium). 없으면 생략",
         },
+        reminder_config: {
+          type: "object",
+          description:
+            "알림 의도 변경 시만. 알림 없음: use_default_reminders=false. 언제만: absolute_times",
+          properties: {
+            use_default_reminders: { type: "boolean" },
+            extra_rules: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  days_before: { type: "number" },
+                  hours_before: { type: "number" },
+                  minutes_before: { type: "number" },
+                },
+              },
+            },
+            absolute_times: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  date: { type: "string" },
+                  time: { type: "string" },
+                },
+                required: ["time"],
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -35,4 +65,5 @@ export interface ComposeMemoArgs {
   due_date?: string;
   due_time?: string;
   priority?: TaskPriority;
+  reminder_config?: Record<string, unknown>;
 }

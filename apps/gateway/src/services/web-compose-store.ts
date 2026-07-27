@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import type { ComposeDraft, ComposeMode } from "../telegram/compose-session.js";
+import type { DraftReminderConfig } from "./draft-reminder.js";
 
 const TTL_SEC = 30 * 60;
 const key = (userId: string) => `web-compose:${userId}`;
@@ -15,6 +16,7 @@ interface StoredDraft {
   description?: string | null;
   priority?: ComposeDraft["priority"];
   dueAt?: string | null;
+  reminderConfig?: DraftReminderConfig;
 }
 
 interface StoredState {
@@ -40,6 +42,7 @@ function deserialize(raw: string): WebComposeState {
     draft: {
       ...parsed.draft,
       dueAt: parsed.draft.dueAt ? new Date(parsed.draft.dueAt) : null,
+      reminderConfig: parsed.draft.reminderConfig,
     },
   };
 }

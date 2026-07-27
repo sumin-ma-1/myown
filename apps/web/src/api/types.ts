@@ -88,6 +88,12 @@ export interface ComposeDraftDto {
   dueAt?: string | null;
   attachmentIds: string[];
   attachments: { id: string; fileName: string }[];
+  reminderConfig?: {
+    useDefaultReminders: boolean;
+    extraRules?: ExtraReminderRule[];
+    absoluteTimes?: { date?: string; time: string }[];
+  };
+  reminderLabel?: string | null;
 }
 
 export interface ChatReplyDto {

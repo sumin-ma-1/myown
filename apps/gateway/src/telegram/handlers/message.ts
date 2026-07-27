@@ -14,6 +14,7 @@ import {
   mergeTextIntoComposeTask,
 } from "../helpers/compose-merge.js";
 import { resolveUserTimezone } from "../../utils/user-timezone.js";
+import { applyDraftReminderConfig } from "../../services/draft-reminder.js";
 
 export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
   bot.on("message:text", async (ctx) => {
@@ -77,6 +78,7 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
           task.id,
           task.attachmentId,
         );
+        const reminderConfig = await app.pendingComposeReminder.take(userId);
         if (attachments.length === 0) {
           await discardActiveTask(app, userId, task.id);
 
@@ -86,6 +88,7 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
             description: task.description,
             priority: task.priority,
             dueAt: task.dueAt,
+            reminderConfig,
           };
 
           const composeKey = randomUUID();
@@ -101,6 +104,18 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
           await app.chatMemory.clear(userId, "telegram");
           return;
         }
+        if (task.dueAt) {
+          await applyDraftReminderConfig({
+            users: app.users,
+            reminderService: app.reminderService,
+            userId,
+            telegramUserId,
+            task,
+            config: reminderConfig,
+          });
+        }
+      } else {
+        await app.pendingComposeReminder.clear(userId);
       }
 
       await app.chatMemory.appendTurns(userId, "telegram", [

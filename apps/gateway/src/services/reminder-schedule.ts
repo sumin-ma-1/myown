@@ -57,17 +57,19 @@ export function buildReminderFireTimes(
     ddayOffsets: number[];
     reminderHour: number;
     extraRules?: ExtraReminderRule[];
+    /** 시각 마감 1시간 전 자동 알림. 기본 true */
+    includeDueProximity?: boolean;
   },
 ): Date[] {
   const now = Date.now();
   const times = new Set<number>();
-  const { ddayOffsets, extraRules = [] } = options;
+  const { ddayOffsets, extraRules = [], includeDueProximity = true } = options;
 
   for (const offset of ddayOffsets) {
     times.add(ddayOffsetFireTime(dueAt, offset).getTime());
   }
 
-  if (!isDateOnlyDue(dueAt)) {
+  if (includeDueProximity && !isDateOnlyDue(dueAt)) {
     const oneHourBefore = dueAt.getTime() - 60 * 60 * 1000;
     if (oneHourBefore > now) times.add(oneHourBefore);
   }

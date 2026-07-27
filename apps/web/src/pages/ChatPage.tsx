@@ -91,6 +91,7 @@ function ComposePanel({
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
         {compose.dueAt && <span>마감 {formatDueDateTime(compose.dueAt)}</span>}
         {compose.priority && <span>우선순위 {priorityLabel(compose.priority)}</span>}
+        {compose.reminderLabel && <span>알림 {compose.reminderLabel}</span>}
       </div>
       {compose.attachments.length > 0 && (
         <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">

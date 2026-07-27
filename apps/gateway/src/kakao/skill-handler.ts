@@ -3,6 +3,7 @@ import { config } from "../config.js";
 import type { KakaoSkillRequest } from "./types.js";
 import { extractLinkToken } from "./types.js";
 import { kakaoMultiTextResponse, kakaoTextResponse } from "./response.js";
+import { applyDraftReminderConfig } from "../services/draft-reminder.js";
 
 const HELP_TEXT = [
   "안녕하세요, MyOwn 업무 관리 비서입니다.",
@@ -130,15 +131,36 @@ export async function handleKakaoSkill(app: AppContext, body: KakaoSkillRequest)
 
   try {
     const telegramUserId = user.telegramUserId ?? 0;
+    const activeBefore = await app.tasks.listActive(user.id);
+    const beforeIds = new Set(activeBefore.map((t) => t.id));
     const recentTurns = await app.chatMemory.getTurns(user.id, "kakao");
     const reply = await app.agent.handleMessage({
       userId: user.id,
       telegramUserId,
       text: agentText,
-      activeTasks: await app.tasks.listActive(user.id),
+      activeTasks: activeBefore,
       recentTurns,
       timezone: user.timezone || config.timezone,
     });
+
+    const activeAfter = await app.taskService.getActiveTasks(user.id);
+    const created = activeAfter.filter((t) => !beforeIds.has(t.id));
+    if (created.length === 1) {
+      const task = created[0]!;
+      const reminderConfig = await app.pendingComposeReminder.take(user.id);
+      if (task.dueAt) {
+        await applyDraftReminderConfig({
+          users: app.users,
+          reminderService: app.reminderService,
+          userId: user.id,
+          telegramUserId,
+          task,
+          config: reminderConfig,
+        });
+      }
+    } else {
+      await app.pendingComposeReminder.clear(user.id);
+    }
 
     if (agentText.startsWith("/")) {
       await app.chatMemory.clear(user.id, "kakao");

@@ -1,7 +1,9 @@
-import type { AttachmentRepository, Task, TaskAttachmentRepository } from "@myown/database";
+import type { AttachmentRepository, Task, TaskAttachmentRepository, UserRepository } from "@myown/database";
 import { join } from "node:path";
 import { config } from "../config.js";
 import type { TaskService } from "./task.js";
+import type { ReminderService } from "./reminder.js";
+import { applyDraftReminderConfig } from "./draft-reminder.js";
 import { deleteAttachmentFile, saveAttachmentFile, SUPPORTED_ATTACHMENT_EXTENSIONS } from "./attachment-storage.js";
 import type { ComposeDraft } from "../telegram/compose-session.js";
 export type SaveAttachmentResult =
@@ -20,6 +22,8 @@ export class AttachmentService {
     private readonly attachments: AttachmentRepository,
     private readonly taskService: TaskService,
     private readonly taskAttachments: TaskAttachmentRepository,
+    private readonly users: UserRepository,
+    private readonly reminderService: ReminderService,
   ) {}
 
   isSupported(fileName: string): boolean {
@@ -87,7 +91,14 @@ export class AttachmentService {
     }
 
     if (task.dueAt) {
-      await this.taskService.scheduleRemindersForTask(task, input.telegramUserId);
+      await applyDraftReminderConfig({
+        users: this.users,
+        reminderService: this.reminderService,
+        userId: input.userId,
+        telegramUserId: input.telegramUserId,
+        task,
+        config: input.draft.reminderConfig,
+      });
     }
 
     return task;

@@ -16,6 +16,7 @@ import {
   inferOfflineComposeMemoPatch,
 } from "./compose-memo-infer.js";
 import { resolveUserTimezone } from "../../utils/user-timezone.js";
+import { formatReminderConfigLabel } from "../../services/draft-reminder.js";
 
 const priorityLabelKo = {
   urgent: "최우선",
@@ -36,6 +37,8 @@ export function formatDraftSummary(draft: ComposeDraft): string {
   if (draft.description) lines.push(`설명: ${draft.description}`);
   if (draft.dueAt) lines.push(`마감: ${formatDueLabel(draft.dueAt)}`);
   lines.push(`우선순위: ${priorityLabelKo[draft.priority ?? "medium"]}`);
+  const remind = formatReminderConfigLabel(draft.reminderConfig);
+  if (remind) lines.push(`알림: ${remind}`);
   lines.push("", "[등록 완료]를 눌러야 실제로 등록됩니다. 취소는 [등록 취소].");
   return lines.join("\n");
 }
@@ -53,6 +56,7 @@ async function applyMemoPatch(
         description?: string | null;
         priority?: TaskPriority;
         dueAt?: Date | null;
+        reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
       };
     }
   | { ok: false; message: string }
