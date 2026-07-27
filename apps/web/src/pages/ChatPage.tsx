@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { ComposeDraftDto } from "@/api/types";
-import { formatDateTime } from "@/lib/dates";
+import { formatDueDateTime } from "@/lib/dates";
 import { priorityLabel } from "@/lib/priority";
 import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { CHAT_HINT_MESSAGES, RotatingSubtitle } from "@/components/ui/RotatingSubtitle";
@@ -89,7 +89,7 @@ function ComposePanel({
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{compose.description}</p>
       )}
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-        {compose.dueAt && <span>마감 {formatDateTime(compose.dueAt)}</span>}
+        {compose.dueAt && <span>마감 {formatDueDateTime(compose.dueAt)}</span>}
         {compose.priority && <span>우선순위 {priorityLabel(compose.priority)}</span>}
       </div>
       {compose.attachments.length > 0 && (
@@ -286,6 +286,18 @@ export function ChatPage() {
       setCompose(composeData.compose);
     }
   }, [composeData]);
+
+  // UI 채팅 기록과 맞춰, 채팅 페이지를 떠나거나 새로고침하면 서버 대화 기억도 비움
+  useEffect(() => {
+    const clear = () => {
+      void api.clearChatMemory().catch(() => {});
+    };
+    window.addEventListener("pagehide", clear);
+    return () => {
+      window.removeEventListener("pagehide", clear);
+      clear();
+    };
+  }, []);
 
   const appendAssistantMessage = (reply: string, nextCompose: ComposeDraftDto | null) => {
     setMessages((prev) => [

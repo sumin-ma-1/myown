@@ -84,6 +84,21 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+export function weekdayKo(date: Date, timezone = config.timezone): string {
+  return WEEKDAY_KO[dayOfWeekSun0(date, timezone)]!;
+}
+
+/** 마감 표시: 날짜(+시각) 옆에 요일 */
+export function formatDueDate(date: Date): string {
+  return `${formatDate(date)} (${weekdayKo(date)})`;
+}
+
+export function formatDueDateTime(date: Date): string {
+  return `${formatDateTime(date)} (${weekdayKo(date)})`;
+}
+
 export function daysUntil(dueAt: Date): number {
   const todayStart = startOfDayInTimezone();
   const dueStart = startOfDayInTimezone(dueAt);

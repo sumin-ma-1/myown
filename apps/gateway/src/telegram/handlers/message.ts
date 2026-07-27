@@ -55,7 +55,7 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
 
       const activeBefore = await app.tasks.listActive(userId);
       const beforeIds = new Set(activeBefore.map((t) => t.id));
-      const recentTurns = await app.chatMemory.getTurns(userId);
+      const recentTurns = await app.chatMemory.getTurns(userId, "telegram");
 
       const timezone = await resolveUserTimezone(app.users, userId);
       const reply = await app.agent.handleMessage({
@@ -98,12 +98,12 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
             anchorMessageId: prompt.message_id,
             draft,
           });
-          await app.chatMemory.clear(userId);
+          await app.chatMemory.clear(userId, "telegram");
           return;
         }
       }
 
-      await app.chatMemory.appendTurns(userId, [
+      await app.chatMemory.appendTurns(userId, "telegram", [
         { role: "user", text },
         { role: "assistant", text: reply },
       ]);

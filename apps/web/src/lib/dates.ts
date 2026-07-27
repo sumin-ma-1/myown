@@ -1,6 +1,7 @@
 export function formatDate(iso: string | null): string {
   if (!iso) return "-";
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -10,6 +11,7 @@ export function formatDate(iso: string | null): string {
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "-";
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -17,6 +19,32 @@ export function formatDateTime(iso: string | null): string {
     minute: "2-digit",
     hour12: false,
   }).format(new Date(iso));
+}
+
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+function weekdayKoFromIso(iso: string): string {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    weekday: "short",
+  }).format(new Date(iso));
+  const map: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return WEEKDAY_KO[map[weekday] ?? new Date(iso).getUTCDay()]!;
+}
+
+/** 마감 표시: 날짜(+시각) 옆에 요일 */
+export function formatDueDateTime(iso: string | null): string {
+  if (!iso) return "-";
+  const base = isDateOnlyDueIso(iso) ? formatDate(iso) : formatDateTime(iso);
+  return `${base} (${weekdayKoFromIso(iso)})`;
 }
 
 export function formatDday(dday: number | null): string {

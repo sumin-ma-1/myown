@@ -9,7 +9,7 @@ import {
   setCompose,
   type ComposeDraft,
 } from "../compose-session.js";
-import { formatDate, formatDateTime } from "../../utils/date.js";
+import { formatDueDate, formatDueDateTime } from "../../utils/date.js";
 import { isDateOnlyDue } from "../../utils/datetime-parse.js";
 import {
   applyComposeMemoPatch,
@@ -25,18 +25,18 @@ const priorityLabelKo = {
 } as const;
 
 function formatDueLabel(dueAt: Date): string {
-  return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
+  return isDateOnlyDue(dueAt) ? formatDueDate(dueAt) : formatDueDateTime(dueAt);
 }
 
 export function formatDraftSummary(draft: ComposeDraft): string {
   const lines = [
-    "📝 일정 초안입니다.",
+    "일정 초안입니다. 아직 등록되지 않았습니다.",
     `제목: ${draft.title}`,
   ];
-  if (draft.description) lines.push(`📝 ${draft.description}`);
+  if (draft.description) lines.push(`설명: ${draft.description}`);
   if (draft.dueAt) lines.push(`마감: ${formatDueLabel(draft.dueAt)}`);
   lines.push(`우선순위: ${priorityLabelKo[draft.priority ?? "medium"]}`);
-  lines.push("", "[등록 완료]를 눌러 업무를 등록해 주세요.");
+  lines.push("", "[등록 완료]를 눌러야 실제로 등록됩니다. 취소는 [등록 취소].");
   return lines.join("\n");
 }
 

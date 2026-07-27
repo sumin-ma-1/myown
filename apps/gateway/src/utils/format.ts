@@ -1,9 +1,9 @@
 import type { Task } from "@myown/database";
-import { daysUntil, formatDate, formatDateTime } from "./date.js";
+import { daysUntil, formatDueDate, formatDueDateTime } from "./date.js";
 import { isDateOnlyDue } from "./datetime-parse.js";
 
 function formatDueAt(dueAt: Date): string {
-  return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
+  return isDateOnlyDue(dueAt) ? formatDueDate(dueAt) : formatDueDateTime(dueAt);
 }
 
 const priorityEmoji: Record<Task["priority"], string> = {

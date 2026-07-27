@@ -1,3 +1,5 @@
+import { decodeLlmStringFields, decodeLlmUtf8Escapes } from "../utils/llm-text-decode.js";
+
 const KNOWN_TOOLS = [
   "create_task",
   "create_reminder",
@@ -19,19 +21,19 @@ function decodeArgValue(raw: string): unknown {
   if (!v) return "";
 
   const special = v.match(/^<\|"\|>([\s\S]*?)<\|"\|>$/);
-  if (special) return special[1]!;
+  if (special) return decodeLlmUtf8Escapes(special[1]!);
 
   if (
     (v.startsWith('"') && v.endsWith('"')) ||
     (v.startsWith("'") && v.endsWith("'"))
   ) {
-    return v.slice(1, -1);
+    return decodeLlmUtf8Escapes(v.slice(1, -1));
   }
 
   if (/^-?\d+$/.test(v)) return Number(v);
   if (/^-?\d+\.\d+$/.test(v)) return Number(v);
 
-  return v;
+  return decodeLlmUtf8Escapes(v);
 }
 
 function parseKeyValueArgs(body: string): Record<string, unknown> {
@@ -52,7 +54,8 @@ function parseArgsBody(body: string): Record<string, unknown> {
   if (trimmed.startsWith("{")) {
     try {
       const normalized = trimmed.replace(/<\|"\|>/g, '"');
-      return JSON.parse(normalized) as Record<string, unknown>;
+      const parsed = JSON.parse(normalized) as Record<string, unknown>;
+      return decodeLlmStringFields(parsed);
     } catch {
       /* key:value 형식으로 폴백 */
     }

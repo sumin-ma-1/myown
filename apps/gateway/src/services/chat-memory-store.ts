@@ -2,7 +2,13 @@ import type { Redis } from "ioredis";
 
 const TTL_SEC = 30 * 60;
 const MAX_TURNS = 8;
-const key = (userId: string) => `chat-memory:${userId}`;
+
+export type ChatMemoryChannel = "web" | "telegram" | "kakao";
+
+const CHANNELS: ChatMemoryChannel[] = ["web", "telegram", "kakao"];
+
+const key = (userId: string, channel: ChatMemoryChannel) =>
+  `chat-memory:${channel}:${userId}`;
 
 export type ChatTurnRole = "user" | "assistant";
 
@@ -18,8 +24,8 @@ interface StoredMemory {
 export class ChatMemoryStore {
   constructor(private readonly redis: Redis) {}
 
-  async getTurns(userId: string): Promise<ChatTurn[]> {
-    const raw = await this.redis.get(key(userId));
+  async getTurns(userId: string, channel: ChatMemoryChannel): Promise<ChatTurn[]> {
+    const raw = await this.redis.get(key(userId, channel));
     if (!raw) return [];
     try {
       const parsed = JSON.parse(raw) as StoredMemory;
@@ -29,9 +35,13 @@ export class ChatMemoryStore {
     }
   }
 
-  async appendTurns(userId: string, turns: ChatTurn[]): Promise<void> {
+  async appendTurns(
+    userId: string,
+    channel: ChatMemoryChannel,
+    turns: ChatTurn[],
+  ): Promise<void> {
     if (turns.length === 0) return;
-    const existing = await this.getTurns(userId);
+    const existing = await this.getTurns(userId, channel);
     const next = [...existing, ...turns]
       .map((t) => ({
         role: t.role,
@@ -40,10 +50,20 @@ export class ChatMemoryStore {
       .filter((t) => t.text.length > 0)
       .slice(-MAX_TURNS);
 
-    await this.redis.set(key(userId), JSON.stringify({ turns: next } satisfies StoredMemory), "EX", TTL_SEC);
+    await this.redis.set(
+      key(userId, channel),
+      JSON.stringify({ turns: next } satisfies StoredMemory),
+      "EX",
+      TTL_SEC,
+    );
   }
 
-  async clear(userId: string): Promise<void> {
-    await this.redis.del(key(userId));
+  /** channel 생략 시 전 채널 삭제 (로그아웃 등) */
+  async clear(userId: string, channel?: ChatMemoryChannel): Promise<void> {
+    if (channel) {
+      await this.redis.del(key(userId, channel));
+      return;
+    }
+    await this.redis.del(...CHANNELS.map((c) => key(userId, c)));
   }
 }

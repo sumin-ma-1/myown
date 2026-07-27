@@ -311,4 +311,10 @@ export const api = {
 
   cancelChatCompose: () =>
     request<ChatReplyDto>("/api/chat/compose", { method: "DELETE" }),
+
+  clearChatMemory: () =>
+    request<{ ok: boolean }>("/api/chat/memory", {
+      method: "DELETE",
+      keepalive: true,
+    }),
 };

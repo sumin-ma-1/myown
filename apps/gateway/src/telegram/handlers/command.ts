@@ -103,7 +103,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       await ctx.reply("⚠️ 사용자 세션을 불러오지 못했습니다. DB 연결을 확인해 주세요.");
       return;
     }
-    await app.chatMemory.clear(userId);
+    await app.chatMemory.clear(userId, "telegram");
     const text = await app.taskService.listActive(userId);
     await ctx.reply(text, replyOptions());
   });
@@ -114,7 +114,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       await ctx.reply("⚠️ 사용자 세션을 불러오지 못했습니다. DB 연결을 확인해 주세요.");
       return;
     }
-    await app.chatMemory.clear(userId);
+    await app.chatMemory.clear(userId, "telegram");
     const text = await app.taskService.listToday(userId);
     await ctx.reply(text, replyOptions());
   });
@@ -129,7 +129,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
 
-    await app.chatMemory.clear(userId);
+    await app.chatMemory.clear(userId, "telegram");
     const result = await app.taskService.completeByIndex(userId, Number(arg));
     await ctx.reply(
       result.ok ? `✅ ${result.task.title} 완료 처리했습니다.` : result.message,
@@ -147,7 +147,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
 
-    await app.chatMemory.clear(userId);
+    await app.chatMemory.clear(userId, "telegram");
     const timezone = await resolveUserTimezone(app.users, userId);
     const reply = await app.agent.handleMessage({
       userId,
@@ -172,7 +172,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
       return;
     }
 
-    await app.chatMemory.clear(userId);
+    await app.chatMemory.clear(userId, "telegram");
     const timezone = await resolveUserTimezone(app.users, userId);
     const reply = await app.agent.handleMessage({
       userId,

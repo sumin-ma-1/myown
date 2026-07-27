@@ -82,3 +82,11 @@ chatRoute.delete("/compose", async (c) => {
   const result = await chatService(c).cancel(userId);
   return c.json(result);
 });
+
+chatRoute.delete("/memory", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "User not found" }, 404);
+
+  await c.var.app.chatMemory.clear(userId, "web");
+  return c.json({ ok: true });
+});

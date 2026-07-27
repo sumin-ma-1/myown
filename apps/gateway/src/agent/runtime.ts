@@ -2,7 +2,7 @@ import type { Task, TaskPriority } from "@myown/database";
 import OpenAI from "openai";
 import { config, isLlmEnabled } from "../config.js";
 import type { TaskService } from "../services/task.js";
-import { formatDate, formatDateTime, llmDueDateContextLines } from "../utils/date.js";
+import { formatDateTime, formatDueDate, formatDueDateTime, llmDueDateContextLines } from "../utils/date.js";
 import { displayOrderOf, formatActiveTasksHint } from "../utils/task-display-order.js";
 import {
   fireAtFromMinutes,
@@ -31,9 +31,10 @@ import {
 } from "../telegram/helpers/compose-memo-infer.js";
 import type { ChatTurn } from "../services/chat-memory-store.js";
 import { parseTextToolCalls } from "./text-tool-call.js";
+import { decodeLlmStringFields, decodeLlmUtf8Escapes } from "../utils/llm-text-decode.js";
 
 function formatDueLabel(dueAt: Date): string {
-  return isDateOnlyDue(dueAt) ? formatDate(dueAt) : formatDateTime(dueAt);
+  return isDateOnlyDue(dueAt) ? formatDueDate(dueAt) : formatDueDateTime(dueAt);
 }
 
 export interface ComposeMemoContext {
@@ -87,7 +88,7 @@ export class AgentRuntime {
     }
 
     try {
-      return await this.runAgent(input);
+      return decodeLlmUtf8Escapes(await this.runAgent(input));
     } catch (err) {
       console.error("[llm] agent error:", err);
       const hint =
@@ -171,7 +172,9 @@ export class AgentRuntime {
       const toolCall = response.choices[0]?.message?.tool_calls?.[0];
       let args: ComposeMemoArgs;
       if (toolCall && toolCall.type === "function") {
-        args = JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs;
+        args = decodeLlmStringFields(
+          JSON.parse(toolCall.function.arguments || "{}") as ComposeMemoArgs,
+        );
       } else {
         const content = response.choices[0]?.message?.content;
         const textCalls = parseTextToolCalls(content);
@@ -179,7 +182,7 @@ export class AgentRuntime {
         if (!memoCall) {
           return { ok: false, message: "메모를 이해하지 못했습니다." };
         }
-        args = memoCall.args as ComposeMemoArgs;
+        args = decodeLlmStringFields(memoCall.args as ComposeMemoArgs);
       }
       let patch: {
         title: string;
@@ -393,13 +396,17 @@ export class AgentRuntime {
           "활성 업무:",
           taskContext || "(없음)",
           "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
+          "날짜는 있는데 시각이 없고, 시각이 필요한 일정이라고 판단되면 create_task를 바로 호출하지 말고 한 번만 '몇 시인가요?'라고 물으세요.",
+          "사용자가 시각을 알려주면 반드시 create_task를 due_time과 함께 호출하세요. 말로만 '등록했습니다'라고 하지 마세요.",
+          "사용자가 시각 없이 진행하겠다고 하면 반드시 create_task를 due_time 없이 호출하세요.",
+          "제출·마감·할 일처럼 날짜만으로 충분한 업무이거나, 처음부터 종일·시각 불필요를 말했으면 묻지 말고 due_time 없이 create_task하세요.",
           "특정 시각 알림은 create_reminder 도구를 사용하세요.",
           "create_reminder·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
-          "최근 대화는 현재 메시지와 관련이 있을 때만 참고하세요. 직전 대화에서 업무 등록 여부를 확인했거나 필요한 추가 정보를 요청했다면, 사용자의 후속 답변을 이전 맥락과 함께 해석하세요. 등록 의도가 확인되거나 필요한 정보가 충분하면 create_task를 호출하세요.",
-          "create_task 결과는 초안 준비일 수 있습니다. '등록 완료했습니다'처럼 단정하지 말고, 확인/[등록 완료] 절차가 필요할 수 있다고 안내하세요.",
-          "일정·목록·오늘 뭐 있는지 물으면 반드시 list_tasks 또는 list_today_tasks를 호출하고, 도구 결과만 말하세요.",
-          "최근 대화에만 나온 일정·초안·미등록 내용은 실제 일정 목록에 넣지 마세요. [등록 완료] 전 초안도 일정이 아닙니다.",
+          "최근 대화는 현재 메시지와 관련이 있을 때만 참고하세요. 직전 대화에서 시각을 물었거나 추가 정보를 요청했다면, 후속 답변을 맥락과 함께 해석하고 정보가 충분하면 create_task를 호출하세요.",
+          "create_task는 초안만 만듭니다. 도구를 호출하지 않은 채 '등록 완료/등록했습니다/일정이 등록되어 있어요'라고 말하지 마세요.",
+          "일정·목록·등록 여부·오늘 뭐 있는지 물으면 반드시 list_tasks 또는 list_today_tasks를 호출하고, 도구 결과만 말하세요. 추측으로 등록됐다고 답하지 마세요.",
+          "최근 대화·초안·미등록 내용은 실제 일정이 아닙니다. [등록 완료] 전 초안도 일정이 아닙니다.",
           "마크다운 문법(** · * · # · ` 등)을 쓰지 말고, 줄바꿈만 쓰는 평문으로 답하세요.",
         ].join("\n"),
       },
@@ -426,13 +433,15 @@ export class AgentRuntime {
       if (!choice) return "응답을 생성하지 못했습니다.";
 
       if (!choice.tool_calls?.length) {
-        const textTools = parseTextToolCalls(choice.content);
+        const textTools = parseTextToolCalls(
+          choice.content ? decodeLlmUtf8Escapes(choice.content) : choice.content,
+        );
         if (textTools.length > 0) {
           const results: string[] = [];
           for (const call of textTools) {
             const result = await this.executeTool(
               call.name,
-              call.args,
+              decodeLlmStringFields(call.args),
               input.userId,
               input.telegramUserId,
             );
@@ -440,14 +449,19 @@ export class AgentRuntime {
           }
           return results.join("\n");
         }
-        return choice.content ?? "처리했습니다.";
+        return choice.content
+          ? decodeLlmUtf8Escapes(choice.content)
+          : "처리했습니다.";
       }
 
       messages.push(choice);
 
+      let createdDraftResult: string | undefined;
       for (const toolCall of choice.tool_calls) {
         if (toolCall.type !== "function") continue;
-        const args = JSON.parse(toolCall.function.arguments || "{}");
+        const args = decodeLlmStringFields(
+          JSON.parse(toolCall.function.arguments || "{}") as Record<string, unknown>,
+        );
         const result = await this.executeTool(
           toolCall.function.name,
           args,
@@ -459,6 +473,14 @@ export class AgentRuntime {
           tool_call_id: toolCall.id,
           content: result,
         });
+        if (toolCall.function.name === "create_task") {
+          createdDraftResult = result;
+        }
+      }
+
+      // create_task 후 LLM이 '등록 완료'로 단정하는 후속 답변을 막음
+      if (createdDraftResult) {
+        return createdDraftResult;
       }
     }
 
@@ -484,7 +506,7 @@ export class AgentRuntime {
           dueAt,
         });
         const due = task.dueAt ? `, 마감 ${formatDueLabel(task.dueAt)}` : "";
-        return `초안: ${task.title}${due} ([등록 완료] 전이면 아직 미등록)`;
+        return `초안 준비됨(미등록): ${task.title}${due}. [등록 완료] 전이면 일정에 반영되지 않습니다.`;
       }
       case "create_reminder": {
         const a = args as unknown as CreateReminderArgs;

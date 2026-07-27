@@ -85,7 +85,7 @@ export class WebChatService {
     const telegramUserId = await resolveTelegramId(this.app, userId);
     const activeBefore = await this.app.tasks.listActive(userId);
     const beforeIds = new Set(activeBefore.map((t) => t.id));
-    const recentTurns = await this.app.chatMemory.getTurns(userId);
+    const recentTurns = await this.app.chatMemory.getTurns(userId, "web");
 
     const timezone = await resolveUserTimezone(this.app.users, userId);
     const reply = await this.app.agent.handleMessage({
@@ -120,7 +120,7 @@ export class WebChatService {
           },
         };
         await this.store.set(userId, state);
-        await this.app.chatMemory.clear(userId);
+        await this.app.chatMemory.clear(userId, "web");
         return {
           reply: formatDraftSummary(state.draft),
           compose: await toComposeDto(this.app, userId, state),
@@ -129,9 +129,9 @@ export class WebChatService {
     }
 
     if (trimmed.startsWith("/")) {
-      await this.app.chatMemory.clear(userId);
+      await this.app.chatMemory.clear(userId, "web");
     } else {
-      await this.app.chatMemory.appendTurns(userId, [
+      await this.app.chatMemory.appendTurns(userId, "web", [
         { role: "user", text: trimmed },
         { role: "assistant", text: reply },
       ]);
@@ -187,7 +187,7 @@ export class WebChatService {
     };
     await this.store.set(userId, state);
 
-    await this.app.chatMemory.clear(userId);
+    await this.app.chatMemory.clear(userId, "web");
 
     const reply = caption?.trim()
       ? formatDraftSummary(draft)
@@ -233,7 +233,7 @@ export class WebChatService {
         draft: existing.draft,
       });
       await this.store.clear(userId);
-      await this.app.chatMemory.clear(userId);
+      await this.app.chatMemory.clear(userId, "web");
       const summary = await buildComposeRegistrationSummary(this.app, userId, task);
       return { reply: summary, compose: null };
     } catch (err) {
@@ -252,7 +252,7 @@ export class WebChatService {
       await this.app.attachmentService.deleteDraftAttachment(userId, attachmentId);
     }
     await this.store.clear(userId);
-    await this.app.chatMemory.clear(userId);
+    await this.app.chatMemory.clear(userId, "web");
     return { reply: "등록을 취소했습니다.", compose: null };
   }
 }
