@@ -142,6 +142,7 @@ export function TaskFormModal({
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [allDay, setAllDay] = useState(false);
+  const [dateRange, setDateRange] = useState(false);
   const [priority, setPriority] = useState<TaskDto["priority"]>("medium");
   const [uiWorkflowStatus, setUiWorkflowStatus] = useState<WorkflowUiStatus>("planned");
   const [useDefaultReminders, setUseDefaultReminders] = useState(true);
@@ -202,6 +203,7 @@ export function TaskFormModal({
       setDueDate(initialDueDate ?? "");
       setDueTime("");
       setAllDay(false);
+      setDateRange(false);
       setPriority("medium");
       setUiWorkflowStatus("planned");
       setUseDefaultReminders(true);
@@ -225,6 +227,7 @@ export function TaskFormModal({
     setDueDate(date);
     setDueTime(t.allDay ? "" : time);
     setAllDay(t.allDay);
+    setDateRange(Boolean(start.date));
     setPriority(t.priority);
     setUiWorkflowStatus(t.status === "completed" ? "completed" : t.workflowStatus);
     setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
@@ -237,19 +240,25 @@ export function TaskFormModal({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const effectiveStartDate = dateRange ? startDate.trim() : "";
+      const effectiveStartTime = dateRange && !allDay ? startTime : "";
       const dueAt = toDueAtIso(dueDate, allDay ? "" : dueTime);
       const resolvedAllDay =
-        allDay || (Boolean(dueDate.trim()) && !dueTime.trim() && !startTime.trim());
+        allDay ||
+        (Boolean(dueDate.trim()) && !dueTime.trim() && !effectiveStartTime.trim());
       let startsAt: string | null = null;
-      if (startDate.trim()) {
+      if (effectiveStartDate) {
         const startIso = resolvedAllDay
           ? (() => {
-              const parsed = new Date(`${startDate}T00:00:00+09:00`);
+              const parsed = new Date(`${effectiveStartDate}T00:00:00+09:00`);
               return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
             })()
-          : toDueAtIso(startDate, startTime.trim() ? startTime : "00:00");
-        const sameDay = startDate === dueDate;
-        if (startIso && (!sameDay || (!resolvedAllDay && (startTime.trim() || dueTime.trim())))) {
+          : toDueAtIso(effectiveStartDate, effectiveStartTime.trim() ? effectiveStartTime : "00:00");
+        const sameDay = effectiveStartDate === dueDate;
+        if (
+          startIso &&
+          (!sameDay || (!resolvedAllDay && (effectiveStartTime.trim() || dueTime.trim())))
+        ) {
           startsAt = sameDay && startIso === dueAt ? null : startIso;
         }
       }
@@ -486,7 +495,7 @@ export function TaskFormModal({
     const task = taskData.item;
     const nextDueAt = toDueAtIso(dueDate, allDay ? "" : dueTime) ?? null;
     const nextStartsAt = (() => {
-      if (!startDate.trim()) return null;
+      if (!dateRange || !startDate.trim()) return null;
       const resolved =
         allDay || (Boolean(dueDate.trim()) && !dueTime.trim() && !startTime.trim());
       const startIso = resolved
@@ -511,7 +520,9 @@ export function TaskFormModal({
     if (!dueAtEqual(nextDueAt, task.dueAt)) return true;
     if (!dueAtEqual(nextStartsAt, task.startsAt)) return true;
     if (
-      (allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate))) !== task.allDay
+      (allDay ||
+        (!dueTime.trim() && (!dateRange || !startTime.trim()) && Boolean(dueDate))) !==
+      task.allDay
     )
       return true;
     if (pendingFiles.length > 0) return true;
@@ -546,11 +557,15 @@ export function TaskFormModal({
               setError("종료 · 마감일을 입력해 주세요.");
               return;
             }
+            if (dateRange && !startDate.trim()) {
+              setError("연속일을 켠 경우 시작일을 입력해 주세요.");
+              return;
+            }
             if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
               setError("종료 시각은 24시간 형식으로 입력해 주세요. (예: 14:00)");
               return;
             }
-            if (startDate && startTime.trim() && !isValidTimeInput(startTime)) {
+            if (dateRange && startDate && startTime.trim() && !isValidTimeInput(startTime)) {
               setError("시작 시각은 24시간 형식으로 입력해 주세요. (예: 09:00)");
               return;
             }
@@ -587,42 +602,68 @@ export function TaskFormModal({
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
-                    <span className="material-icons text-[14px] leading-none text-amber-500" aria-hidden>
-                      schedule
-                    </span>
-                    종일
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">시각 없이 날짜만 사용</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+                      <span className="material-icons text-[14px] leading-none text-amber-500" aria-hidden>
+                        today
+                      </span>
+                      종일
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">시각 없이 날짜만</p>
+                  </div>
+                  <Switch
+                    checked={allDay}
+                    aria-label="종일"
+                    onCheckedChange={(checked) => {
+                      setAllDay(checked);
+                      if (checked) {
+                        setStartTime("");
+                        setDueTime("");
+                      }
+                    }}
+                  />
                 </div>
-                <Switch
-                  checked={allDay}
-                  aria-label="종일"
-                  onCheckedChange={(checked) => {
-                    setAllDay(checked);
-                    if (checked) {
-                      setStartTime("");
-                      setDueTime("");
-                    }
-                  }}
-                />
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+                      <span className="material-icons text-[14px] leading-none text-slate-500 dark:text-slate-400" aria-hidden>
+                        date_range
+                      </span>
+                      연속일
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">시작일 포함 기간</p>
+                  </div>
+                  <Switch
+                    checked={dateRange}
+                    aria-label="연속일"
+                    onCheckedChange={(checked) => {
+                      setDateRange(checked);
+                      if (!checked) {
+                        setStartDate("");
+                        setStartTime("");
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
-                    시작일
-                  </label>
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                {!allDay && (
+                {dateRange && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      시작일
+                    </label>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                )}
+                {dateRange && !allDay && (
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
                       시작 시각
