@@ -17,12 +17,24 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
         },
         due_time: {
           type: "string",
-          description: "마감 시각 HH:MM (24시간). 날짜만 있으면 생략",
+          description: "종료·마감 시각 HH:MM (24시간). 날짜만 있으면 생략",
         },
         priority: {
           type: "string",
           enum: ["urgent", "high", "medium"],
           description: "최우선(urgent), 우선(high), 일반(medium). 없으면 생략",
+        },
+        start_date: {
+          type: "string",
+          description: "기간 시작일 YYYY-MM-DD. 없으면 생략",
+        },
+        start_time: {
+          type: "string",
+          description: "시작 시각 HH:MM (24시간). 기간에 시각이 있을 때",
+        },
+        all_day: {
+          type: "boolean",
+          description: "종일 여부",
         },
         reminder_config: {
           type: "object",
@@ -64,6 +76,9 @@ export interface ComposeMemoArgs {
   description?: string;
   due_date?: string;
   due_time?: string;
+  start_date?: string;
+  start_time?: string;
+  all_day?: boolean;
   priority?: TaskPriority;
   reminder_config?: Record<string, unknown>;
 }

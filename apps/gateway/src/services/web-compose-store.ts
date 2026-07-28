@@ -16,6 +16,8 @@ interface StoredDraft {
   description?: string | null;
   priority?: ComposeDraft["priority"];
   dueAt?: string | null;
+  startsAt?: string | null;
+  allDay?: boolean;
   reminderConfig?: DraftReminderConfig;
 }
 
@@ -30,6 +32,8 @@ function serialize(state: WebComposeState): string {
     draft: {
       ...state.draft,
       dueAt: state.draft.dueAt?.toISOString() ?? null,
+      startsAt: state.draft.startsAt?.toISOString() ?? null,
+      allDay: state.draft.allDay ?? false,
     },
   };
   return JSON.stringify(payload);
@@ -42,6 +46,8 @@ function deserialize(raw: string): WebComposeState {
     draft: {
       ...parsed.draft,
       dueAt: parsed.draft.dueAt ? new Date(parsed.draft.dueAt) : null,
+      startsAt: parsed.draft.startsAt ? new Date(parsed.draft.startsAt) : null,
+      allDay: parsed.draft.allDay ?? false,
       reminderConfig: parsed.draft.reminderConfig,
     },
   };

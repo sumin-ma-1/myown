@@ -6,6 +6,8 @@ export interface ComposeMemoInferContext {
   title: string;
   description?: string | null;
   dueAt?: Date | null;
+  startsAt?: Date | null;
+  allDay?: boolean;
   priority: TaskPriority;
 }
 
@@ -14,6 +16,8 @@ export interface ComposeMemoPatch {
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | null;
+  startsAt?: Date | null;
+  allDay?: boolean;
   reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
 }
 
@@ -154,6 +158,8 @@ export function applyComposeMemoPatch(
     description?: string | null;
     priority?: TaskPriority;
     dueAt?: Date | null;
+    startsAt?: Date | null;
+    allDay?: boolean;
     reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
   },
   patch: ComposeMemoPatch,
@@ -164,6 +170,8 @@ export function applyComposeMemoPatch(
     description: patch.description !== undefined ? patch.description : base.description,
     priority: patch.priority ?? base.priority,
     dueAt: patch.dueAt !== undefined ? patch.dueAt : base.dueAt,
+    startsAt: patch.startsAt !== undefined ? patch.startsAt : base.startsAt,
+    allDay: patch.allDay !== undefined ? patch.allDay : base.allDay,
     reminderConfig:
       patch.reminderConfig !== undefined ? patch.reminderConfig : base.reminderConfig,
   };

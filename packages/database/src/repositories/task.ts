@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import type { Database } from "../client.js";
 import { calendarImports, tasks } from "../schema.js";
 import type { Task, TaskPriority } from "../schema.js";
@@ -28,6 +28,8 @@ export class TaskRepository {
     description?: string;
     priority?: TaskPriority;
     dueAt?: Date;
+    startsAt?: Date | null;
+    allDay?: boolean;
     attachmentId?: string;
     listIndex?: number;
   }): Promise<Task> {
@@ -40,6 +42,8 @@ export class TaskRepository {
         description: input.description,
         priority: normalizeTaskPriority(input.priority),
         dueAt: input.dueAt,
+        startsAt: input.startsAt ?? null,
+        allDay: input.allDay ?? false,
         attachmentId: input.attachmentId,
         listIndex,
       })
@@ -208,6 +212,8 @@ export class TaskRepository {
       ? inArray(tasks.status, ["active", "completed"])
       : eq(tasks.status, "active");
 
+    // 구간 겹침: dueAt >= from AND coalesce(startsAt, dueAt) <= to
+    // (raw sql에 Date를 넣으면 postgres 드라이버가 Date 바인딩에 실패함)
     return this.db
       .select()
       .from(tasks)
@@ -217,7 +223,10 @@ export class TaskRepository {
           statusFilter,
           isNotNull(tasks.dueAt),
           gte(tasks.dueAt, from),
-          lte(tasks.dueAt, to),
+          or(
+            and(isNull(tasks.startsAt), lte(tasks.dueAt, to)),
+            and(isNotNull(tasks.startsAt), lte(tasks.startsAt, to)),
+          ),
         ),
       )
       .orderBy(asc(tasks.dueAt));
@@ -231,6 +240,8 @@ export class TaskRepository {
       description?: string | null;
       priority?: TaskPriority;
       dueAt?: Date | null;
+      startsAt?: Date | null;
+      allDay?: boolean;
       status?: "active" | "completed" | "cancelled";
       attachmentId?: string | null;
     },
@@ -240,6 +251,8 @@ export class TaskRepository {
     if (patch.description !== undefined) updates.description = patch.description;
     if (patch.priority !== undefined) updates.priority = normalizeTaskPriority(patch.priority);
     if (patch.dueAt !== undefined) updates.dueAt = patch.dueAt;
+    if (patch.startsAt !== undefined) updates.startsAt = patch.startsAt;
+    if (patch.allDay !== undefined) updates.allDay = patch.allDay;
     if (patch.attachmentId !== undefined) updates.attachmentId = patch.attachmentId;
     if (patch.status !== undefined) {
       updates.status = patch.status;

@@ -9,14 +9,13 @@ import {
   setCompose,
   type ComposeDraft,
 } from "../compose-session.js";
-import { formatDueDate, formatDueDateTime } from "../../utils/date.js";
-import { isDateOnlyDue } from "../../utils/datetime-parse.js";
+import { formatReminderConfigLabel } from "../../services/draft-reminder.js";
+import { formatTaskScheduleLabel } from "../../utils/schedule-label.js";
+import { resolveUserTimezone } from "../../utils/user-timezone.js";
 import {
   applyComposeMemoPatch,
   inferOfflineComposeMemoPatch,
 } from "./compose-memo-infer.js";
-import { resolveUserTimezone } from "../../utils/user-timezone.js";
-import { formatReminderConfigLabel } from "../../services/draft-reminder.js";
 
 const priorityLabelKo = {
   urgent: "최우선",
@@ -25,17 +24,21 @@ const priorityLabelKo = {
   low: "일반",
 } as const;
 
-function formatDueLabel(dueAt: Date): string {
-  return isDateOnlyDue(dueAt) ? formatDueDate(dueAt) : formatDueDateTime(dueAt);
-}
-
 export function formatDraftSummary(draft: ComposeDraft): string {
   const lines = [
-    "일정 초안입니다.",
+    "일정 초안입니다. 아직 등록되지 않았습니다.",
     `제목: ${draft.title}`,
   ];
   if (draft.description) lines.push(`설명: ${draft.description}`);
-  if (draft.dueAt) lines.push(`마감: ${formatDueLabel(draft.dueAt)}`);
+  const schedule = formatTaskScheduleLabel({
+    dueAt: draft.dueAt,
+    startsAt: draft.startsAt,
+    allDay: draft.allDay,
+  });
+  if (schedule) {
+    const hasRange = schedule.includes(" ~ ");
+    lines.push(`${hasRange ? "기간" : draft.allDay ? "일정" : "마감"}: ${schedule}`);
+  }
   lines.push(`우선순위: ${priorityLabelKo[draft.priority ?? "medium"]}`);
   const remind = formatReminderConfigLabel(draft.reminderConfig);
   if (remind) lines.push(`알림: ${remind}`);
@@ -46,7 +49,14 @@ export function formatDraftSummary(draft: ComposeDraft): string {
 async function applyMemoPatch(
   app: AppContext,
   userId: string,
-  context: { title: string; description?: string | null; dueAt?: Date | null; priority: TaskPriority },
+  context: {
+    title: string;
+    description?: string | null;
+    dueAt?: Date | null;
+    startsAt?: Date | null;
+    allDay?: boolean;
+    priority: TaskPriority;
+  },
   text: string,
 ): Promise<
   | {
@@ -56,6 +66,8 @@ async function applyMemoPatch(
         description?: string | null;
         priority?: TaskPriority;
         dueAt?: Date | null;
+        startsAt?: Date | null;
+        allDay?: boolean;
         reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
       };
     }

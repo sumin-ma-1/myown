@@ -52,11 +52,23 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           description: { type: "string", description: "상세 설명" },
           due_date: {
             type: "string",
-            description: "마감일 (YYYY-MM-DD). 없으면 생략",
+            description: "마감일 또는 기간 종료일 (YYYY-MM-DD). 필수",
           },
           due_time: {
             type: "string",
-            description: "마감 시각 (HH:MM, 24시간). 없으면 날짜만",
+            description: "종료·마감 시각 (HH:MM, 24시간). 종일·날짜만이면 생략",
+          },
+          start_date: {
+            type: "string",
+            description: "기간 시작일 YYYY-MM-DD. 하루면 생략",
+          },
+          start_time: {
+            type: "string",
+            description: "시작 시각 HH:MM (24시간). 기간에 시각이 있을 때. 종일이면 생략",
+          },
+          all_day: {
+            type: "boolean",
+            description: "종일 여부. 날짜만·종일 기간이면 true, 시작/종료 시각이 있으면 false",
           },
           priority: {
             type: "string",
@@ -65,7 +77,7 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
           reminder_config: reminderConfigProperties,
         },
-        required: ["title"],
+        required: ["title", "due_date"],
       },
     },
   },
@@ -178,8 +190,11 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 export interface CreateTaskArgs {
   title: string;
   description?: string;
-  due_date?: string;
+  due_date: string;
   due_time?: string;
+  start_date?: string;
+  start_time?: string;
+  all_day?: boolean;
   priority?: TaskPriority;
   reminder_config?: DraftReminderConfig | Record<string, unknown>;
   reminderConfig?: DraftReminderConfig | Record<string, unknown>;

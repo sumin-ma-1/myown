@@ -11,6 +11,7 @@
     "db:push": "pnpm --filter @myown/database db:push",
     "db:migrate-priority": "pnpm --filter @myown/database db:migrate-priority",
     "db:migrate-task-attachments": "pnpm --filter @myown/database db:migrate-task-attachments",
+    "db:migrate-task-allday": "pnpm --filter @myown/database db:migrate-task-allday",
     "bot:profile": "pnpm --filter @myown/gateway bot:profile",
     "tunnel": "powershell -NoProfile -Command \"& 'C:\\Program Files (x86)\\cloudflared\\cloudflared.exe' tunnel --url http://127.0.0.1:5173\""
   },

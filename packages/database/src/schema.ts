@@ -256,6 +256,8 @@ export const tasks = pgTable(
     status: taskStatusEnum("status").notNull().default("active"),
     priority: taskPriorityEnum("priority").notNull().default("medium"),
     dueAt: timestamp("due_at", { withTimezone: true }),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    allDay: boolean("all_day").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     attachmentId: uuid("attachment_id").references(() => attachments.id, {
       onDelete: "set null",

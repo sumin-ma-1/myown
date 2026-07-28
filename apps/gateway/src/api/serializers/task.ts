@@ -16,6 +16,8 @@ export interface TaskDto {
   workflowStatus: TaskWorkflowStatus;
   priority: Task["priority"];
   dueAt: string | null;
+  startsAt: string | null;
+  allDay: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +79,8 @@ export function serializeTask(
     workflowStatus: task.status === "completed" ? "in_progress" : getWorkflowStatus(user, task),
     priority: task.priority,
     dueAt: task.dueAt?.toISOString() ?? null,
+    startsAt: task.startsAt?.toISOString() ?? null,
+    allDay: task.allDay,
     completedAt: task.completedAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),

@@ -4,11 +4,12 @@ import { api } from "@/api/client";
 import type { ExtraReminderRule, ReminderDto, TaskDto } from "@/api/types";
 import { Modal } from "@/components/ui/Modal";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
-import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
+import { formatDateTime, formatTaskScheduleLabel, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
 import { ACTIVE_WORKFLOW_OPTIONS, WORKFLOW_STATUS_OPTIONS, type WorkflowUiStatus } from "@/lib/status";
+import { Switch } from "@/components/ui/Switch";
 
 function dueAtEqual(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a && !b) return true;
@@ -136,8 +137,11 @@ export function TaskFormModal({
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
+  const [allDay, setAllDay] = useState(false);
   const [priority, setPriority] = useState<TaskDto["priority"]>("medium");
   const [uiWorkflowStatus, setUiWorkflowStatus] = useState<WorkflowUiStatus>("planned");
   const [useDefaultReminders, setUseDefaultReminders] = useState(true);
@@ -193,8 +197,11 @@ export function TaskFormModal({
     if (mode === "create") {
       setTitle("");
       setDescription("");
+      setStartDate("");
+      setStartTime("");
       setDueDate(initialDueDate ?? "");
       setDueTime("");
+      setAllDay(Boolean(initialDueDate));
       setPriority("medium");
       setUiWorkflowStatus("planned");
       setUseDefaultReminders(true);
@@ -210,10 +217,14 @@ export function TaskFormModal({
 
     const t = taskData.item;
     const { date, time } = splitDueAt(t.dueAt);
+    const start = t.startsAt ? splitDueAt(t.startsAt) : { date: "", time: "" };
     setTitle(t.title);
     setDescription(t.description ?? "");
+    setStartDate(start.date);
+    setStartTime(t.allDay ? "" : start.time);
     setDueDate(date);
-    setDueTime(time);
+    setDueTime(t.allDay ? "" : time);
+    setAllDay(t.allDay);
     setPriority(t.priority);
     setUiWorkflowStatus(t.status === "completed" ? "completed" : t.workflowStatus);
     setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
@@ -226,13 +237,30 @@ export function TaskFormModal({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const dueAt = toDueAtIso(dueDate, dueTime);
+      const dueAt = toDueAtIso(dueDate, allDay ? "" : dueTime);
+      const resolvedAllDay =
+        allDay || (Boolean(dueDate.trim()) && !dueTime.trim() && !startTime.trim());
+      let startsAt: string | null = null;
+      if (startDate.trim()) {
+        const startIso = resolvedAllDay
+          ? (() => {
+              const parsed = new Date(`${startDate}T00:00:00+09:00`);
+              return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+            })()
+          : toDueAtIso(startDate, startTime.trim() ? startTime : "00:00");
+        const sameDay = startDate === dueDate;
+        if (startIso && (!sameDay || (!resolvedAllDay && (startTime.trim() || dueTime.trim())))) {
+          startsAt = sameDay && startIso === dueAt ? null : startIso;
+        }
+      }
       const extraReminders = rowsToRules(extraRows);
       const payload: Parameters<typeof api.createTask>[0] = {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
         dueAt,
+        startsAt,
+        allDay: resolvedAllDay,
       };
 
       if (mode === "create") {
@@ -270,6 +298,8 @@ export function TaskFormModal({
           description: description.trim() || null,
           priority,
           dueAt: dueAt ?? null,
+          startsAt,
+          allDay: resolvedAllDay,
         };
 
         if (uiWorkflowStatus === "completed") {
@@ -437,7 +467,7 @@ export function TaskFormModal({
   const offsetsForPreview = ddayEnabledDefault ? offsets : [];
   const offsetLabel = offsetsForPreview.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
   const reminderHour = settings?.notification.reminderHour ?? 9;
-  const dueAtIso = toDueAtIso(dueDate, dueTime);
+  const dueAtIso = toDueAtIso(dueDate, allDay ? "" : dueTime);
   const extraApplying = applyExtraRemindersMutation.isPending;
 
   const existingAttachments =
@@ -454,7 +484,23 @@ export function TaskFormModal({
     if (mode !== "edit" || !taskData || taskData.item.id !== taskId) return false;
 
     const task = taskData.item;
-    const nextDueAt = toDueAtIso(dueDate, dueTime) ?? null;
+    const nextDueAt = toDueAtIso(dueDate, allDay ? "" : dueTime) ?? null;
+    const nextStartsAt = (() => {
+      if (!startDate.trim()) return null;
+      const resolved =
+        allDay || (Boolean(dueDate.trim()) && !dueTime.trim() && !startTime.trim());
+      const startIso = resolved
+        ? (() => {
+            const parsed = new Date(`${startDate}T00:00:00+09:00`);
+            return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+          })()
+        : toDueAtIso(startDate, startTime.trim() ? startTime : "00:00") ?? null;
+      const sameDay = startDate === dueDate;
+      if (!startIso) return null;
+      if (sameDay && startIso === nextDueAt) return null;
+      if (!sameDay || (!resolved && (startTime.trim() || dueTime.trim()))) return startIso;
+      return null;
+    })();
 
     if (title.trim() !== task.title) return true;
     if ((description.trim() || null) !== (task.description ?? null)) return true;
@@ -463,6 +509,11 @@ export function TaskFormModal({
       task.status === "completed" ? "completed" : task.workflowStatus;
     if (uiWorkflowStatus !== currentUiStatus) return true;
     if (!dueAtEqual(nextDueAt, task.dueAt)) return true;
+    if (!dueAtEqual(nextStartsAt, task.startsAt)) return true;
+    if (
+      (allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate))) !== task.allDay
+    )
+      return true;
     if (pendingFiles.length > 0) return true;
     if (removedAttachmentIds.length > 0) return true;
 
@@ -491,8 +542,16 @@ export function TaskFormModal({
               setError("제목을 입력해 주세요.");
               return;
             }
+            if (!dueDate.trim()) {
+              setError("종료(마감)일을 입력해 주세요.");
+              return;
+            }
             if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
-              setError("마감 시각은 24시간 형식으로 입력해 주세요. (예: 14:00)");
+              setError("종료 시각은 24시간 형식으로 입력해 주세요. (예: 14:00)");
+              return;
+            }
+            if (startDate && startTime.trim() && !isValidTimeInput(startTime)) {
+              setError("시작 시각은 24시간 형식으로 입력해 주세요. (예: 09:00)");
               return;
             }
             if (mode === "edit" && !hasEditChanges()) {
@@ -507,7 +566,9 @@ export function TaskFormModal({
               <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">업무</h3>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">제목 *</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  제목 <span className="text-red-500">*</span>
+                </label>
                 <input
                   className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                   value={title}
@@ -526,9 +587,62 @@ export function TaskFormModal({
                 />
               </div>
 
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+                    <span className="material-icons text-[14px] leading-none text-amber-500" aria-hidden>
+                      schedule
+                    </span>
+                    종일
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">시각 없이 날짜만 사용</p>
+                </div>
+                <Switch
+                  checked={allDay}
+                  aria-label="종일"
+                  onCheckedChange={(checked) => {
+                    setAllDay(checked);
+                    if (checked) {
+                      setStartTime("");
+                      setDueTime("");
+                    }
+                  }}
+                />
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감일</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                    시작일
+                  </label>
+                  <input
+                    type="date"
+                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                {!allDay && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      시작 시각
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="09:00"
+                      autoComplete="off"
+                      className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      onBlur={(e) => setStartTime(normalizeTimeInput(e.target.value))}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                    종료 · 마감일 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
@@ -536,23 +650,52 @@ export function TaskFormModal({
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">마감 · 시작 시각</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="14:00"
-                    autoComplete="off"
-                    className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                    value={dueTime}
-                    onChange={(e) => setDueTime(e.target.value)}
-                    onBlur={(e) => setDueTime(normalizeTimeInput(e.target.value))}
-                  />
-                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                    24시간 형식 · 비우면 날짜만 마감
-                  </p>
-                </div>
+                {!allDay && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      종료 시각
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="14:00"
+                      autoComplete="off"
+                      className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                      value={dueTime}
+                      onChange={(e) => setDueTime(e.target.value)}
+                      onBlur={(e) => setDueTime(normalizeTimeInput(e.target.value))}
+                    />
+                  </div>
+                )}
               </div>
+
+              {!allDay && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  시각은 24시간 형식 · 둘 다 비우면 종일로 저장
+                </p>
+              )}
+
+              {(dueDate || startDate) && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  표시:{" "}
+                  {formatTaskScheduleLabel({
+                    dueAt: toDueAtIso(dueDate || startDate, allDay ? "" : dueTime) ?? null,
+                    startsAt: (() => {
+                      if (!startDate.trim()) return null;
+                      const previewAllDay =
+                        allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate));
+                      if (previewAllDay) {
+                        if (startDate === (dueDate || startDate)) return null;
+                        return new Date(`${startDate}T00:00:00+09:00`).toISOString();
+                      }
+                      return (
+                        toDueAtIso(startDate, startTime.trim() ? startTime : "00:00") ?? null
+                      );
+                    })(),
+                    allDay: allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate)),
+                  }) ?? "-"}
+                </p>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>

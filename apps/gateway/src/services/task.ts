@@ -14,6 +14,8 @@ export interface CreateTaskInput {
   description?: string;
   priority?: TaskPriority;
   dueAt?: Date;
+  startsAt?: Date | null;
+  allDay?: boolean;
   attachmentId?: string;
   /** true면 리마인더 예약 생략 (일괄 등록 시) */
   skipReminders?: boolean;
@@ -35,6 +37,8 @@ export class TaskService {
       description: input.description,
       priority: input.priority,
       dueAt: input.dueAt,
+      startsAt: input.startsAt,
+      allDay: input.allDay,
       attachmentId: input.attachmentId,
       listIndex: input.listIndex,
     });

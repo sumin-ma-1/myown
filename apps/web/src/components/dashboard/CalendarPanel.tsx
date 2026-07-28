@@ -11,17 +11,18 @@ import {
   endOfDay,
   endOfMonth,
   formatLocalDateKey,
-  localDateKeyFromIso,
   sameDay,
   startOfDay,
   startOfMonth,
   startOfWeek,
-  formatDateTime,
   formatDueTime,
+  formatTaskScheduleLabel,
+  taskSpanDayKeys,
 } from "@/lib/dates";
 import { priorityCalendarChipClass, priorityLabel } from "@/lib/priority";
 
 type CalendarView = "month" | "week";
+type SpanRole = "single" | "start" | "middle" | "end";
 
 /** Max task chips shown per day in month view before "+N more". */
 const MONTH_DAY_TASK_PREVIEW = 3;
@@ -35,24 +36,49 @@ const PRIORITY_RANK: Record<TaskDto["priority"], number> = {
   medium: 2,
 };
 
+function spanRoleForDay(task: TaskDto, dayKey: string): SpanRole {
+  const keys = taskSpanDayKeys(task);
+  if (keys.length <= 1) return "single";
+  const index = keys.indexOf(dayKey);
+  if (index <= 0) return "start";
+  if (index >= keys.length - 1) return "end";
+  return "middle";
+}
+
 function CalendarTaskChip({
   task,
+  dayKey,
   onClick,
 }: {
   task: TaskDto;
+  dayKey: string;
   onClick?: (task: TaskDto) => void;
 }) {
-  const dueTime = formatDueTime(task.dueAt);
+  const role = spanRoleForDay(task, dayKey);
+  const isAllDay = task.allDay || !formatDueTime(task.dueAt, task.allDay);
+  const dueTime = role === "single" || role === "start" ? formatDueTime(task.dueAt, task.allDay) : null;
   const isCompleted = task.status === "completed";
   const chipClass = isCompleted
     ? "bg-slate-100 text-slate-500 hover:bg-slate-200/80 dark:bg-slate-700/50 dark:text-slate-400 dark:hover:bg-slate-700/70"
     : priorityCalendarChipClass(task.priority);
 
+  const radius =
+    role === "start"
+      ? "rounded-l px-1 py-0.5 rounded-r-none"
+      : role === "end"
+        ? "rounded-r px-1 py-0.5 rounded-l-none"
+        : role === "middle"
+          ? "rounded-none px-1 py-0.5"
+          : "rounded px-1 py-0.5";
+
+  const scheduleLabel = formatTaskScheduleLabel(task);
+  const showTitle = role === "single" || role === "start";
+
   return (
     <button
       type="button"
-      className={`flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${chipClass}`}
-      title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}`}
+      className={`flex w-full min-w-0 items-center gap-1 text-left ${CALENDAR_TASK_TEXT_CLASS} ${chipClass} ${radius}`}
+      title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${scheduleLabel ? ` · ${scheduleLabel}` : ""}`}
       onClick={(event) => {
         event.stopPropagation();
         onClick?.(task);
@@ -61,7 +87,15 @@ function CalendarTaskChip({
       {dueTime && (
         <span className="shrink-0 tabular-nums opacity-80">{dueTime}</span>
       )}
-      <span className="min-w-0 truncate">{task.title}</span>
+      {showTitle ? (
+        <span className="min-w-0 truncate">
+          {isAllDay && role === "single" ? task.title : task.title}
+        </span>
+      ) : (
+        <span className="min-w-0 truncate opacity-70" aria-hidden>
+          ···
+        </span>
+      )}
     </button>
   );
 }
@@ -140,10 +174,11 @@ export function CalendarPanel({
     const map = new Map<string, TaskDto[]>();
     for (const task of tasks) {
       if (!task.dueAt) continue;
-      const key = localDateKeyFromIso(task.dueAt);
-      const list = map.get(key) ?? [];
-      list.push(task);
-      map.set(key, list);
+      for (const key of taskSpanDayKeys(task)) {
+        const list = map.get(key) ?? [];
+        list.push(task);
+        map.set(key, list);
+      }
     }
     for (const [key, list] of map) {
       map.set(key, sortTasksForCalendar(list));
@@ -299,7 +334,7 @@ export function CalendarPanel({
                 <ul className="space-y-1">
                   {dayTasks.slice(0, MONTH_DAY_TASK_PREVIEW).map((t) => (
                     <li key={t.id}>
-                      <CalendarTaskChip task={t} onClick={onTaskClick} />
+                      <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
                     </li>
                   ))}
                   {dayTasks.length > MONTH_DAY_TASK_PREVIEW && (
@@ -370,7 +405,7 @@ export function CalendarPanel({
                   <ul className="space-y-1">
                     {dayTasks.map((t) => (
                       <li key={t.id}>
-                        <CalendarTaskChip task={t} onClick={onTaskClick} />
+                        <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
                       </li>
                     ))}
                   </ul>

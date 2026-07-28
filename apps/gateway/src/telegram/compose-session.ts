@@ -11,6 +11,8 @@ export interface ComposeDraft {
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: Date | null;
+  startsAt?: Date | null;
+  allDay?: boolean;
   reminderConfig?: DraftReminderConfig;
 }
 
@@ -75,6 +77,8 @@ export function draftMemoContext(draft: ComposeDraft) {
     title: draft.title,
     description: draft.description ?? null,
     dueAt: draft.dueAt ?? null,
+    startsAt: draft.startsAt ?? null,
+    allDay: draft.allDay ?? false,
     priority: draft.priority ?? ("medium" as TaskPriority),
   };
 }

@@ -4,7 +4,7 @@ import { PrioritySelect } from "@/components/tasks/PrioritySelect";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { ReminderBell } from "@/components/tasks/ReminderBell";
 import { StatusSelect } from "@/components/tasks/StatusSelect";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, formatTaskScheduleLabel } from "@/lib/dates";
 
 interface TaskTableProps {
   tasks: TaskDto[];
@@ -197,7 +197,7 @@ export function TaskTable({
                       {formatDateTime(task.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {task.dueAt ? formatDateTime(task.dueAt) : "-"}
+                      {formatTaskScheduleLabel(task) ?? "-"}
                     </td>
                     {showCompletedAt && (
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">

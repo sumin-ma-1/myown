@@ -11,6 +11,7 @@ import { WebComposeStore, type WebComposeState } from "./web-compose-store.js";
 import { resolveUserTimezone } from "../utils/user-timezone.js";
 import type { DraftReminderConfig } from "./draft-reminder.js";
 import { applyDraftReminderConfig, formatReminderConfigLabel } from "./draft-reminder.js";
+import { formatTaskScheduleLabel } from "../utils/schedule-label.js";
 
 export interface ComposeDraftDto {
   mode: WebComposeState["mode"];
@@ -18,10 +19,13 @@ export interface ComposeDraftDto {
   description?: string | null;
   priority?: ComposeDraft["priority"];
   dueAt?: string | null;
+  startsAt?: string | null;
+  allDay?: boolean;
   attachmentIds: string[];
   attachments: { id: string; fileName: string }[];
   reminderConfig?: DraftReminderConfig;
   reminderLabel?: string | null;
+  scheduleLabel?: string | null;
 }
 
 async function resolveTelegramId(app: AppContext, userId: string): Promise<number | null> {
@@ -48,10 +52,17 @@ async function toComposeDto(
     description: state.draft.description,
     priority: state.draft.priority,
     dueAt: state.draft.dueAt?.toISOString() ?? null,
+    startsAt: state.draft.startsAt?.toISOString() ?? null,
+    allDay: state.draft.allDay ?? false,
     attachmentIds: state.draft.attachmentIds,
     attachments,
     reminderConfig: state.draft.reminderConfig,
     reminderLabel: formatReminderConfigLabel(state.draft.reminderConfig),
+    scheduleLabel: formatTaskScheduleLabel({
+      dueAt: state.draft.dueAt,
+      startsAt: state.draft.startsAt,
+      allDay: state.draft.allDay,
+    }),
   };
 }
 
@@ -124,6 +135,8 @@ export class WebChatService {
             description: task.description,
             priority: task.priority,
             dueAt: task.dueAt,
+            startsAt: task.startsAt,
+            allDay: task.allDay,
             reminderConfig,
           },
         };

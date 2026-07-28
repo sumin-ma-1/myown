@@ -70,6 +70,8 @@ export const api = {
     description?: string;
     priority?: TaskDto["priority"];
     dueAt?: string;
+    startsAt?: string | null;
+    allDay?: boolean;
     workflowStatus?: TaskDto["workflowStatus"];
     useDefaultReminders?: boolean;
     extraReminders?: ExtraReminderRule[];
@@ -86,6 +88,8 @@ export const api = {
       description: string | null;
       priority: TaskDto["priority"];
       dueAt: string | null;
+      startsAt: string | null;
+      allDay: boolean;
       workflowStatus: TaskDto["workflowStatus"];
       status: TaskDto["status"];
       useDefaultReminders: boolean;

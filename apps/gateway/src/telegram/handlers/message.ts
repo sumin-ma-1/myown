@@ -88,6 +88,8 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
             description: task.description,
             priority: task.priority,
             dueAt: task.dueAt,
+            startsAt: task.startsAt,
+            allDay: task.allDay,
             reminderConfig,
           };
 

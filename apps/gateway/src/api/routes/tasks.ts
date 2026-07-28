@@ -159,6 +159,8 @@ tasksRoute.post("/", async (c) => {
     description?: string;
     priority?: TaskPriority;
     dueAt?: string;
+    startsAt?: string | null;
+    allDay?: boolean;
     workflowStatus?: TaskWorkflowStatus;
     useDefaultReminders?: boolean;
     extraReminders?: ExtraReminderRule[];
@@ -166,6 +168,9 @@ tasksRoute.post("/", async (c) => {
 
   if (!body.title?.trim()) {
     return c.json({ error: "title is required" }, 400);
+  }
+  if (!body.dueAt) {
+    return c.json({ error: "dueAt is required" }, 400);
   }
   if (body.priority && !PRIORITIES.has(body.priority)) {
     return c.json({ error: "invalid priority" }, 400);
@@ -179,7 +184,9 @@ tasksRoute.post("/", async (c) => {
     title: body.title.trim(),
     description: body.description?.trim(),
     priority: body.priority,
-    dueAt: body.dueAt ? new Date(body.dueAt) : undefined,
+    dueAt: new Date(body.dueAt),
+    startsAt: body.startsAt ? new Date(body.startsAt) : body.startsAt === null ? null : undefined,
+    allDay: body.allDay,
   });
 
   let user = await app.users.findById(userId);
@@ -225,6 +232,8 @@ tasksRoute.patch("/:id", async (c) => {
     description?: string | null;
     priority?: TaskPriority;
     dueAt?: string | null;
+    startsAt?: string | null;
+    allDay?: boolean;
     status?: "active" | "completed" | "cancelled";
     workflowStatus?: TaskWorkflowStatus;
     useDefaultReminders?: boolean;
@@ -240,6 +249,9 @@ tasksRoute.patch("/:id", async (c) => {
   }
   if (body.workflowStatus && !WORKFLOW.has(body.workflowStatus)) {
     return c.json({ error: "invalid workflowStatus" }, 400);
+  }
+  if (body.dueAt === null) {
+    return c.json({ error: "dueAt is required" }, 400);
   }
 
   let user = await app.users.findById(userId);
@@ -257,6 +269,14 @@ tasksRoute.patch("/:id", async (c) => {
     (body.dueAt === null
       ? existing.dueAt !== null
       : new Date(body.dueAt).getTime() !== existing.dueAt?.getTime());
+  const startsAtChanged =
+    body.startsAt !== undefined &&
+    (body.startsAt === null
+      ? existing.startsAt !== null
+      : new Date(body.startsAt).getTime() !== existing.startsAt?.getTime());
+  const allDayChanged =
+    body.allDay !== undefined && body.allDay !== existing.allDay;
+  const scheduleChanged = dueAtChanged || startsAtChanged || allDayChanged;
 
   const existingReminderConfig = getTaskReminderConfig(user, taskId);
   const extraRules =
@@ -288,12 +308,15 @@ tasksRoute.patch("/:id", async (c) => {
     description: body.description,
     priority: body.priority,
     dueAt: body.dueAt === null ? null : body.dueAt ? new Date(body.dueAt) : undefined,
+    startsAt:
+      body.startsAt === null ? null : body.startsAt ? new Date(body.startsAt) : undefined,
+    allDay: body.allDay,
     status: body.status,
   });
 
   if (!task) return c.json({ error: "Task not found" }, 404);
 
-  if (dueAtChanged) {
+  if (scheduleChanged) {
     const prefs = (user.preferences ?? {}) as UserPreferences;
     user =
       (await app.users.updatePreferences(userId, {
@@ -305,7 +328,7 @@ tasksRoute.patch("/:id", async (c) => {
     await app.reminderService.cancelForTask(taskId);
   } else if (
     task.dueAt &&
-    (dueAtChanged || reminderConfigChanged || body.rescheduleReminders)
+    (scheduleChanged || reminderConfigChanged || body.rescheduleReminders)
   ) {
     const config = getTaskReminderConfig(user, taskId);
     await app.reminderService.syncRemindersForTask(task, user.telegramUserId ?? null, user, {

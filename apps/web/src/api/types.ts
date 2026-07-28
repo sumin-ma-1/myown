@@ -17,6 +17,8 @@ export interface TaskDto {
   workflowStatus: WorkflowStatus;
   priority: TaskPriority;
   dueAt: string | null;
+  startsAt: string | null;
+  allDay: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -86,6 +88,8 @@ export interface ComposeDraftDto {
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: string | null;
+  startsAt?: string | null;
+  allDay?: boolean;
   attachmentIds: string[];
   attachments: { id: string; fileName: string }[];
   reminderConfig?: {
@@ -94,6 +98,7 @@ export interface ComposeDraftDto {
     absoluteTimes?: { date?: string; time: string }[];
   };
   reminderLabel?: string | null;
+  scheduleLabel?: string | null;
 }
 
 export interface ChatReplyDto {

@@ -9,6 +9,7 @@ import {
   formatReminderConfigLabel,
   parseDraftReminderConfig,
 } from "../services/draft-reminder.js";
+import { formatTaskScheduleLabel } from "../utils/schedule-label.js";
 import { formatDateTime, formatDueDate, formatDueDateTime, llmDueDateContextLines } from "../utils/date.js";
 import { displayOrderOf, formatActiveTasksHint } from "../utils/task-display-order.js";
 import {
@@ -145,6 +146,8 @@ export class AgentRuntime {
       title: string;
       description?: string | null;
       dueAt?: Date | null;
+      startsAt?: Date | null;
+      allDay?: boolean;
       priority: TaskPriority;
     },
     memo: string,
@@ -157,6 +160,8 @@ export class AgentRuntime {
           description?: string | null;
           priority?: TaskPriority;
           dueAt?: Date | null;
+          startsAt?: Date | null;
+          allDay?: boolean;
           reminderConfig?: import("../services/draft-reminder.js").DraftReminderConfig;
         };
       }
@@ -167,6 +172,12 @@ export class AgentRuntime {
     }
 
     const currentDue = context.dueAt ? formatDueLabel(context.dueAt) : "없음";
+    const currentSchedule =
+      formatTaskScheduleLabel({
+        dueAt: context.dueAt,
+        startsAt: context.startsAt,
+        allDay: context.allDay,
+      }) ?? currentDue;
 
     try {
       const response = await this.llmCall({
@@ -180,11 +191,15 @@ export class AgentRuntime {
               ...llmDueDateContextLines(timezone),
               `현재 제목: ${context.title}`,
               `현재 설명: ${context.description ?? "(없음)"}`,
-              `현재 마감: ${currentDue}`,
+              `현재 일정: ${currentSchedule}`,
               `현재 우선순위: ${context.priority}`,
               "",
               "규칙:",
               "- 마감·시각 보충이면 due_date/due_time만, title 생략 (예: '오후 6시에', '내일까지')",
+              "- 연속된 날짜 범위이면 start_date+due_date+all_day=true",
+              "- 기간에 시각이 있으면 start_date+start_time+due_date+due_time+all_day=false",
+              "- 「종일」이면 all_day=true, 시각이 있으면 all_day=false와 due_time(필요 시 start_time)",
+              "- 업무에는 마감일(due_date)이 필요합니다. 없으면 마감일을 물어보도록 안내하세요",
               "- 우선순위 보충이면 priority만 (예: '급해요', '최우선으로')",
               "- 설명·메모 추가면 description만 (예: '팀장님 검토 필요')",
               "- 제목 변경은 사용자가 분명히 바꾸려 할 때만 title (예: '분기 보고서로 할게', '제목은 회의록')",
@@ -219,6 +234,8 @@ export class AgentRuntime {
         description?: string | null;
         priority?: TaskPriority;
         dueAt?: Date | null;
+        startsAt?: Date | null;
+        allDay?: boolean;
         reminderConfig?: import("../services/draft-reminder.js").DraftReminderConfig;
       } = {
         title: args.title?.trim() || context.title,
@@ -231,14 +248,51 @@ export class AgentRuntime {
         patch.priority = args.priority;
       }
       if (args.due_date?.trim()) {
-        patch.dueAt = resolveDueAt(args.due_date, args.due_time) ?? null;
+        const hasTimed =
+          Boolean(args.due_time?.trim()) || Boolean(args.start_time?.trim());
+        let memoAllDay =
+          args.all_day === true || (args.all_day !== false && !hasTimed);
+        if (hasTimed) memoAllDay = false;
+        patch.dueAt =
+          resolveDueAt(args.due_date, memoAllDay ? undefined : args.due_time) ?? null;
+        patch.allDay = memoAllDay;
+        if (args.start_date?.trim()) {
+          const sameDay = args.start_date === args.due_date;
+          if (memoAllDay) {
+            patch.startsAt = sameDay
+              ? null
+              : new Date(`${args.start_date}T00:00:00+09:00`);
+          } else if (!sameDay || args.start_time?.trim()) {
+            patch.startsAt =
+              resolveDueAt(
+                args.start_date,
+                args.start_time?.trim() ? args.start_time : "00:00",
+              ) ?? null;
+          } else {
+            patch.startsAt = null;
+          }
+        } else {
+          patch.startsAt = null;
+        }
       } else if (args.due_time?.trim()) {
         const dateStr = context.dueAt
           ? todayDateString(context.dueAt)
           : todayDateString();
         patch.dueAt = resolveDueAt(dateStr, args.due_time) ?? null;
+        patch.allDay = false;
       } else if (looksLikeDueSupplementOnly(memo)) {
         patch.dueAt = parseKoreanDueSupplement(memo, context.dueAt) ?? null;
+      } else if (args.start_date?.trim()) {
+        const timed = Boolean(args.start_time?.trim());
+        patch.startsAt = timed
+          ? resolveDueAt(args.start_date, args.start_time) ?? null
+          : (args.all_day ?? context.allDay) !== false
+            ? new Date(`${args.start_date}T00:00:00+09:00`)
+            : resolveDueAt(args.start_date) ?? null;
+        if (timed) patch.allDay = false;
+      }
+      if (args.all_day !== undefined) {
+        patch.allDay = args.all_day;
       }
 
       const reminderConfig = parseDraftReminderConfig(
@@ -297,13 +351,16 @@ export class AgentRuntime {
 
     if (text.startsWith("/add ")) {
       const parsed = parseAddCommand(text.slice(5).trim());
+      if (!parsed.dueAt) {
+        return "⚠️ 마감일이 필요합니다. 예: /add 보고서 제출 2026-07-28";
+      }
       const task = await this.taskService.create({
         userId: input.userId,
         telegramUserId: input.telegramUserId,
         title: parsed.title,
         dueAt: parsed.dueAt,
       });
-      const due = task.dueAt ? ` (마감: ${formatDueLabel(task.dueAt)})` : "";
+      const due = ` (마감: ${formatDueLabel(task.dueAt!)})`;
       return `✅ 업무 등록: ${task.title}${due}`;
     }
 
@@ -433,11 +490,15 @@ export class AgentRuntime {
           ...llmDueDateContextLines(input.timezone),
           "활성 업무:",
           taskContext || "(없음)",
-          "업무 등록 시 due_date(YYYY-MM-DD), due_time(HH:MM)을 사용하세요.",
-          "날짜는 있는데 시각이 없고, 시각이 필요한 일정이라고 판단되면 create_task를 바로 호출하지 말고 한 번만 '몇 시인가요?'라고 물으세요.",
-          "사용자가 시각을 알려주면 반드시 create_task를 due_time과 함께 호출하세요. 말로만 '등록했습니다'라고 하지 마세요.",
-          "사용자가 시각 없이 진행하겠다고 하면 반드시 create_task를 due_time 없이 호출하세요.",
-          "제출·마감·할 일처럼 날짜만으로 충분한 업무이거나, 처음부터 종일·시각 불필요를 말했으면 묻지 말고 due_time 없이 create_task하세요.",
+          "업무 등록 시 due_date(YYYY-MM-DD)는 필수입니다. due_time(HH:MM), 기간이면 start_date, 시작 시각이면 start_time, 종일이면 all_day=true를 사용하세요.",
+          "마감일(due_date)이 없으면 create_task를 호출하지 말고 날짜를 한 번만 물으세요.",
+          "종일 연속일이면 start_date+due_date+all_day=true.",
+          "연속일에 시각이 있으면 start_date+start_time+due_date+due_time+all_day=false.",
+          "연속 날짜만 있고 시각이 없을 때, 회의·출장처럼 시각이 필요할 수 있으면 create_task 전에 한 번만 '시작·종료 시각이 있나요? 없으면 종일로 등록할게요'라고 물으세요.",
+          "제출·여행·할 일처럼 종일로 충분하거나, 사용자가 종일·시각 불필요를 말했으면 묻지 말고 all_day=true로 create_task하세요.",
+          "하루 일정에 날짜만 있고 시각이 필요한 경우 create_task 전에 한 번만 '몇 시인가요?'라고 물으세요.",
+          "사용자가 시각을 알려주면 반드시 create_task를 due_time(기간이면 start_time도)과 함께 호출하세요. 말로만 '등록했습니다'라고 하지 마세요.",
+          "사용자가 시각 없이 진행하겠다고 하면 반드시 create_task를 due_time/start_time 없이(all_day=true) 호출하세요.",
           "특정 시각 알림 추가는 create_reminder, 조회는 list_reminders, 취소는 cancel_reminder, 한 번에 다시 맞추려면 set_task_reminders를 사용하세요.",
           "create_reminder·list_reminders·cancel_reminder·set_task_reminders·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
@@ -536,7 +597,35 @@ export class AgentRuntime {
     switch (name) {
       case "create_task": {
         const a = args as unknown as CreateTaskArgs;
-        const dueAt = resolveDueAt(a.due_date, a.due_time);
+        if (!a.due_date?.trim()) {
+          return "마감일(due_date)이 필요합니다. 날짜를 확인한 뒤 다시 create_task를 호출하거나, 사용자에게 마감일을 한 번만 물어보세요.";
+        }
+        const hasTimed =
+          Boolean(a.due_time?.trim()) || Boolean(a.start_time?.trim());
+        let allDay = a.all_day === true;
+        if (a.all_day === undefined) {
+          allDay = !hasTimed;
+        }
+        if (hasTimed) allDay = false;
+        const dueAt = resolveDueAt(a.due_date, allDay ? undefined : a.due_time);
+        if (!dueAt) {
+          return "마감일 형식을 확인해 주세요. due_date는 YYYY-MM-DD 입니다.";
+        }
+        let startsAt: Date | undefined;
+        if (a.start_date?.trim()) {
+          const sameDay = a.start_date === a.due_date;
+          if (allDay) {
+            if (!sameDay) {
+              startsAt = new Date(`${a.start_date}T00:00:00+09:00`);
+            }
+          } else if (!sameDay || a.start_time?.trim()) {
+            startsAt =
+              resolveDueAt(
+                a.start_date,
+                a.start_time?.trim() ? a.start_time : "00:00",
+              ) ?? undefined;
+          }
+        }
         const reminderConfig = parseDraftReminderConfig(args);
         const task = await this.taskService.create({
           userId,
@@ -545,6 +634,8 @@ export class AgentRuntime {
           description: a.description,
           priority: a.priority,
           dueAt,
+          startsAt,
+          allDay: Boolean(allDay && dueAt),
           skipReminders: true,
         });
         if (reminderConfig) {
@@ -552,10 +643,15 @@ export class AgentRuntime {
         } else {
           await this.pendingComposeReminder.clear(userId);
         }
-        const due = task.dueAt ? `, 마감 ${formatDueLabel(task.dueAt)}` : "";
+        const schedule = formatTaskScheduleLabel({
+          dueAt: task.dueAt,
+          startsAt: task.startsAt,
+          allDay: task.allDay,
+        });
+        const schedulePart = schedule ? `, ${schedule}` : "";
         const remind = formatReminderConfigLabel(reminderConfig);
         const remindPart = remind ? `, 알림 ${remind}` : "";
-        return `초안 준비됨(미등록): ${task.title}${due}${remindPart}. [등록 완료] 전이면 일정에 반영되지 않습니다.`;
+        return `초안 준비됨(미등록): ${task.title}${schedulePart}${remindPart}. [등록 완료] 전이면 일정에 반영되지 않습니다.`;
       }
       case "create_reminder": {
         const a = args as unknown as CreateReminderArgs;

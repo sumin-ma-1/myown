@@ -75,13 +75,19 @@ export class AttachmentService {
     telegramUserId: number | null;
     draft: ComposeDraft;
   }): Promise<Task> {
+    if (!input.draft.dueAt) {
+      throw new Error("마감일이 필요합니다. 초안에 종료(마감)일을 넣어 주세요.");
+    }
+
     const task = await this.taskService.create({
       userId: input.userId,
       telegramUserId: input.telegramUserId,
       title: input.draft.title,
       description: input.draft.description ?? undefined,
       priority: input.draft.priority,
-      dueAt: input.draft.dueAt ?? undefined,
+      dueAt: input.draft.dueAt,
+      startsAt: input.draft.startsAt ?? undefined,
+      allDay: input.draft.allDay,
       attachmentId: input.draft.attachmentIds[0],
       skipReminders: true,
     });
@@ -90,16 +96,14 @@ export class AttachmentService {
       await this.taskService.linkAttachment(input.userId, task.id, attachmentId);
     }
 
-    if (task.dueAt) {
-      await applyDraftReminderConfig({
-        users: this.users,
-        reminderService: this.reminderService,
-        userId: input.userId,
-        telegramUserId: input.telegramUserId,
-        task,
-        config: input.draft.reminderConfig,
-      });
-    }
+    await applyDraftReminderConfig({
+      users: this.users,
+      reminderService: this.reminderService,
+      userId: input.userId,
+      telegramUserId: input.telegramUserId,
+      task,
+      config: input.draft.reminderConfig,
+    });
 
     return task;
   }

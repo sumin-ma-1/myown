@@ -62,9 +62,9 @@ export function dueDateToneClass(dday: number | null): string {
   return "text-slate-500 dark:text-slate-400";
 }
 
-/** 마감 시각(HH:mm). 날짜만 마감(23:59)이면 null */
-export function formatDueTime(iso: string | null): string | null {
-  if (!iso || isDateOnlyDueIso(iso)) return null;
+/** 마감 시각(HH:mm). 종일 또는 날짜만 마감(23:59)이면 null */
+export function formatDueTime(iso: string | null, allDay?: boolean | null): string | null {
+  if (!iso || allDay || isDateOnlyDueIso(iso)) return null;
   const { hour, minute } = getTimePartsInSeoul(new Date(iso));
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
@@ -206,4 +206,56 @@ export function isValidTimeInput(raw: string): boolean {
   const hour = Number(match[1]);
   const minute = Number(match[2]);
   return hour <= 23 && minute <= 59;
+}
+
+function localDayKeyFromIso(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** 목록·칩용: 종일 / 기간 / 시각 */
+export function formatTaskScheduleLabel(input: {
+  dueAt?: string | null;
+  startsAt?: string | null;
+  allDay?: boolean | null;
+}): string | null {
+  if (!input.dueAt) return null;
+  const allDay = input.allDay === true || (input.allDay !== false && isDateOnlyDueIso(input.dueAt));
+  const startsAt = input.startsAt;
+
+  if (startsAt && localDayKeyFromIso(startsAt) !== localDayKeyFromIso(input.dueAt)) {
+    const startLabel =
+      allDay || isDateOnlyDueIso(startsAt) ? formatDate(startsAt) : formatDateTime(startsAt);
+    const endLabel = allDay ? formatDate(input.dueAt) : formatDateTime(input.dueAt);
+    return `${startLabel} ~ ${endLabel}`;
+  }
+
+  if (allDay) {
+    return `${formatDate(input.dueAt)} (종일)`;
+  }
+
+  return formatDateTime(input.dueAt);
+}
+
+export function taskSpanDayKeys(task: {
+  dueAt?: string | null;
+  startsAt?: string | null;
+}): string[] {
+  if (!task.dueAt) return [];
+  const endKey = localDateKeyFromIso(task.dueAt);
+  const startKey = task.startsAt ? localDateKeyFromIso(task.startsAt) : endKey;
+  if (startKey === endKey) return [endKey];
+
+  const keys: string[] = [];
+  const cursor = new Date(`${startKey}T12:00:00+09:00`);
+  const end = new Date(`${endKey}T12:00:00+09:00`);
+  while (cursor.getTime() <= end.getTime()) {
+    keys.push(formatLocalDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
 }

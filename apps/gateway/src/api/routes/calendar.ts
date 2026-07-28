@@ -31,6 +31,7 @@ calendarRoute.get("/", async (c) => {
 
   const includeCompleted = c.req.query("includeCompleted") === "true";
 
+  // overlap: dueAt >= from AND coalesce(startsAt, dueAt) <= to
   const tasks = await app.tasks.listDueInRange(userId, from, to, { includeCompleted });
   const items = await Promise.all(
     tasks.map(async (task) => {

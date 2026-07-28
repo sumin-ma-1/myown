@@ -89,7 +89,10 @@ function ComposePanel({
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{compose.description}</p>
       )}
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-        {compose.dueAt && <span>마감 {formatDueDateTime(compose.dueAt)}</span>}
+        {compose.scheduleLabel && <span>{compose.scheduleLabel}</span>}
+        {!compose.scheduleLabel && compose.dueAt && (
+          <span>마감 {formatDueDateTime(compose.dueAt)}</span>
+        )}
         {compose.priority && <span>우선순위 {priorityLabel(compose.priority)}</span>}
         {compose.reminderLabel && <span>알림 {compose.reminderLabel}</span>}
       </div>
