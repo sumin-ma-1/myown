@@ -22,6 +22,7 @@ import {
 import { priorityCalendarChipClass, priorityLabel } from "@/lib/priority";
 
 type CalendarView = "month" | "week";
+/** 주(일~토) 세그먼트 기준 역할 — 주 경계에서 start가 다시 열림 */
 type SpanRole = "single" | "start" | "middle" | "end";
 
 /** Max task chips shown per day in month view before "+N more". */
@@ -36,12 +37,25 @@ const PRIORITY_RANK: Record<TaskDto["priority"], number> = {
   medium: 2,
 };
 
+function weekdayFromDayKey(dayKey: string): number {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return new Date(y!, m! - 1, d!).getDay();
+}
+
+/** 연속일을 주 단위 세그먼트로 나눠 start/middle/end 결정 (일요일 주 시작) */
 function spanRoleForDay(task: TaskDto, dayKey: string): SpanRole {
   const keys = taskSpanDayKeys(task);
   if (keys.length <= 1) return "single";
   const index = keys.indexOf(dayKey);
-  if (index <= 0) return "start";
-  if (index >= keys.length - 1) return "end";
+  if (index < 0) return "single";
+
+  const weekday = weekdayFromDayKey(dayKey);
+  const isSegStart = index === 0 || weekday === 0;
+  const isSegEnd = index === keys.length - 1 || weekday === 6;
+
+  if (isSegStart && isSegEnd) return "single";
+  if (isSegStart) return "start";
+  if (isSegEnd) return "end";
   return "middle";
 }
 
@@ -55,8 +69,36 @@ function CalendarTaskChip({
   onClick?: (task: TaskDto) => void;
 }) {
   const role = spanRoleForDay(task, dayKey);
+  const spanKeys = taskSpanDayKeys(task);
+  const isMultiDay = spanKeys.length > 1;
+  const isSpanStart = spanKeys[0] === dayKey;
+  const isSpanEnd = spanKeys[spanKeys.length - 1] === dayKey;
   const isAllDay = task.allDay || !formatDueTime(task.dueAt, task.allDay);
-  const dueTime = role === "single" || role === "start" ? formatDueTime(task.dueAt, task.allDay) : null;
+
+  // 주 시작 세그먼트·기간 시작은 진한 제목, 그 외(중간·끝)는 연한 제목
+  const showPrimaryTitle =
+    !isMultiDay || role === "start" || (role === "single" && isSpanStart);
+
+  const startTime = isAllDay ? null : formatDueTime(task.startsAt, false);
+  const endTime = isAllDay ? null : formatDueTime(task.dueAt, false);
+
+  let timeLeft: string | null = null;
+  let timeRight: string | null = null;
+  if (!isAllDay) {
+    if (!isMultiDay) {
+      if (startTime && endTime && startTime !== endTime) {
+        timeLeft = `${startTime}–${endTime}`;
+      } else {
+        timeLeft = startTime ?? endTime;
+      }
+    } else if (showPrimaryTitle) {
+      timeLeft = startTime;
+    }
+    if (isMultiDay && isSpanEnd && endTime) {
+      timeRight = endTime;
+    }
+  }
+
   const isCompleted = task.status === "completed";
   const chipClass = isCompleted
     ? "bg-slate-100 text-slate-500 hover:bg-slate-200/80 dark:bg-slate-700/50 dark:text-slate-400 dark:hover:bg-slate-700/70"
@@ -64,37 +106,40 @@ function CalendarTaskChip({
 
   const radius =
     role === "start"
-      ? "rounded-l px-1 py-0.5 rounded-r-none"
+      ? "rounded-l rounded-r-none"
       : role === "end"
-        ? "rounded-r px-1 py-0.5 rounded-l-none"
+        ? "rounded-r rounded-l-none"
         : role === "middle"
-          ? "rounded-none px-1 py-0.5"
-          : "rounded px-1 py-0.5";
+          ? "rounded-none"
+          : "rounded";
 
   const scheduleLabel = formatTaskScheduleLabel(task);
-  const showTitle = role === "single" || role === "start";
+  const bridgeGap = isMultiDay && role !== "single";
 
   return (
     <button
       type="button"
-      className={`flex w-full min-w-0 items-center gap-1 text-left ${CALENDAR_TASK_TEXT_CLASS} ${chipClass} ${radius}`}
+      className={`flex min-h-[1.25rem] w-full min-w-0 items-center gap-1 px-1 py-0.5 text-left ${CALENDAR_TASK_TEXT_CLASS} ${chipClass} ${radius} ${
+        bridgeGap ? "relative z-[1] -mx-0.5 w-[calc(100%+0.25rem)]" : ""
+      }`}
       title={`${task.title} · ${priorityLabel(task.priority)}${isCompleted ? " · 완료" : ""}${scheduleLabel ? ` · ${scheduleLabel}` : ""}`}
       onClick={(event) => {
         event.stopPropagation();
         onClick?.(task);
       }}
     >
-      {dueTime && (
-        <span className="shrink-0 tabular-nums opacity-80">{dueTime}</span>
+      {timeLeft && (
+        <span className="shrink-0 tabular-nums opacity-80">{timeLeft}</span>
       )}
-      {showTitle ? (
-        <span className="min-w-0 truncate">
-          {isAllDay && role === "single" ? task.title : task.title}
-        </span>
-      ) : (
-        <span className="min-w-0 truncate opacity-70" aria-hidden>
-          ···
-        </span>
+      <span
+        className={`min-w-0 flex-1 truncate ${
+          showPrimaryTitle ? "" : "opacity-40 dark:opacity-35"
+        }`}
+      >
+        {task.title}
+      </span>
+      {timeRight && (
+        <span className="shrink-0 tabular-nums opacity-80">{timeRight}</span>
       )}
     </button>
   );

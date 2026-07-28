@@ -4,7 +4,7 @@ import { api } from "@/api/client";
 import type { ExtraReminderRule, ReminderDto, TaskDto } from "@/api/types";
 import { Modal } from "@/components/ui/Modal";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
-import { formatDateTime, formatTaskScheduleLabel, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
+import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
@@ -201,7 +201,7 @@ export function TaskFormModal({
       setStartTime("");
       setDueDate(initialDueDate ?? "");
       setDueTime("");
-      setAllDay(Boolean(initialDueDate));
+      setAllDay(false);
       setPriority("medium");
       setUiWorkflowStatus("planned");
       setUseDefaultReminders(true);
@@ -543,7 +543,7 @@ export function TaskFormModal({
               return;
             }
             if (!dueDate.trim()) {
-              setError("종료(마감)일을 입력해 주세요.");
+              setError("종료 · 마감일을 입력해 주세요.");
               return;
             }
             if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
@@ -672,28 +672,6 @@ export function TaskFormModal({
               {!allDay && (
                 <p className="text-xs text-slate-400 dark:text-slate-500">
                   시각은 24시간 형식 · 둘 다 비우면 종일로 저장
-                </p>
-              )}
-
-              {(dueDate || startDate) && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  표시:{" "}
-                  {formatTaskScheduleLabel({
-                    dueAt: toDueAtIso(dueDate || startDate, allDay ? "" : dueTime) ?? null,
-                    startsAt: (() => {
-                      if (!startDate.trim()) return null;
-                      const previewAllDay =
-                        allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate));
-                      if (previewAllDay) {
-                        if (startDate === (dueDate || startDate)) return null;
-                        return new Date(`${startDate}T00:00:00+09:00`).toISOString();
-                      }
-                      return (
-                        toDueAtIso(startDate, startTime.trim() ? startTime : "00:00") ?? null
-                      );
-                    })(),
-                    allDay: allDay || (!dueTime.trim() && !startTime.trim() && Boolean(dueDate)),
-                  }) ?? "-"}
                 </p>
               )}
 
