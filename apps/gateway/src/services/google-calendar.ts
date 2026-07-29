@@ -203,15 +203,23 @@ export class GoogleCalendarService {
     userId: string,
     row: CalendarImport,
   ): Promise<boolean> {
-    if (row.enabled && row.taskId) return true;
+    if (row.enabled && row.taskId) {
+      // 이미 연결된 task라도, 코드 변경으로 인해 fields가 비어/불일치할 수 있으므로 재동기화
+      await this.syncImportToLinkedTask(userId, row);
+      return true;
+    }
 
     const task = await this.tasks.findUnlinkedCalendarMatch(userId, {
       title: row.title,
-      dueAt: row.startsAt,
+      // tasks.dueAt anchor는 import 이벤트의 끝을 기준으로 맞춤
+      dueAt: row.endsAt ?? row.startsAt,
     });
     if (!task) return false;
 
-    await this.imports.setEnabled(userId, row.id, true, task.id);
+    const updated = await this.imports.setEnabled(userId, row.id, true, task.id);
+    if (updated) {
+      await this.syncImportToLinkedTask(userId, updated);
+    }
     return true;
   }
 
@@ -239,10 +247,22 @@ export class GoogleCalendarService {
     const task = await this.tasks.findById(userId, row.taskId);
     if (!task || task.status !== "active") return;
 
+    const dueAt = row.endsAt ?? row.startsAt;
+    const shouldUpdate =
+      task.title !== row.title ||
+      (task.description ?? null) !== (row.description ?? null) ||
+      task.allDay !== row.allDay ||
+      (task.dueAt?.getTime() ?? null) !== dueAt.getTime() ||
+      (task.startsAt?.getTime() ?? null) !== row.startsAt.getTime();
+
+    if (!shouldUpdate) return;
+
     await this.tasks.update(userId, row.taskId, {
       title: row.title,
       description: row.description,
-      dueAt: row.startsAt,
+      dueAt,
+      startsAt: row.startsAt,
+      allDay: row.allDay,
     });
   }
 
@@ -507,11 +527,14 @@ export class GoogleCalendarService {
         return existing.id;
       }
       if (existing && existing.status !== "active") {
+        const dueAt = row.endsAt ?? row.startsAt;
         await this.tasks.update(userId, existing.id, {
           status: "active",
           title: row.title,
           description: row.description,
-          dueAt: row.startsAt,
+          dueAt,
+          startsAt: row.startsAt,
+          allDay: row.allDay,
         });
         await this.setTaskWorkflow(userId, existing.id, "planned");
         return existing.id;
@@ -519,12 +542,15 @@ export class GoogleCalendarService {
     }
 
     const user = await this.users.findById(userId);
+    const dueAt = row.endsAt ?? row.startsAt;
     const task = await this.taskService.create({
       userId,
       telegramUserId: user?.telegramUserId ?? null,
       title: row.title,
       description: row.description ?? undefined,
-      dueAt: row.startsAt,
+      dueAt,
+      startsAt: row.startsAt,
+      allDay: row.allDay,
     });
     await this.setTaskWorkflow(userId, task.id, "planned");
     return task.id;
@@ -573,10 +599,16 @@ export class GoogleCalendarService {
     const allDay = Boolean(event.start?.date && !event.start?.dateTime);
 
     if (allDay && event.start?.date) {
-      const startsAt = new Date(`${event.start.date}T09:00:00+09:00`);
+      // Google all-day events: end.date는 'exclusive'(다음날 00:00)을 의미.
+      // 앱의 기간 anchor(23:59:59) 규칙에 맞추려면 endsAt을 endExclusive(00:00) - 1ms로 둔다.
+      const startsAt = new Date(`${event.start.date}T00:00:00+09:00`);
       const endsAt = event.end?.date
-        ? new Date(`${event.end.date}T23:59:59+09:00`)
-        : null;
+        ? (() => {
+            const endExclusiveStart = new Date(`${event.end.date}T00:00:00+09:00`);
+            if (Number.isNaN(endExclusiveStart.getTime())) return null;
+            return new Date(endExclusiveStart.getTime() - 1);
+          })()
+        : new Date(`${event.start.date}T23:59:59+09:00`);
       return {
         title,
         description: event.description ?? null,
