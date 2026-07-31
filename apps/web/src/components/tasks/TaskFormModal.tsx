@@ -248,18 +248,24 @@ export function TaskFormModal({
         (Boolean(dueDate.trim()) && !dueTime.trim() && !effectiveStartTime.trim());
       let startsAt: string | null = null;
       if (effectiveStartDate) {
-        const startIso = resolvedAllDay
-          ? (() => {
-              const parsed = new Date(`${effectiveStartDate}T00:00:00+09:00`);
-              return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-            })()
-          : toDueAtIso(effectiveStartDate, effectiveStartTime.trim() ? effectiveStartTime : "00:00");
         const sameDay = effectiveStartDate === dueDate;
-        if (
-          startIso &&
-          (!sameDay || (!resolvedAllDay && (effectiveStartTime.trim() || dueTime.trim())))
-        ) {
-          startsAt = sameDay && startIso === dueAt ? null : startIso;
+        // 같은 날 + 시작 시각 없음 → 마감만 (startsAt 불필요)
+        // 같은 날 종일 → 하루짜리이므로 startsAt 불필요
+        if (sameDay && (resolvedAllDay || !effectiveStartTime.trim())) {
+          startsAt = null;
+        } else {
+          const startIso = resolvedAllDay
+            ? (() => {
+                const parsed = new Date(`${effectiveStartDate}T00:00:00+09:00`);
+                return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+              })()
+            : toDueAtIso(
+                effectiveStartDate,
+                effectiveStartTime.trim() ? effectiveStartTime : "00:00",
+              );
+          if (startIso && startIso !== dueAt) {
+            startsAt = startIso;
+          }
         }
       }
       const extraReminders = rowsToRules(extraRows);
@@ -498,17 +504,16 @@ export function TaskFormModal({
       if (!dateRange || !startDate.trim()) return null;
       const resolved =
         allDay || (Boolean(dueDate.trim()) && !dueTime.trim() && !startTime.trim());
+      const sameDay = startDate === dueDate;
+      if (sameDay && (resolved || !startTime.trim())) return null;
       const startIso = resolved
         ? (() => {
             const parsed = new Date(`${startDate}T00:00:00+09:00`);
             return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
           })()
         : toDueAtIso(startDate, startTime.trim() ? startTime : "00:00") ?? null;
-      const sameDay = startDate === dueDate;
-      if (!startIso) return null;
-      if (sameDay && startIso === nextDueAt) return null;
-      if (!sameDay || (!resolved && (startTime.trim() || dueTime.trim()))) return startIso;
-      return null;
+      if (!startIso || startIso === nextDueAt) return null;
+      return startIso;
     })();
 
     if (title.trim() !== task.title) return true;
@@ -558,7 +563,7 @@ export function TaskFormModal({
               return;
             }
             if (dateRange && !startDate.trim()) {
-              setError("연속일을 켠 경우 시작일을 입력해 주세요.");
+              setError("기간을 켠 경우 시작일을 입력해 주세요.");
               return;
             }
             if (dueDate && dueTime.trim() && !isValidTimeInput(dueTime)) {
@@ -631,18 +636,20 @@ export function TaskFormModal({
                       <span className="material-icons text-[14px] leading-none text-slate-500 dark:text-slate-400" aria-hidden>
                         date_range
                       </span>
-                      연속일
+                      기간
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">시작일 포함 기간</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">시작 · 종료</p>
                   </div>
                   <Switch
                     checked={dateRange}
-                    aria-label="연속일"
+                    aria-label="기간"
                     onCheckedChange={(checked) => {
                       setDateRange(checked);
                       if (!checked) {
                         setStartDate("");
                         setStartTime("");
+                      } else if (!startDate.trim() && dueDate.trim()) {
+                        setStartDate(dueDate);
                       }
                     }}
                   />
@@ -688,7 +695,13 @@ export function TaskFormModal({
                     type="date"
                     className="mt-1 w-full rounded-lg border border-surface-border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setDueDate(next);
+                      if (dateRange && !startDate.trim() && next.trim()) {
+                        setStartDate(next);
+                      }
+                    }}
                   />
                 </div>
                 {!allDay && (
