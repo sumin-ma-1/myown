@@ -91,10 +91,13 @@ function TelegramActions({ item }: { item: IntegrationDto }) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending}
           onClick={() => sync.mutate()}
         >
+          <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden>
+            refresh
+          </span>
           연결 새로고침
         </button>
       </div>
@@ -202,18 +205,24 @@ function KakaoActions({ item }: { item: IntegrationDto }) {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           disabled={sync.isPending}
           onClick={() => sync.mutate()}
         >
+          <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden>
+            refresh
+          </span>
           연결 새로고침
         </button>
         <button
           type="button"
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
           disabled={disconnect.isPending}
           onClick={() => disconnect.mutate()}
         >
+          <span className="material-icons text-[16px] leading-none" aria-hidden>
+            link_off
+          </span>
           연결 해제
         </button>
       </div>
