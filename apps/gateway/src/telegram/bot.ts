@@ -21,6 +21,13 @@ export interface SessionData {
       description?: string | null;
       priority?: "urgent" | "high" | "medium" | "low";
       dueAt?: Date | null;
+      startsAt?: Date | null;
+      allDay?: boolean;
+      recurrenceRule?: string | null;
+      recurrenceUntil?: Date | null;
+      recurrenceCount?: number | null;
+      recurrenceTimezone?: string | null;
+      reminderConfig?: import("../services/draft-reminder.js").DraftReminderConfig;
     };
   };
 }

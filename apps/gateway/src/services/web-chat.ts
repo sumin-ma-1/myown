@@ -12,6 +12,7 @@ import { resolveUserTimezone } from "../utils/user-timezone.js";
 import type { DraftReminderConfig } from "./draft-reminder.js";
 import { applyDraftReminderConfig, formatReminderConfigLabel } from "./draft-reminder.js";
 import { formatTaskScheduleLabel } from "../utils/schedule-label.js";
+import { formatRecurrenceLabel } from "../utils/recurrence.js";
 
 export interface ComposeDraftDto {
   mode: WebComposeState["mode"];
@@ -21,11 +22,15 @@ export interface ComposeDraftDto {
   dueAt?: string | null;
   startsAt?: string | null;
   allDay?: boolean;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: string | null;
+  recurrenceCount?: number | null;
   attachmentIds: string[];
   attachments: { id: string; fileName: string }[];
   reminderConfig?: DraftReminderConfig;
   reminderLabel?: string | null;
   scheduleLabel?: string | null;
+  recurrenceLabel?: string | null;
 }
 
 async function resolveTelegramId(app: AppContext, userId: string): Promise<number | null> {
@@ -54,6 +59,9 @@ async function toComposeDto(
     dueAt: state.draft.dueAt?.toISOString() ?? null,
     startsAt: state.draft.startsAt?.toISOString() ?? null,
     allDay: state.draft.allDay ?? false,
+    recurrenceRule: state.draft.recurrenceRule ?? null,
+    recurrenceUntil: state.draft.recurrenceUntil?.toISOString() ?? null,
+    recurrenceCount: state.draft.recurrenceCount ?? null,
     attachmentIds: state.draft.attachmentIds,
     attachments,
     reminderConfig: state.draft.reminderConfig,
@@ -63,6 +71,7 @@ async function toComposeDto(
       startsAt: state.draft.startsAt,
       allDay: state.draft.allDay,
     }),
+    recurrenceLabel: formatRecurrenceLabel(state.draft.recurrenceRule),
   };
 }
 
@@ -137,6 +146,10 @@ export class WebChatService {
             dueAt: task.dueAt,
             startsAt: task.startsAt,
             allDay: task.allDay,
+            recurrenceRule: task.recurrenceRule,
+            recurrenceUntil: task.recurrenceUntil,
+            recurrenceCount: task.recurrenceCount,
+            recurrenceTimezone: task.recurrenceTimezone,
             reminderConfig,
           },
         };

@@ -90,6 +90,10 @@ export function registerMessageHandlers(bot: Bot<BotContext>, app: AppContext) {
             dueAt: task.dueAt,
             startsAt: task.startsAt,
             allDay: task.allDay,
+            recurrenceRule: task.recurrenceRule,
+            recurrenceUntil: task.recurrenceUntil,
+            recurrenceCount: task.recurrenceCount,
+            recurrenceTimezone: task.recurrenceTimezone,
             reminderConfig,
           };
 

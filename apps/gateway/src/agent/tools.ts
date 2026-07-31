@@ -44,7 +44,8 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "create_task",
-      description: "새 업무 초안을 만듭니다. 알림 의도가 있으면 reminder_config를 넣으세요.",
+      description:
+        "새 업무 초안. 일정 필드는 첫 회차(인스턴스)만, 반복 필드는 시리즈 규칙만. 알림 의도가 있으면 reminder_config.",
       parameters: {
         type: "object",
         properties: {
@@ -52,35 +53,36 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           description: { type: "string", description: "상세 설명" },
           due_date: {
             type: "string",
-            description: "마감일 또는 기간 종료일 (YYYY-MM-DD). 필수",
+            description:
+              "인스턴스 종료·마감일 YYYY-MM-DD(필수). 시리즈가 끝나는 날이 아님",
           },
           due_time: {
             type: "string",
             description:
-              "종료·마감 시각 (HH:MM, 24시간). 종일·날짜만이면 생략. 같은 날 시작~끝이면 start_time과 함께",
+              "인스턴스 종료·마감 시각 HH:MM. 종일·날짜만이면 생략. 같은 날 시작~끝이면 start_time과 함께",
           },
           start_date: {
             type: "string",
             description:
-              "여러 날 기간의 시작일 YYYY-MM-DD. 같은 날이면 생략(due_date만 사용)",
+              "인스턴스가 여러 날일 때만 시작일 YYYY-MM-DD. 같은 날·단일이면 생략. 시리즈 시작일로 쓰지 말 것",
           },
           start_time: {
             type: "string",
             description:
-              "시작 시각 HH:MM (24시간). 같은 날·여러 날 시작~끝 블록에 사용. 마감만·종일이면 생략",
+              "인스턴스 시작 시각 HH:MM. 시작~끝 블록에만. 마감만·종일이면 생략",
           },
           all_day: {
             type: "boolean",
-            description: "종일 여부. 날짜만·종일 기간이면 true, 시작/종료 시각이 있으면 false",
+            description: "종일. 시각 없으면 true, start_time/due_time 있으면 false",
           },
           recurrence_freq: {
             type: "string",
             enum: ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"],
-            description: "반복 주기. 매주/매월 등이면 설정. 단건이면 생략",
+            description: "시리즈 주기. 단건이면 생략",
           },
           recurrence_interval: {
             type: "number",
-            description: "반복 간격 (기본 1). 예: 2주마다=2",
+            description: "시리즈 간격(기본 1). N일/주/월/년마다",
           },
           recurrence_by_day: {
             type: "array",
@@ -89,15 +91,16 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
               enum: ["SU", "MO", "TU", "WE", "TH", "FR", "SA"],
             },
             description:
-              "보통 생략. 매주이면 due_date(기간이면 start) 요일로 반복. 여러 요일만 필요할 때",
+              "여러 요일을 지정할 때만. 그 외에는 생략(인스턴스 요일 사용)",
           },
           recurrence_until: {
             type: "string",
-            description: "반복 종료일 YYYY-MM-DD. count와 둘 중 하나 또는 생략(무기한)",
+            description:
+              "시리즈 마지막 날 YYYY-MM-DD. due_date(인스턴스 종료)와 별개",
           },
           recurrence_count: {
             type: "number",
-            description: "반복 횟수. until과 둘 중 하나 또는 생략",
+            description: "시리즈 횟수. until과 택일 또는 생략(무기한)",
           },
           priority: {
             type: "string",

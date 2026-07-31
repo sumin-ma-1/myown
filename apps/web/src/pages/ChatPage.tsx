@@ -93,6 +93,7 @@ function ComposePanel({
         {!compose.scheduleLabel && compose.dueAt && (
           <span>마감 {formatDueDateTime(compose.dueAt)}</span>
         )}
+        {compose.recurrenceLabel && <span>{compose.recurrenceLabel}</span>}
         {compose.priority && <span>우선순위 {priorityLabel(compose.priority)}</span>}
         {compose.reminderLabel && <span>알림 {compose.reminderLabel}</span>}
       </div>

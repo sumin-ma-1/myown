@@ -153,6 +153,9 @@ export class AgentRuntime {
       startsAt?: Date | null;
       allDay?: boolean;
       priority: TaskPriority;
+      recurrenceRule?: string | null;
+      recurrenceUntil?: Date | null;
+      recurrenceCount?: number | null;
     },
     memo: string,
     timezone: string,
@@ -166,6 +169,9 @@ export class AgentRuntime {
           dueAt?: Date | null;
           startsAt?: Date | null;
           allDay?: boolean;
+          recurrenceRule?: string | null;
+          recurrenceUntil?: Date | null;
+          recurrenceCount?: number | null;
           reminderConfig?: import("../services/draft-reminder.js").DraftReminderConfig;
         };
       }
@@ -182,6 +188,7 @@ export class AgentRuntime {
         startsAt: context.startsAt,
         allDay: context.allDay,
       }) ?? currentDue;
+    const currentRecur = formatRecurrenceLabel(context.recurrenceRule) ?? "없음";
 
     try {
       const response = await this.llmCall({
@@ -196,22 +203,22 @@ export class AgentRuntime {
               `현재 제목: ${context.title}`,
               `현재 설명: ${context.description ?? "(없음)"}`,
               `현재 일정: ${currentSchedule}`,
+              `현재 반복: ${currentRecur}`,
               `현재 우선순위: ${context.priority}`,
               "",
               "규칙:",
-              "- 마감·시각 보충이면 due_date/due_time만, title 생략 (예: '오후 6시에', '내일까지')",
-              "- 같은 날 시작~끝이면 due_date+start_time+due_time+all_day=false (start_date 생략)",
-              "- 연속된 날짜 범위이면 start_date+due_date+all_day=true",
-              "- 여러 날에 시각이 있으면 start_date+start_time+due_date+due_time+all_day=false",
-              "- 「종일」이면 all_day=true, 시각이 있으면 all_day=false와 due_time(필요 시 start_time)",
-              "- 시작과 끝을 말하면 start_time·due_time을 둘 다 채우세요. due_time 하나에 범위를 넣지 마세요",
-              "- 업무에는 마감일(due_date)이 필요합니다. 없으면 마감일을 물어보도록 안내하세요",
-              "- 우선순위 보충이면 priority만 (예: '급해요', '최우선으로')",
-              "- 설명·메모 추가면 description만 (예: '팀장님 검토 필요')",
-              "- 제목 변경은 사용자가 분명히 바꾸려 할 때만 title (예: '분기 보고서로 할게', '제목은 회의록')",
-              "- 알림 의도(없음/하나만/언제만)가 있으면 reminder_config만 채우세요",
-              "- 메모 전체를 title로 복사하지 마세요",
-              "- 언급되지 않은 필드는 생략",
+              "- 변경할 필드만 채우고, 언급되지 않은 필드는 생략하세요.",
+              "- 마감·시각만 바꾸면 due_date/due_time(필요 시 start_*). title에 메모 전체를 넣지 마세요.",
+              "- 같은 날 시작~끝 → due_date+start_time+due_time+all_day=false (start_date 없음).",
+              "- 연속 날짜(종일) → start_date+due_date+all_day=true.",
+              "- 여러 날+시각 → start_date+start_time+due_date+due_time+all_day=false.",
+              "- 종일 ↔ 시각: 종일이면 all_day=true, 시각이 있으면 all_day=false.",
+              "- start_time과 due_time을 말할 때 due_time 하나에 범위를 넣지 마세요.",
+              "- 우선순위만 → priority. 반복만 → recurrence_freq(+ interval/until/count). by_day는 여러 요일일 때만.",
+              "- 반복 종료는 recurrence_until/count. 인스턴스 due_date로 시리즈 기간을 쓰지 마세요.",
+              "- 설명 추가 → description. 제목은 사용자가 제목을 바꾸겠다고 명확할 때만.",
+              "- 알림 의도만 있으면 reminder_config만.",
+              "- due_date가 아예 없고 일정이 필요하면 마감일이 필요하다고 보세요.",
             ].join("\n"),
           },
           { role: "user", content: memo },
@@ -259,6 +266,9 @@ export class AgentRuntime {
         dueAt?: Date | null;
         startsAt?: Date | null;
         allDay?: boolean;
+        recurrenceRule?: string | null;
+        recurrenceUntil?: Date | null;
+        recurrenceCount?: number | null;
         reminderConfig?: import("../services/draft-reminder.js").DraftReminderConfig;
       } = {
         title: args.title?.trim() || context.title,
@@ -324,6 +334,26 @@ export class AgentRuntime {
       }
       if (args.all_day !== undefined) {
         patch.allDay = args.all_day;
+      }
+
+      if (args.recurrence_freq) {
+        let recurrenceUntil: Date | null = null;
+        let recurrenceCount: number | null = null;
+        if (args.recurrence_until?.trim()) {
+          recurrenceUntil = resolveDueAt(args.recurrence_until.trim()) ?? null;
+        }
+        if (args.recurrence_count && args.recurrence_count > 0) {
+          recurrenceCount = args.recurrence_count;
+        }
+        patch.recurrenceRule = buildRRule({
+          freq: args.recurrence_freq as RRuleFreq,
+          interval: args.recurrence_interval,
+          byDay: [],
+          until: recurrenceCount ? null : recurrenceUntil,
+          count: recurrenceCount,
+        });
+        patch.recurrenceUntil = recurrenceUntil;
+        patch.recurrenceCount = recurrenceCount;
       }
 
       const reminderConfig = parseDraftReminderConfig(
@@ -521,27 +551,40 @@ export class AgentRuntime {
           ...llmDueDateContextLines(input.timezone),
           "활성 업무:",
           taskContext || "(없음)",
-          "업무 등록 시 due_date(YYYY-MM-DD)는 필수입니다. due_time(HH:MM), 여러 날 기간이면 start_date, 시작 시각이면 start_time, 종일이면 all_day=true를 사용하세요.",
-          "마감일(due_date)이 없으면 create_task를 호출하지 말고 날짜를 한 번만 물으세요.",
-          "같은 날 시작~끝이면 due_date+start_time+due_time+all_day=false (start_date 생략).",
-          "매주·매월 등 반복이면 recurrence_freq(+ 필요 시 until/count). due_date는 첫 발생일·요일이 매주 기준. recurrence_by_day는 보통 생략.",
-          "마감만이면 due_date+due_time만 (start_time 생략).",
-          "종일 연속일이면 start_date+due_date+all_day=true.",
-          "여러 날에 시각이 있으면 start_date+start_time+due_date+due_time+all_day=false.",
-          "연속 날짜만 있고 시각이 없을 때, 회의·출장처럼 시각이 필요할 수 있으면 create_task 전에 한 번만 '시작·종료 시각이 있나요? 없으면 종일로 등록할게요'라고 물으세요.",
-          "제출·여행·할 일처럼 종일로 충분하거나, 사용자가 종일·시각 불필요를 말했으면 묻지 말고 all_day=true로 create_task하세요.",
-          "하루 일정에 날짜만 있고 시각이 필요한 경우 create_task 전에 한 번만 '몇 시인가요?'라고 물으세요.",
-          "사용자가 시각을 알려주면 반드시 create_task를 due_time(같은 날·기간 블록이면 start_time도)과 함께 호출하세요. 말로만 '등록했습니다'라고 하지 마세요.",
-          "사용자가 시작시간과 종료시간을 말하면 start_time과 due_time을 둘 다 넣으세요. due_time 하나에 범위를 넣지 마세요.",
-          "사용자가 시각 없이 진행하겠다고 하면 반드시 create_task를 due_time/start_time 없이(all_day=true) 호출하세요.",
+          "업무 등록 시 due_date(YYYY-MM-DD)는 필수입니다.",
+          "",
+          "[일정 필드 — 한 회차(인스턴스)만 담습니다]",
+          "- due_date: 그 회차의 종료·마감일. due_time: 그 회차의 종료·마감 시각.",
+          "- start_date/start_time: 그 회차가 여러 날·시작~끝 블록일 때만. 같은 날이면 start_date 생략.",
+          "- all_day=true: 시각 없음. 시각이 있으면 all_day=false.",
+          "- 같은 날 시작~끝 → due_date + start_time + due_time (start_date 없음).",
+          "- 마감만 → due_date(+due_time). 종일 연속일 → start_date+due_date+all_day=true.",
+          "- 여러 날+시각 → start_date+start_time+due_date+due_time+all_day=false.",
+          "- start_time과 due_time을 말할 때 due_time 하나에 범위를 넣지 마세요.",
+          "",
+          "[반복 필드 — 위 인스턴스가 어떻게 반복되는지만]",
+          "- recurrence_freq: DAILY|WEEKLY|MONTHLY|YEARLY. 단건이면 생략.",
+          "- recurrence_until / recurrence_count: 시리즈가 언제 끝나는지. 인스턴스 due_date와 절대 혼동 금지.",
+          "- due_date·start_date 간격으로 ‘몇 주·몇 달 동안’을 표현하지 마세요. 기간 한도는 recurrence_until(또는 count)만.",
+          "- WEEKLY 요일은 due_date(기간이면 start_date) 요일을 따릅니다. recurrence_by_day는 여러 요일을 명시할 때만.",
+          "- recurrence_interval: N일/주/월/년마다 (기본 1).",
+          "",
+          "[등록 전 질문 — 한 번만]",
+          "- 마감일(due_date)이 없으면 create_task 하지 말고 날짜만 물으세요.",
+          "- 연속 날짜만 있고 시각이 애매하면(회의·출장 등) 시각 있는지 한 번만 묻고, 없으면 종일로 진행한다고 하세요.",
+          "- 종일로 충분한 유형이거나 사용자가 시각 불필요를 말했으면 묻지 말고 all_day=true.",
+          "- 하루 일정에 날짜만 있고 시각이 필요해 보이면 시각을 한 번만 물으세요.",
+          "- 사용자가 시각을 주면 반드시 create_task에 due_time(기간이면 start_time도)을 넣으세요. 말로만 등록했다고 하지 마세요.",
+          "- 시각 없이 진행하겠다고 하면 due_time/start_time 없이 all_day=true로 create_task하세요.",
+          "",
           "특정 시각 알림 추가는 create_reminder, 조회는 list_reminders, 취소는 cancel_reminder, 한 번에 다시 맞추려면 set_task_reminders를 사용하세요.",
           "create_reminder·list_reminders·cancel_reminder·set_task_reminders·complete_task의 list_index는 위 목록의 1, 2, 3… 순번입니다. 완료된 업무 번호는 사용하지 마세요.",
           "인사·잡담에는 도구를 호출하지 말고 짧게 답하세요.",
           "최근 대화는 현재 메시지와 관련이 있을 때만 참고하세요. 직전 대화에서 시각을 물었거나 추가 정보를 요청했다면, 후속 답변을 맥락과 함께 해석하고 정보가 충분하면 create_task를 호출하세요.",
           "create_task는 초안만 만듭니다. 도구를 호출하지 않은 채 '등록 완료/등록했습니다/일정이 등록되어 있어요'라고 말하지 마세요.",
-          "등록 문장에 알림 의도가 있으면 create_task의 reminder_config를 채우세요. 예: 알림 없음→use_default_reminders=false, 하나만(마감 당일)→use_default_reminders=false+extra_rules[{days_before:0}], 언제만→use_default_reminders=false+absolute_times. 없으면 reminder_config 생략(기본 D-DAY). 전역 알림 설정은 바꾸지 마세요. 애매하면 한 번만 묻세요.",
-          "이미 등록된 업무 알림을 '다 끄고 ○○만'처럼 바꾸면 set_task_reminders를 쓰세요.",
-          "일정·목록·등록 여부·오늘 뭐 있는지 물으면 반드시 list_tasks 또는 list_today_tasks를 호출하고, 도구 결과만 말하세요. 추측으로 등록됐다고 답하지 마세요.",
+          "등록 문장에 알림 의도가 있으면 create_task의 reminder_config를 채우세요. 없음→use_default_reminders=false. 기본 D-DAY 중 일부만→use_default_reminders=false+extra_rules. 특정 시각만→use_default_reminders=false+absolute_times. 의도 없으면 reminder_config 생략(기본 D-DAY). 전역 알림 설정은 바꾸지 마세요. 애매하면 한 번만 묻세요.",
+          "이미 등록된 업무 알림을 바꾸면 set_task_reminders를 쓰세요.",
+          "일정·목록·등록 여부·오늘 일정을 물으면 반드시 list_tasks 또는 list_today_tasks를 호출하고 도구 결과만 말하세요. 추측으로 등록됐다고 답하지 마세요.",
           "최근 대화·초안·미등록 내용은 실제 일정이 아닙니다. [등록 완료] 전 초안도 일정이 아닙니다.",
           "마크다운 문법(** · * · # · ` 등)을 쓰지 말고, 줄바꿈만 쓰는 평문으로 답하세요.",
         ].join("\n"),
@@ -642,7 +685,7 @@ export class AgentRuntime {
           allDay = !hasTimed;
         }
         if (hasTimed) allDay = false;
-        const dueAt = resolveDueAt(a.due_date, allDay ? undefined : a.due_time);
+        let dueAt = resolveDueAt(a.due_date, allDay ? undefined : a.due_time);
         if (!dueAt) {
           return "마감일 형식을 확인해 주세요. due_date는 YYYY-MM-DD 입니다.";
         }
@@ -688,6 +731,7 @@ export class AgentRuntime {
           if (a.recurrence_count && a.recurrence_count > 0) {
             recurrenceCount = a.recurrence_count;
           }
+
           recurrenceRule = buildRRule({
             freq: a.recurrence_freq as RRuleFreq,
             interval: a.recurrence_interval,

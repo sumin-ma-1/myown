@@ -150,7 +150,20 @@ function sortTasksForCalendar(tasks: TaskDto[]): TaskDto[] {
     const statusRank = (task: TaskDto) => (task.status === "completed" ? 1 : 0);
     const byStatus = statusRank(a) - statusRank(b);
     if (byStatus !== 0) return byStatus;
-    return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+
+    const byPriority = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+    if (byPriority !== 0) return byPriority;
+
+    const timeMs = (task: TaskDto) => {
+      const iso = task.startsAt ?? task.dueAt;
+      if (!iso) return Number.POSITIVE_INFINITY;
+      const t = new Date(iso).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    };
+    const byTime = timeMs(a) - timeMs(b);
+    if (byTime !== 0) return byTime;
+
+    return a.title.localeCompare(b.title, "ko");
   });
 }
 

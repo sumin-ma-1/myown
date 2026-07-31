@@ -13,6 +13,10 @@ export interface ComposeDraft {
   dueAt?: Date | null;
   startsAt?: Date | null;
   allDay?: boolean;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: Date | null;
+  recurrenceCount?: number | null;
+  recurrenceTimezone?: string | null;
   reminderConfig?: DraftReminderConfig;
 }
 
@@ -23,7 +27,8 @@ export interface ComposeState {
   mode: ComposeMode;
   anchorMessageId: number;
   /** [등록 완료] 전까지 DB에 업무 없음 */
-  draft: ComposeDraft;}
+  draft: ComposeDraft;
+}
 
 export function getCompose(session: SessionData): ComposeState | undefined {
   return session.compose;
@@ -66,7 +71,8 @@ export function composeContinueKeyboard(composeKey: string) {
 export const COMPOSE_HINT =
   "메모를 입력하거나 파일을 첨부한 뒤 [등록 완료].";
 
-export function parseComposeText(text: string): { title: string; description?: string } {  const lines = text.trim().split("\n");
+export function parseComposeText(text: string): { title: string; description?: string } {
+  const lines = text.trim().split("\n");
   const title = lines[0]?.trim() ?? text.trim();
   const rest = lines.slice(1).join("\n").trim();
   return { title, description: rest || undefined };
@@ -80,5 +86,8 @@ export function draftMemoContext(draft: ComposeDraft) {
     startsAt: draft.startsAt ?? null,
     allDay: draft.allDay ?? false,
     priority: draft.priority ?? ("medium" as TaskPriority),
+    recurrenceRule: draft.recurrenceRule ?? null,
+    recurrenceUntil: draft.recurrenceUntil ?? null,
+    recurrenceCount: draft.recurrenceCount ?? null,
   };
 }

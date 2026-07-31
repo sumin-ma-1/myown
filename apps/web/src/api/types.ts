@@ -106,6 +106,7 @@ export interface ComposeDraftDto {
   };
   reminderLabel?: string | null;
   scheduleLabel?: string | null;
+  recurrenceLabel?: string | null;
 }
 
 export interface ChatReplyDto {

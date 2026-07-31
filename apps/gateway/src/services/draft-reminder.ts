@@ -158,7 +158,14 @@ export async function applyDraftReminderConfig(input: {
 
   if (!config) {
     if (sync) {
-      await reminderService.syncRemindersForTask(task, telegramUserId, user);
+      if (task.recurrenceRule) {
+        await reminderService.cancelForTask(task.id);
+        await reminderService.scheduleRecurringWindow(task, telegramUserId, user);
+      } else {
+        await reminderService.syncRemindersForTask(task, telegramUserId, user);
+      }
+    } else if (task.recurrenceRule) {
+      await reminderService.scheduleRecurringWindow(task, telegramUserId, user);
     } else {
       await reminderService.scheduleForTask(task, telegramUserId, user);
     }
@@ -181,10 +188,17 @@ export async function applyDraftReminderConfig(input: {
     await reminderService.cancelForTask(task.id);
   }
 
-  await reminderService.scheduleForTask(task, telegramUserId, user, {
-    useDefaults: config.useDefaultReminders,
-    extraRules,
-  });
+  if (task.recurrenceRule) {
+    await reminderService.scheduleRecurringWindow(task, telegramUserId, user, {
+      useDefaults: config.useDefaultReminders,
+      extraRules,
+    });
+  } else {
+    await reminderService.scheduleForTask(task, telegramUserId, user, {
+      useDefaults: config.useDefaultReminders,
+      extraRules,
+    });
+  }
 
   for (const at of config.absoluteTimes ?? []) {
     const fireAt = parseRemindDateTime(at.date, at.time);

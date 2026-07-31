@@ -342,3 +342,58 @@ export function parseOccurrenceInstanceId(
   if (!taskId || Number.isNaN(d.getTime())) return null;
   return { taskId, occurrenceStartsAt: d };
 }
+
+/**
+ * LLM이 반복 종료일(recurrence_until)을 due_date에 넣는 실수를 보정.
+ * due/start가 여러 날이고, due가 until과 같거나(또는 동일 시각으로 길게 늘어난 경우)
+ * → 인스턴스는 첫 발생일만, until은 시리즈 종료로 분리.
+ */
+export function normalizeRecurringInstanceBounds(input: {
+  startsAt?: Date | null;
+  dueAt: Date;
+  recurrenceUntil?: Date | null;
+  allDay?: boolean;
+}): {
+  startsAt: Date | null | undefined;
+  dueAt: Date;
+  recurrenceUntil: Date | null;
+} {
+  const startsAt = input.startsAt ?? null;
+  let dueAt = input.dueAt;
+  let recurrenceUntil = input.recurrenceUntil ?? null;
+  if (!startsAt) {
+    return { startsAt: undefined, dueAt, recurrenceUntil };
+  }
+
+  const spanDays = daysBetweenLocal(startsAt, dueAt);
+  if (spanDays < 1) {
+    return { startsAt, dueAt, recurrenceUntil };
+  }
+
+  const sp = getLocalParts(startsAt);
+  const dp = getLocalParts(dueAt);
+  const sameClock = sp.hour === dp.hour && sp.minute === dp.minute;
+  const untilMatchesDue =
+    recurrenceUntil !== null && localDayKey(recurrenceUntil) === localDayKey(dueAt);
+
+  // 예: start=8/6 19:30, due=9/10 19:30, until=9/10 → due를 시리즈 종료로 착각
+  const looksLikeUntilAsDue = untilMatchesDue || (sameClock && spanDays >= 2);
+  if (!looksLikeUntilAsDue) {
+    return { startsAt, dueAt, recurrenceUntil };
+  }
+
+  if (!recurrenceUntil) recurrenceUntil = dueAt;
+
+  // 첫 발생: 시작일 + (종료 시각). 동일 시각·종일이면 단건(마감만)
+  if (input.allDay || sameClock) {
+    dueAt = input.allDay
+      ? new Date(
+          `${localDayKey(startsAt)}T23:59:59+09:00`,
+        )
+      : atLocal(sp.year, sp.month, sp.day, sp.hour, sp.minute, sp.second);
+    return { startsAt: null, dueAt, recurrenceUntil };
+  }
+
+  dueAt = atLocal(sp.year, sp.month, sp.day, dp.hour, dp.minute, dp.second);
+  return { startsAt, dueAt, recurrenceUntil };
+}

@@ -11,6 +11,7 @@ import {
 } from "../compose-session.js";
 import { formatReminderConfigLabel } from "../../services/draft-reminder.js";
 import { formatTaskScheduleLabel } from "../../utils/schedule-label.js";
+import { formatRecurrenceLabel } from "../../utils/recurrence.js";
 import { resolveUserTimezone } from "../../utils/user-timezone.js";
 import {
   applyComposeMemoPatch,
@@ -39,6 +40,8 @@ export function formatDraftSummary(draft: ComposeDraft): string {
     const hasRange = schedule.includes(" ~ ");
     lines.push(`${hasRange ? "기간" : draft.allDay ? "일정" : "마감"}: ${schedule}`);
   }
+  const recur = formatRecurrenceLabel(draft.recurrenceRule);
+  if (recur) lines.push(`반복: ${recur}`);
   lines.push(`우선순위: ${priorityLabelKo[draft.priority ?? "medium"]}`);
   const remind = formatReminderConfigLabel(draft.reminderConfig);
   if (remind) lines.push(`알림: ${remind}`);
@@ -56,6 +59,9 @@ async function applyMemoPatch(
     startsAt?: Date | null;
     allDay?: boolean;
     priority: TaskPriority;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: Date | null;
+    recurrenceCount?: number | null;
   },
   text: string,
 ): Promise<
@@ -68,6 +74,9 @@ async function applyMemoPatch(
         dueAt?: Date | null;
         startsAt?: Date | null;
         allDay?: boolean;
+        recurrenceRule?: string | null;
+        recurrenceUntil?: Date | null;
+        recurrenceCount?: number | null;
         reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
       };
     }

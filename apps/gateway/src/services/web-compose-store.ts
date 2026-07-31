@@ -18,6 +18,10 @@ interface StoredDraft {
   dueAt?: string | null;
   startsAt?: string | null;
   allDay?: boolean;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: string | null;
+  recurrenceCount?: number | null;
+  recurrenceTimezone?: string | null;
   reminderConfig?: DraftReminderConfig;
 }
 
@@ -34,6 +38,10 @@ function serialize(state: WebComposeState): string {
       dueAt: state.draft.dueAt?.toISOString() ?? null,
       startsAt: state.draft.startsAt?.toISOString() ?? null,
       allDay: state.draft.allDay ?? false,
+      recurrenceRule: state.draft.recurrenceRule ?? null,
+      recurrenceUntil: state.draft.recurrenceUntil?.toISOString() ?? null,
+      recurrenceCount: state.draft.recurrenceCount ?? null,
+      recurrenceTimezone: state.draft.recurrenceTimezone ?? null,
     },
   };
   return JSON.stringify(payload);
@@ -48,6 +56,12 @@ function deserialize(raw: string): WebComposeState {
       dueAt: parsed.draft.dueAt ? new Date(parsed.draft.dueAt) : null,
       startsAt: parsed.draft.startsAt ? new Date(parsed.draft.startsAt) : null,
       allDay: parsed.draft.allDay ?? false,
+      recurrenceRule: parsed.draft.recurrenceRule ?? null,
+      recurrenceUntil: parsed.draft.recurrenceUntil
+        ? new Date(parsed.draft.recurrenceUntil)
+        : null,
+      recurrenceCount: parsed.draft.recurrenceCount ?? null,
+      recurrenceTimezone: parsed.draft.recurrenceTimezone ?? null,
       reminderConfig: parsed.draft.reminderConfig,
     },
   };

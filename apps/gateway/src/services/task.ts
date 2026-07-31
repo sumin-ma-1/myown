@@ -5,6 +5,11 @@ import {
   formatActiveTasksHint,
   resolveByDisplayOrder,
 } from "../utils/task-display-order.js";
+import {
+  buildRRule,
+  normalizeRecurringInstanceBounds,
+  parseRRule,
+} from "../utils/recurrence.js";
 import type { ReminderService } from "./reminder.js";
 
 export interface CreateTaskInput {
@@ -35,16 +40,50 @@ export class TaskService {
   ) {}
 
   async create(input: CreateTaskInput): Promise<Task> {
+    let dueAt = input.dueAt;
+    let startsAt = input.startsAt;
+    let recurrenceUntil = input.recurrenceUntil;
+    let recurrenceRule = input.recurrenceRule;
+
+    if (recurrenceRule && dueAt) {
+      const normalized = normalizeRecurringInstanceBounds({
+        startsAt,
+        dueAt,
+        recurrenceUntil,
+        allDay: input.allDay,
+      });
+      startsAt = normalized.startsAt ?? undefined;
+      dueAt = normalized.dueAt;
+      recurrenceUntil = normalized.recurrenceUntil;
+
+      const parsed = parseRRule(recurrenceRule);
+      if (
+        parsed &&
+        recurrenceUntil &&
+        !parsed.until &&
+        !parsed.count &&
+        !input.recurrenceCount
+      ) {
+        recurrenceRule = buildRRule({
+          freq: parsed.freq,
+          interval: parsed.interval,
+          byDay: parsed.byDay,
+          until: recurrenceUntil,
+          count: null,
+        });
+      }
+    }
+
     const task = await this.tasks.create({
       userId: input.userId,
       title: input.title,
       description: input.description,
       priority: input.priority,
-      dueAt: input.dueAt,
-      startsAt: input.startsAt,
+      dueAt,
+      startsAt,
       allDay: input.allDay,
-      recurrenceRule: input.recurrenceRule,
-      recurrenceUntil: input.recurrenceUntil,
+      recurrenceRule,
+      recurrenceUntil,
       recurrenceCount: input.recurrenceCount,
       recurrenceTimezone: input.recurrenceTimezone,
       attachmentId: input.attachmentId,

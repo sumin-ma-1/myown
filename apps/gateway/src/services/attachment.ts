@@ -88,6 +88,10 @@ export class AttachmentService {
       dueAt: input.draft.dueAt,
       startsAt: input.draft.startsAt ?? undefined,
       allDay: input.draft.allDay,
+      recurrenceRule: input.draft.recurrenceRule,
+      recurrenceUntil: input.draft.recurrenceUntil,
+      recurrenceCount: input.draft.recurrenceCount,
+      recurrenceTimezone: input.draft.recurrenceTimezone,
       attachmentId: input.draft.attachmentIds[0],
       skipReminders: true,
     });

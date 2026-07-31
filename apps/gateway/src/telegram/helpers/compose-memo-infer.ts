@@ -7,6 +7,7 @@ import {
   parseKoreanDueSupplement,
   todayDateString,
 } from "../../utils/datetime-parse.js";
+import { buildRRule } from "../../utils/recurrence.js";
 
 export interface ComposeMemoInferContext {
   title: string;
@@ -15,6 +16,9 @@ export interface ComposeMemoInferContext {
   startsAt?: Date | null;
   allDay?: boolean;
   priority: TaskPriority;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: Date | null;
+  recurrenceCount?: number | null;
 }
 
 export interface ComposeMemoPatch {
@@ -24,6 +28,9 @@ export interface ComposeMemoPatch {
   dueAt?: Date | null;
   startsAt?: Date | null;
   allDay?: boolean;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: Date | null;
+  recurrenceCount?: number | null;
   reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
 }
 
@@ -45,6 +52,40 @@ export function looksLikePrioritySupplementOnly(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 24) return false;
   return parsePrioritySupplement(trimmed) !== undefined;
+}
+
+const RECURRENCE_ONLY: { re: RegExp; freq: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; interval?: number }[] = [
+  { re: /^(?:매일|날마다)$/i, freq: "DAILY" },
+  { re: /^(?:매주|주마다)$/i, freq: "WEEKLY" },
+  { re: /^(?:매월|달마다|매달)$/i, freq: "MONTHLY" },
+  { re: /^(?:매년|해마다)$/i, freq: "YEARLY" },
+  { re: /^(?:격주|2주\s*마다)$/i, freq: "WEEKLY", interval: 2 },
+];
+
+export function parseRecurrenceSupplement(
+  text: string,
+): { freq: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"; interval: number } | undefined {
+  const trimmed = text.trim();
+  for (const { re, freq, interval } of RECURRENCE_ONLY) {
+    if (re.test(trimmed)) return { freq, interval: interval ?? 1 };
+  }
+  const everyN = trimmed.match(/^(\d+)\s*(일|주|개월|달|년)\s*마다$/);
+  if (everyN) {
+    const n = Number(everyN[1]);
+    if (!n || n < 1) return undefined;
+    const unit = everyN[2]!;
+    if (unit === "일") return { freq: "DAILY", interval: n };
+    if (unit === "주") return { freq: "WEEKLY", interval: n };
+    if (unit === "년") return { freq: "YEARLY", interval: n };
+    return { freq: "MONTHLY", interval: n };
+  }
+  return undefined;
+}
+
+export function looksLikeRecurrenceSupplementOnly(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 24) return false;
+  return parseRecurrenceSupplement(trimmed) !== undefined;
 }
 
 function looksLikeFileNameTitle(title: string): boolean {
@@ -88,6 +129,20 @@ export function inferOfflineComposeMemoPatch(
   const priority = parsePrioritySupplement(trimmed);
   if (priority && looksLikePrioritySupplementOnly(trimmed)) {
     return { title: context.title, priority };
+  }
+
+  const recur = parseRecurrenceSupplement(trimmed);
+  if (recur && looksLikeRecurrenceSupplementOnly(trimmed)) {
+    return {
+      title: context.title,
+      recurrenceRule: buildRRule({
+        freq: recur.freq,
+        interval: recur.interval,
+        byDay: [],
+      }),
+      recurrenceUntil: null,
+      recurrenceCount: null,
+    };
   }
 
   const labeledTitle = trimmed.match(/^(?:제목|업무명)\s*[:：]\s*(.+)$/);
@@ -169,6 +224,19 @@ export function sanitizeComposeMemoPatch(
     };
   }
 
+  if (looksLikeRecurrenceSupplementOnly(m)) {
+    const recur = parseRecurrenceSupplement(m);
+    return {
+      ...patch,
+      title: context.title,
+      recurrenceRule: recur
+        ? buildRRule({ freq: recur.freq, interval: recur.interval, byDay: [] })
+        : patch.recurrenceRule,
+      recurrenceUntil: patch.recurrenceUntil ?? null,
+      recurrenceCount: patch.recurrenceCount ?? null,
+    };
+  }
+
   if (
     llmTitle === m &&
     (patch.dueAt !== undefined || patch.priority !== undefined || patch.description !== undefined)
@@ -195,6 +263,9 @@ export function applyComposeMemoPatch(
     dueAt?: Date | null;
     startsAt?: Date | null;
     allDay?: boolean;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: Date | null;
+    recurrenceCount?: number | null;
     reminderConfig?: import("../../services/draft-reminder.js").DraftReminderConfig;
   },
   patch: ComposeMemoPatch,
@@ -207,6 +278,12 @@ export function applyComposeMemoPatch(
     dueAt: patch.dueAt !== undefined ? patch.dueAt : base.dueAt,
     startsAt: patch.startsAt !== undefined ? patch.startsAt : base.startsAt,
     allDay: patch.allDay !== undefined ? patch.allDay : base.allDay,
+    recurrenceRule:
+      patch.recurrenceRule !== undefined ? patch.recurrenceRule : base.recurrenceRule,
+    recurrenceUntil:
+      patch.recurrenceUntil !== undefined ? patch.recurrenceUntil : base.recurrenceUntil,
+    recurrenceCount:
+      patch.recurrenceCount !== undefined ? patch.recurrenceCount : base.recurrenceCount,
     reminderConfig:
       patch.reminderConfig !== undefined ? patch.reminderConfig : base.reminderConfig,
   };

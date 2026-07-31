@@ -13,12 +13,12 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
         description: { type: "string", description: "상세 설명·메모" },
         due_date: {
           type: "string",
-          description: "마감일 YYYY-MM-DD. 메모에 없으면 생략",
+          description: "인스턴스 종료·마감일 YYYY-MM-DD. 메모에 없으면 생략",
         },
         due_time: {
           type: "string",
           description:
-            "종료·마감 시각 HH:MM (24시간). 날짜만 있으면 생략. 같은 날 시작~끝이면 start_time과 함께",
+            "인스턴스 종료·마감 시각 HH:MM. 날짜만이면 생략. 같은 날 시작~끝이면 start_time과 함께",
         },
         priority: {
           type: "string",
@@ -28,16 +28,32 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
         start_date: {
           type: "string",
           description:
-            "여러 날 기간의 시작일 YYYY-MM-DD. 같은 날이면 생략(due_date만)",
+            "인스턴스가 여러 날일 때만 시작일. 같은 날이면 생략. 시리즈 기간으로 쓰지 말 것",
         },
         start_time: {
           type: "string",
-          description:
-            "시작 시각 HH:MM (24시간). 같은 날·여러 날 시작~끝 블록에 사용",
+          description: "인스턴스 시작 시각 HH:MM. 시작~끝 블록에만",
         },
         all_day: {
           type: "boolean",
-          description: "종일 여부",
+          description: "종일. 시각 없으면 true",
+        },
+        recurrence_freq: {
+          type: "string",
+          enum: ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"],
+          description: "시리즈 주기. 반복 의도가 있을 때만",
+        },
+        recurrence_interval: {
+          type: "number",
+          description: "시리즈 간격(기본 1)",
+        },
+        recurrence_until: {
+          type: "string",
+          description: "시리즈 종료일 YYYY-MM-DD. 인스턴스 due_date와 별개",
+        },
+        recurrence_count: {
+          type: "number",
+          description: "시리즈 횟수. until과 택일",
         },
         reminder_config: {
           type: "object",
@@ -83,5 +99,9 @@ export interface ComposeMemoArgs {
   start_time?: string;
   all_day?: boolean;
   priority?: TaskPriority;
+  recurrence_freq?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+  recurrence_interval?: number;
+  recurrence_until?: string;
+  recurrence_count?: number;
   reminder_config?: Record<string, unknown>;
 }
