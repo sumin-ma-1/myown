@@ -238,6 +238,14 @@ export function formatTaskScheduleLabel(input: {
     return `${formatDate(input.dueAt)} (종일)`;
   }
 
+  if (startsAt && localDayKeyFromIso(startsAt) === localDayKeyFromIso(input.dueAt)) {
+    const startT = formatDueTime(startsAt, false);
+    const endT = formatDueTime(input.dueAt, false);
+    if (startT && endT && startT !== endT) {
+      return `${formatDate(input.dueAt)} ${startT} ~ ${endT}`;
+    }
+  }
+
   return formatDateTime(input.dueAt);
 }
 

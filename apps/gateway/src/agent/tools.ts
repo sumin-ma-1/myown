@@ -1,6 +1,6 @@
 import type { TaskPriority } from "@myown/database";
 import type OpenAI from "openai";
-import { parseDateAndTime } from "../utils/datetime-parse.js";
+import { parseClockTimeRange, findClockTimeRangeInText, parseDateAndTime } from "../utils/datetime-parse.js";
 import type { DraftReminderConfig } from "../services/draft-reminder.js";
 
 const reminderConfigProperties = {
@@ -56,15 +56,18 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
           due_time: {
             type: "string",
-            description: "종료·마감 시각 (HH:MM, 24시간). 종일·날짜만이면 생략",
+            description:
+              "종료·마감 시각 (HH:MM, 24시간). 종일·날짜만이면 생략. 같은 날 시작~끝이면 start_time과 함께",
           },
           start_date: {
             type: "string",
-            description: "기간 시작일 YYYY-MM-DD. 하루면 생략",
+            description:
+              "여러 날 기간의 시작일 YYYY-MM-DD. 같은 날이면 생략(due_date만 사용)",
           },
           start_time: {
             type: "string",
-            description: "시작 시각 HH:MM (24시간). 기간에 시각이 있을 때. 종일이면 생략",
+            description:
+              "시작 시각 HH:MM (24시간). 같은 날·여러 날 시작~끝 블록에 사용. 마감만·종일이면 생략",
           },
           all_day: {
             type: "boolean",
@@ -235,4 +238,23 @@ export interface CompleteTaskArgs {
 
 export function resolveDueAt(due_date?: string, due_time?: string) {
   return parseDateAndTime(due_date, due_time);
+}
+
+/** due_time·제목 등에 10:30~16:00 형태가 있으면 start_time/due_time으로 분리 */
+export function normalizeTaskScheduleArgs<
+  T extends {
+    title?: string;
+    description?: string;
+    due_time?: string;
+    start_time?: string;
+  },
+>(args: T): T {
+  if (args.start_time?.trim()) return args;
+  const range =
+    parseClockTimeRange(args.due_time) ??
+    findClockTimeRangeInText(
+      [args.due_time, args.title, args.description].filter(Boolean).join(" "),
+    );
+  if (!range) return args;
+  return { ...args, start_time: range.start, due_time: range.end };
 }

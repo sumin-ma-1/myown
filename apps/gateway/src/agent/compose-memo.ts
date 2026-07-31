@@ -17,7 +17,8 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
         },
         due_time: {
           type: "string",
-          description: "종료·마감 시각 HH:MM (24시간). 날짜만 있으면 생략",
+          description:
+            "종료·마감 시각 HH:MM (24시간). 날짜만 있으면 생략. 같은 날 시작~끝이면 start_time과 함께",
         },
         priority: {
           type: "string",
@@ -26,11 +27,13 @@ export const composeMemoTool: OpenAI.Chat.Completions.ChatCompletionTool = {
         },
         start_date: {
           type: "string",
-          description: "기간 시작일 YYYY-MM-DD. 없으면 생략",
+          description:
+            "여러 날 기간의 시작일 YYYY-MM-DD. 같은 날이면 생략(due_date만)",
         },
         start_time: {
           type: "string",
-          description: "시작 시각 HH:MM (24시간). 기간에 시각이 있을 때",
+          description:
+            "시작 시각 HH:MM (24시간). 같은 날·여러 날 시작~끝 블록에 사용",
         },
         all_day: {
           type: "boolean",

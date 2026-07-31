@@ -1,6 +1,12 @@
 import type { TaskPriority } from "@myown/database";
 import { parseComposeText } from "../compose-session.js";
-import { looksLikeDueSupplementOnly, parseKoreanDueSupplement } from "../../utils/datetime-parse.js";
+import {
+  looksLikeDueSupplementOnly,
+  findClockTimeRangeInText,
+  parseDateAndTime,
+  parseKoreanDueSupplement,
+  todayDateString,
+} from "../../utils/datetime-parse.js";
 
 export interface ComposeMemoInferContext {
   title: string;
@@ -61,6 +67,19 @@ export function inferOfflineComposeMemoPatch(
   const trimmed = text.trim();
   if (!trimmed) return { title: context.title };
 
+  const timeRange = findClockTimeRangeInText(trimmed);
+  if (timeRange) {
+    const dateStr = context.dueAt
+      ? todayDateString(context.dueAt)
+      : todayDateString();
+    return {
+      title: context.title,
+      startsAt: parseDateAndTime(dateStr, timeRange.start) ?? null,
+      dueAt: parseDateAndTime(dateStr, timeRange.end) ?? null,
+      allDay: false,
+    };
+  }
+
   const dueAt = parseKoreanDueSupplement(trimmed, context.dueAt);
   if (dueAt && looksLikeDueSupplementOnly(trimmed)) {
     return { title: context.title, dueAt };
@@ -116,6 +135,22 @@ export function sanitizeComposeMemoPatch(
 ): ComposeMemoPatch {
   const m = memo.trim();
   const llmTitle = patch.title.trim();
+  const timeRange = findClockTimeRangeInText(m);
+  if (timeRange) {
+    const dateStr = context.dueAt
+      ? todayDateString(context.dueAt)
+      : patch.dueAt
+        ? todayDateString(patch.dueAt)
+        : todayDateString();
+    return {
+      ...patch,
+      title: context.title,
+      startsAt: parseDateAndTime(dateStr, timeRange.start) ?? null,
+      dueAt: parseDateAndTime(dateStr, timeRange.end) ?? null,
+      allDay: false,
+    };
+  }
+
   const supplementalDue = parseKoreanDueSupplement(m, context.dueAt);
 
   if (looksLikeDueSupplementOnly(m)) {

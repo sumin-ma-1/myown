@@ -42,7 +42,7 @@ export function ConfirmToast({
           </span>
           <p
             id="confirm-toast-message"
-            className="text-sm font-medium text-slate-800 dark:text-slate-100"
+            className="whitespace-pre-line text-sm font-medium text-slate-800 dark:text-slate-100"
           >
             {message}
           </p>

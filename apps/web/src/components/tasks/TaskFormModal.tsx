@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { ExtraReminderRule, ReminderDto, TaskDto } from "@/api/types";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmToast } from "@/components/ui/ConfirmToast";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
@@ -150,6 +151,8 @@ export function TaskFormModal({
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialReminderConfigRef = useRef<{
     useDefaultReminders: boolean;
@@ -187,6 +190,13 @@ export function TaskFormModal({
     queryFn: () => api.listReminders(taskId!),
     enabled: open && mode === "edit" && !!taskId,
   });
+
+  useEffect(() => {
+    if (!open) {
+      setDeleteConfirmOpen(false);
+      setCompleteConfirmOpen(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -541,6 +551,7 @@ export function TaskFormModal({
   };
 
   return (
+    <>
     <Modal
       open={open}
       title={mode === "create" ? "새 업무 등록" : "업무 수정"}
@@ -994,10 +1005,7 @@ export function TaskFormModal({
                     disabled={footerBusy}
                     onClick={() => {
                       if (!taskId) return;
-                      const name = title.trim() || "이 업무";
-                      if (window.confirm(`「${name}」을(를) 완료 처리할까요?`)) {
-                        completeTaskMutation.mutate();
-                      }
+                      setCompleteConfirmOpen(true);
                     }}
                   >
                     <span className="material-icons text-[18px] leading-none" aria-hidden>
@@ -1012,10 +1020,7 @@ export function TaskFormModal({
                   disabled={footerBusy}
                   onClick={() => {
                     if (!taskId) return;
-                    const name = title.trim() || "이 업무";
-                    if (window.confirm(`「${name}」을(를) 삭제할까요?\n예약된 알림도 함께 취소됩니다.`)) {
-                      deleteTaskMutation.mutate();
-                    }
+                    setDeleteConfirmOpen(true);
                   }}
                 >
                   <span className="material-icons text-[18px] leading-none" aria-hidden>
@@ -1047,5 +1052,30 @@ export function TaskFormModal({
         </form>
       )}
     </Modal>
+    <ConfirmToast
+      open={deleteConfirmOpen}
+      icon="delete"
+      message={`「${title.trim() || "이 업무"}」을(를) 삭제할까요?\n예약된 알림도 함께 취소됩니다.`}
+      confirmLabel="삭제"
+      cancelLabel="취소"
+      onCancel={() => setDeleteConfirmOpen(false)}
+      onConfirm={() => {
+        setDeleteConfirmOpen(false);
+        deleteTaskMutation.mutate();
+      }}
+    />
+    <ConfirmToast
+      open={completeConfirmOpen}
+      icon="check_circle"
+      message={`「${title.trim() || "이 업무"}」을(를) 완료 처리할까요?`}
+      confirmLabel="완료"
+      cancelLabel="취소"
+      onCancel={() => setCompleteConfirmOpen(false)}
+      onConfirm={() => {
+        setCompleteConfirmOpen(false);
+        completeTaskMutation.mutate();
+      }}
+    />
+    </>
   );
 }

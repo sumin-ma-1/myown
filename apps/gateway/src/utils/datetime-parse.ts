@@ -75,6 +75,73 @@ export function parseDateAndTime(date?: string, time?: string): Date | undefined
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function padClock(hour: string, minute: string): string | undefined {
+  const h = Number(hour);
+  const m = Number(minute);
+  if (h > 23 || m > 59) return undefined;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * 같은 날 시작~끝 시각.
+ * 예: 10:30~16:00, 10:30-16:00, 10:30부터 16:00까지
+ */
+export function parseClockTimeRange(
+  text?: string,
+): { start: string; end: string } | undefined {
+  if (!text?.trim()) return undefined;
+  const t = text.trim();
+
+  const sep = t.match(
+    /^(\d{1,2}):(\d{2})\s*[~\-–—〜～]\s*(\d{1,2}):(\d{2})\.?$/,
+  );
+  if (sep) {
+    const start = padClock(sep[1]!, sep[2]!);
+    const end = padClock(sep[3]!, sep[4]!);
+    if (start && end && start !== end) return { start, end };
+  }
+
+  const fromTo = t.match(
+    /^(\d{1,2}):(\d{2})\s*부터\s*(\d{1,2}):(\d{2})\s*까지\.?$/,
+  );
+  if (fromTo) {
+    const start = padClock(fromTo[1]!, fromTo[2]!);
+    const end = padClock(fromTo[3]!, fromTo[4]!);
+    if (start && end && start !== end) return { start, end };
+  }
+
+  return undefined;
+}
+
+/** 문장 안 어디에든 있는 시작~끝 시각 */
+export function findClockTimeRangeInText(
+  text?: string,
+): { start: string; end: string } | undefined {
+  if (!text?.trim()) return undefined;
+  const exact = parseClockTimeRange(text.trim());
+  if (exact) return exact;
+
+  const sep = text.match(
+    /(\d{1,2}):(\d{2})\s*[~\-–—〜～]\s*(\d{1,2}):(\d{2})/,
+  );
+  if (sep) {
+    const start = padClock(sep[1]!, sep[2]!);
+    const end = padClock(sep[3]!, sep[4]!);
+    if (start && end && start !== end) return { start, end };
+  }
+
+  const fromTo = text.match(
+    /(\d{1,2}):(\d{2})\s*부터\s*(\d{1,2}):(\d{2})\s*까지/,
+  );
+  if (fromTo) {
+    const start = padClock(fromTo[1]!, fromTo[2]!);
+    const end = padClock(fromTo[3]!, fromTo[4]!);
+    if (start && end && start !== end) return { start, end };
+  }
+
+  return undefined;
+}
+
 export function parseRemindDateTime(
   date: string | undefined,
   time: string,
@@ -180,6 +247,7 @@ export function parseKoreanDueSupplement(
 export function looksLikeDueSupplementOnly(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
+  if (parseClockTimeRange(trimmed)) return true;
   if (parseKoreanDueSupplement(trimmed) !== undefined) return true;
   return /^(\d{4}-\d{2}-\d{2})(\s+\d{1,2}:\d{2})?$/.test(trimmed);
 }

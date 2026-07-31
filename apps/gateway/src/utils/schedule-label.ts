@@ -1,5 +1,5 @@
 import { formatDueDate, formatDueDateTime } from "./date.js";
-import { isDateOnlyDue } from "./datetime-parse.js";
+import { getTimePartsInTimezone, isDateOnlyDue } from "./datetime-parse.js";
 
 export interface ScheduleLabelInput {
   dueAt?: Date | string | null;
@@ -46,5 +46,18 @@ export function formatTaskScheduleLabel(input: ScheduleLabelInput): string | nul
     return `${formatDueDate(dueAt)} (종일)`;
   }
 
+  if (startsAt && localDayKey(startsAt) === localDayKey(dueAt)) {
+    const startT = clockHm(startsAt);
+    const endT = clockHm(dueAt);
+    if (startT && endT && startT !== endT) {
+      return `${formatDueDate(dueAt)} ${startT} ~ ${endT}`;
+    }
+  }
+
   return formatDueDateTime(dueAt);
+}
+
+function clockHm(date: Date): string {
+  const { hour, minute } = getTimePartsInTimezone(date);
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
