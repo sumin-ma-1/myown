@@ -269,6 +269,7 @@ export function CalendarPanel({
   return (
     <Card
       id="schedule-calendar"
+      variant="glass"
       onClick={scrollCalendarIntoView}
       title={
         <CardTitle icon="calendar_month" iconClassName="text-brand dark:text-blue-400">

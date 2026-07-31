@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const ROTATE_MS = 6000;
+const HOLD_MS = 6000;
 const FADE_OUT_MS = 450;
 const FADE_IN_MS = 1400;
 
@@ -9,6 +9,10 @@ interface RotatingSubtitleProps {
   className?: string;
 }
 
+/**
+ * 한 줄만 표시. 완전히 사라진 뒤 문구를 바꾸고 다시 페이드인.
+ * (transitionend 미사용 — Safari/Mac에서 이벤트·잔상으로 겹쳐 보이던 문제 방지)
+ */
 export function RotatingSubtitle({
   messages,
   className = "text-sm text-slate-500 dark:text-slate-400",
@@ -17,22 +21,43 @@ export function RotatingSubtitle({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => setVisible(false), ROTATE_MS);
-    return () => clearInterval(interval);
-  }, []);
+    if (messages.length <= 1) return;
 
-  const handleTransitionEnd = (event: React.TransitionEvent<HTMLParagraphElement>) => {
-    if (event.propertyName !== "opacity" || visible) return;
+    let cancelled = false;
+    let holdId = 0;
+    let outId = 0;
 
-    setIndex((i) => (i + 1) % messages.length);
-    setVisible(true);
-  };
+    const schedule = () => {
+      holdId = window.setTimeout(() => {
+        if (cancelled) return;
+        setVisible(false);
+        outId = window.setTimeout(() => {
+          if (cancelled) return;
+          setIndex((i) => (i + 1) % messages.length);
+          // 다음 페인트에서 페이드인 (duration 전환과 opacity 동시 변경 충돌 방지)
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            setVisible(true);
+            schedule();
+          });
+        }, FADE_OUT_MS);
+      }, HOLD_MS);
+    };
+
+    schedule();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(holdId);
+      window.clearTimeout(outId);
+    };
+  }, [messages]);
 
   return (
     <p
-      className={`${className} transition-opacity ease-in-out ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`${className} min-h-[1.5rem] transition-opacity ease-out [transform:translateZ(0)] ${
+        visible ? "opacity-100" : "opacity-0"
+      }`}
       style={{ transitionDuration: `${visible ? FADE_IN_MS : FADE_OUT_MS}ms` }}
-      onTransitionEnd={handleTransitionEnd}
       aria-live="polite"
     >
       {messages[index]}

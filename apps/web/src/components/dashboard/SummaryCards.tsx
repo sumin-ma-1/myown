@@ -13,8 +13,10 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
     <li>
       <button
         type="button"
-        className={`flex w-full items-start justify-between gap-2 border-b border-slate-100 py-2 text-left last:border-0 dark:border-slate-700 ${
-          onClick ? "cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50" : ""
+        className={`flex w-full items-start justify-between gap-2 rounded-2xl border border-white/55 bg-white/50 px-3 py-2.5 text-left shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow,transform] dark:border-white/15 dark:bg-white/[0.09] dark:shadow-[0_1px_3px_rgba(0,0,0,0.28)] ${
+          onClick
+            ? "cursor-pointer hover:bg-white/75 hover:shadow-[0_2px_6px_rgba(15,23,42,0.08)] active:scale-[0.99] dark:hover:bg-white/[0.14] dark:hover:shadow-[0_2px_6px_rgba(0,0,0,0.32)]"
+            : ""
         }`}
         onClick={(event) => {
           event.stopPropagation();
@@ -61,7 +63,7 @@ function SummaryTaskList({
 
   return (
     <ScrollFadeArea className={SUMMARY_LIST_MAX_HEIGHT}>
-      <ul>
+      <ul className="space-y-2">
         {tasks.map((task) => (
           <TaskRow key={task.id} task={task} onClick={onTaskClick} />
         ))}
@@ -120,8 +122,9 @@ function SummaryCard({
   return (
     <Card
       id={id}
+      variant="glass"
       onClick={() => scrollCardIntoView(id)}
-      className="min-w-0 scroll-mt-6 overflow-hidden"
+      className="min-w-0 scroll-mt-6"
       title={
         <SummaryCardTitle
           icon={icon}

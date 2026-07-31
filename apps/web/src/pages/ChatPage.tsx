@@ -201,8 +201,10 @@ function ChatInputBar({
   className?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const glassBtnClass =
+    "h-11 w-11 shrink-0 rounded-3xl border border-white/55 bg-white/50 shadow-[0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-[background-color,border-color,box-shadow,transform,opacity] dark:border-white/15 dark:bg-white/[0.09] dark:shadow-[0_1px_3px_rgba(0,0,0,0.28)]";
   const controlClass =
-    "h-11 shrink-0 rounded-3xl border border-surface-border bg-white text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
+    "h-11 shrink-0 rounded-3xl border border-white/55 bg-white/50 text-sm shadow-[0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-white/15 dark:bg-white/[0.09] dark:text-slate-100 dark:shadow-[0_1px_3px_rgba(0,0,0,0.28)]";
 
   const canSend = input.trim().length > 0 || pendingFiles.length > 0;
 
@@ -229,7 +231,7 @@ function ChatInputBar({
       />
       <button
         type="button"
-        className={`flex w-11 items-center justify-center border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 ${controlClass}`}
+        className={`${glassBtnClass} flex items-center justify-center text-slate-600 hover:!bg-white/75 hover:shadow-[0_2px_6px_rgba(15,23,42,0.08)] disabled:opacity-60 dark:text-slate-300 dark:hover:!bg-white/[0.14]`}
         disabled={busy}
         onClick={() => fileInputRef.current?.click()}
         title="파일 첨부"
@@ -256,7 +258,7 @@ function ChatInputBar({
       />
       <button
         type="button"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-3xl bg-brand text-white disabled:opacity-60"
+        className={`${glassBtnClass} flex items-center justify-center border-brand/35 !bg-brand/80 text-white !shadow-[0_1px_3px_rgba(37,99,235,0.25)] hover:!bg-brand/90 hover:!shadow-[0_2px_6px_rgba(37,99,235,0.28)] disabled:opacity-60 dark:border-blue-300/30 dark:!bg-brand/70 dark:hover:!bg-brand/80`}
         disabled={busy || !canSend}
         onClick={onSend}
         title={sendPending ? "전송 중…" : "전송"}
