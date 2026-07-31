@@ -30,6 +30,10 @@ export class TaskRepository {
     dueAt?: Date;
     startsAt?: Date | null;
     allDay?: boolean;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: Date | null;
+    recurrenceCount?: number | null;
+    recurrenceTimezone?: string | null;
     attachmentId?: string;
     listIndex?: number;
   }): Promise<Task> {
@@ -44,6 +48,10 @@ export class TaskRepository {
         dueAt: input.dueAt,
         startsAt: input.startsAt ?? null,
         allDay: input.allDay ?? false,
+        recurrenceRule: input.recurrenceRule ?? null,
+        recurrenceUntil: input.recurrenceUntil ?? null,
+        recurrenceCount: input.recurrenceCount ?? null,
+        recurrenceTimezone: input.recurrenceTimezone ?? "Asia/Seoul",
         attachmentId: input.attachmentId,
         listIndex,
       })
@@ -69,6 +77,7 @@ export class TaskRepository {
           eq(tasks.userId, userId),
           eq(tasks.status, "active"),
           isNotNull(tasks.dueAt),
+          isNull(tasks.recurrenceRule),
           gte(tasks.dueAt, start),
           lte(tasks.dueAt, end),
         ),
@@ -212,8 +221,7 @@ export class TaskRepository {
       ? inArray(tasks.status, ["active", "completed"])
       : eq(tasks.status, "active");
 
-    // 구간 겹침: dueAt >= from AND coalesce(startsAt, dueAt) <= to
-    // (raw sql에 Date를 넣으면 postgres 드라이버가 Date 바인딩에 실패함)
+    // 단건(비반복): 구간 겹침 dueAt >= from AND coalesce(startsAt, dueAt) <= to
     return this.db
       .select()
       .from(tasks)
@@ -222,6 +230,7 @@ export class TaskRepository {
           eq(tasks.userId, userId),
           statusFilter,
           isNotNull(tasks.dueAt),
+          isNull(tasks.recurrenceRule),
           gte(tasks.dueAt, from),
           or(
             and(isNull(tasks.startsAt), lte(tasks.dueAt, to)),
@@ -230,6 +239,36 @@ export class TaskRepository {
         ),
       )
       .orderBy(asc(tasks.dueAt));
+  }
+
+  /** 활성(또는 완료 포함) 반복 시리즈 — 캘린더 구간에서 expand */
+  async listRecurring(
+    userId: string,
+    options?: { includeCompleted?: boolean },
+  ): Promise<Task[]> {
+    const statusFilter = options?.includeCompleted
+      ? inArray(tasks.status, ["active", "completed"])
+      : eq(tasks.status, "active");
+
+    return this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          statusFilter,
+          isNotNull(tasks.dueAt),
+          isNotNull(tasks.recurrenceRule),
+        ),
+      )
+      .orderBy(asc(tasks.dueAt));
+  }
+
+  async listActiveRecurringAll(): Promise<Task[]> {
+    return this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.status, "active"), isNotNull(tasks.recurrenceRule), isNotNull(tasks.dueAt)));
   }
 
   async update(
@@ -242,6 +281,10 @@ export class TaskRepository {
       dueAt?: Date | null;
       startsAt?: Date | null;
       allDay?: boolean;
+      recurrenceRule?: string | null;
+      recurrenceUntil?: Date | null;
+      recurrenceCount?: number | null;
+      recurrenceTimezone?: string | null;
       status?: "active" | "completed" | "cancelled";
       attachmentId?: string | null;
     },
@@ -253,6 +296,12 @@ export class TaskRepository {
     if (patch.dueAt !== undefined) updates.dueAt = patch.dueAt;
     if (patch.startsAt !== undefined) updates.startsAt = patch.startsAt;
     if (patch.allDay !== undefined) updates.allDay = patch.allDay;
+    if (patch.recurrenceRule !== undefined) updates.recurrenceRule = patch.recurrenceRule;
+    if (patch.recurrenceUntil !== undefined) updates.recurrenceUntil = patch.recurrenceUntil;
+    if (patch.recurrenceCount !== undefined) updates.recurrenceCount = patch.recurrenceCount;
+    if (patch.recurrenceTimezone !== undefined) {
+      updates.recurrenceTimezone = patch.recurrenceTimezone;
+    }
     if (patch.attachmentId !== undefined) updates.attachmentId = patch.attachmentId;
     if (patch.status !== undefined) {
       updates.status = patch.status;

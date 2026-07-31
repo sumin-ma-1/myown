@@ -258,6 +258,11 @@ export const tasks = pgTable(
     dueAt: timestamp("due_at", { withTimezone: true }),
     startsAt: timestamp("starts_at", { withTimezone: true }),
     allDay: boolean("all_day").notNull().default(false),
+    /** RFC 5545 RRULE 본문 (FREQ=…;INTERVAL=…). DTSTART는 startsAt/dueAt 앵커 */
+    recurrenceRule: text("recurrence_rule"),
+    recurrenceUntil: timestamp("recurrence_until", { withTimezone: true }),
+    recurrenceCount: integer("recurrence_count"),
+    recurrenceTimezone: text("recurrence_timezone").notNull().default("Asia/Seoul"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     attachmentId: uuid("attachment_id").references(() => attachments.id, {
       onDelete: "set null",
@@ -269,6 +274,40 @@ export const tasks = pgTable(
   (table) => [
     index("tasks_user_status_idx").on(table.userId, table.status),
     index("tasks_due_at_idx").on(table.dueAt),
+    index("tasks_recurrence_rule_idx").on(table.userId, table.recurrenceRule),
+  ],
+);
+
+export const recurrenceExceptionActionEnum = pgEnum("recurrence_exception_action", [
+  "cancelled",
+  "completed",
+  "modified",
+]);
+
+/** 반복 시리즈의 개별 발생분 예외(이번만 취소·완료·시간 변경) */
+export const taskRecurrenceExceptions = pgTable(
+  "task_recurrence_exceptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    /** 시리즈 기준 발생 시작(키). Asia/Seoul 앵커 */
+    occurrenceStartsAt: timestamp("occurrence_starts_at", { withTimezone: true }).notNull(),
+    action: recurrenceExceptionActionEnum("action").notNull(),
+    title: text("title"),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    allDay: boolean("all_day"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("task_recurrence_exceptions_task_occ_uidx").on(
+      table.taskId,
+      table.occurrenceStartsAt,
+    ),
+    index("task_recurrence_exceptions_task_id_idx").on(table.taskId),
   ],
 );
 
@@ -329,6 +368,10 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+export type RecurrenceExceptionAction =
+  (typeof recurrenceExceptionActionEnum.enumValues)[number];
+export type TaskRecurrenceException = typeof taskRecurrenceExceptions.$inferSelect;
+export type NewTaskRecurrenceException = typeof taskRecurrenceExceptions.$inferInsert;
 export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type Attachment = typeof attachments.$inferSelect;

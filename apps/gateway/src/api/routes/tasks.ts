@@ -18,14 +18,25 @@ import { serializeTask } from "../serializers/task.js";
 import { requireAppUser } from "../middleware/session.js";
 import { config } from "../../config.js";
 import { requireLinkedUser } from "../helpers/linked-user.js";
+import { expandRecurrence, parseOccurrenceInstanceId } from "../../utils/recurrence.js";
 
 const PRIORITIES = new Set<TaskPriority>(TASK_PRIORITIES);
 const WORKFLOW = new Set<TaskWorkflowStatus>(["planned", "in_progress"]);
+
+function resolveTaskIdParam(raw: string): {
+  taskId: string;
+  occurrenceStartsAt: Date | null;
+} {
+  const parsed = parseOccurrenceInstanceId(raw);
+  if (parsed) return { taskId: parsed.taskId, occurrenceStartsAt: parsed.occurrenceStartsAt };
+  return { taskId: raw, occurrenceStartsAt: null };
+}
 
 async function serializeTaskById(
   app: ApiEnv["Variables"]["app"],
   userId: string,
   taskId: string,
+  occurrenceStartsAt?: Date | null,
 ) {
   const task = await app.tasks.findById(userId, taskId);
   if (!task) return null;
@@ -35,6 +46,32 @@ async function serializeTaskById(
 
   const attachments = await loadTaskAttachments(app, userId, task);
   const reminders = await app.reminders.listForTask(taskId);
+
+  if (occurrenceStartsAt && task.recurrenceRule && task.dueAt) {
+    const ex = await app.recurrenceExceptions.find(taskId, occurrenceStartsAt);
+    const durationMs = task.dueAt.getTime() - (task.startsAt ?? task.dueAt).getTime();
+    const hasStart = Boolean(task.startsAt);
+    const occDue =
+      ex?.action === "modified" && ex.dueAt
+        ? ex.dueAt
+        : hasStart
+          ? new Date(occurrenceStartsAt.getTime() + durationMs)
+          : occurrenceStartsAt;
+    const occStart =
+      ex?.action === "modified" && ex.startsAt !== undefined
+        ? ex.startsAt
+        : hasStart
+          ? occurrenceStartsAt
+          : null;
+    return serializeTask(task, user, attachments, reminders, {
+      occurrenceStartsAt,
+      startsAt: occStart,
+      dueAt: occDue,
+      title: ex?.action === "modified" ? ex.title : undefined,
+      status: ex?.action === "completed" ? "completed" : task.status,
+    });
+  }
+
   return serializeTask(task, user, attachments, reminders);
 }
 
@@ -96,7 +133,10 @@ tasksRoute.get("/today", async (c) => {
 
   const start = startOfDayInTimezone();
   const end = endOfDayInTimezone();
-  const tasks = await app.tasks.listDueToday(userId, start, end);
+  const [tasks, seriesList] = await Promise.all([
+    app.tasks.listDueToday(userId, start, end),
+    app.tasks.listRecurring(userId),
+  ]);
 
   const items = await Promise.all(
     tasks.map(async (task) => {
@@ -106,6 +146,42 @@ tasksRoute.get("/today", async (c) => {
     }),
   );
 
+  const exceptions = await app.recurrenceExceptions.listForTasks(seriesList.map((t) => t.id));
+  for (const task of seriesList) {
+    if (!task.dueAt || !task.recurrenceRule) continue;
+    const attachments = await loadTaskAttachments(app, userId, task);
+    const reminders = await app.reminders.listForTask(task.id);
+    const occs = expandRecurrence(
+      {
+        recurrenceRule: task.recurrenceRule,
+        recurrenceUntil: task.recurrenceUntil,
+        recurrenceCount: task.recurrenceCount,
+        startsAt: task.startsAt,
+        dueAt: task.dueAt,
+        allDay: task.allDay,
+      },
+      start,
+      end,
+    );
+    for (const occ of occs) {
+      const ex = exceptions.find(
+        (e) =>
+          e.taskId === task.id &&
+          e.occurrenceStartsAt.getTime() === occ.occurrenceStartsAt.getTime(),
+      );
+      if (ex?.action === "cancelled" || ex?.action === "completed") continue;
+      items.push(
+        serializeTask(task, user, attachments, reminders, {
+          occurrenceStartsAt: occ.occurrenceStartsAt,
+          startsAt:
+            ex?.action === "modified" && ex.startsAt !== undefined ? ex.startsAt : occ.startsAt,
+          dueAt: ex?.action === "modified" && ex.dueAt ? ex.dueAt : occ.dueAt,
+          title: ex?.action === "modified" && ex.title ? ex.title : undefined,
+        }),
+      );
+    }
+  }
+
   return c.json({ items });
 });
 
@@ -113,9 +189,9 @@ tasksRoute.get("/:id", async (c) => {
   const userId = requireLinkedUser(c);
   if (userId instanceof Response) return userId;
   const app = c.get("app");
-  const taskId = c.req.param("id");
+  const { taskId, occurrenceStartsAt } = resolveTaskIdParam(c.req.param("id"));
 
-  const item = await serializeTaskById(app, userId, taskId);
+  const item = await serializeTaskById(app, userId, taskId, occurrenceStartsAt);
   if (!item) return c.json({ error: "Task not found" }, 404);
 
   const user = await app.users.findById(userId);
@@ -161,6 +237,10 @@ tasksRoute.post("/", async (c) => {
     dueAt?: string;
     startsAt?: string | null;
     allDay?: boolean;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: string | null;
+    recurrenceCount?: number | null;
+    recurrenceTimezone?: string | null;
     workflowStatus?: TaskWorkflowStatus;
     useDefaultReminders?: boolean;
     extraReminders?: ExtraReminderRule[];
@@ -187,6 +267,10 @@ tasksRoute.post("/", async (c) => {
     dueAt: new Date(body.dueAt),
     startsAt: body.startsAt ? new Date(body.startsAt) : body.startsAt === null ? null : undefined,
     allDay: body.allDay,
+    recurrenceRule: body.recurrenceRule?.trim() || null,
+    recurrenceUntil: body.recurrenceUntil ? new Date(body.recurrenceUntil) : null,
+    recurrenceCount: body.recurrenceCount ?? null,
+    recurrenceTimezone: body.recurrenceTimezone ?? "Asia/Seoul",
   });
 
   let user = await app.users.findById(userId);
@@ -212,10 +296,17 @@ tasksRoute.post("/", async (c) => {
 
   const telegramId = user.telegramUserId ?? null;
   if (task.dueAt) {
-    await app.reminderService.scheduleForTask(task, telegramId, user, {
-      useDefaults,
-      extraRules,
-    });
+    if (task.recurrenceRule) {
+      await app.reminderService.scheduleRecurringWindow(task, telegramId, user, {
+        useDefaults,
+        extraRules,
+      });
+    } else {
+      await app.reminderService.scheduleForTask(task, telegramId, user, {
+        useDefaults,
+        extraRules,
+      });
+    }
   }
 
   const item = await serializeTaskById(app, userId, task.id);
@@ -226,7 +317,7 @@ tasksRoute.patch("/:id", async (c) => {
   const userId = requireLinkedUser(c);
   if (userId instanceof Response) return userId;
   const app = c.get("app");
-  const taskId = c.req.param("id");
+  const { taskId, occurrenceStartsAt } = resolveTaskIdParam(c.req.param("id"));
   const body = await c.req.json<{
     title?: string;
     description?: string | null;
@@ -234,6 +325,12 @@ tasksRoute.patch("/:id", async (c) => {
     dueAt?: string | null;
     startsAt?: string | null;
     allDay?: boolean;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: string | null;
+    recurrenceCount?: number | null;
+    recurrenceTimezone?: string | null;
+    /** series = 전체, this = 이번만, following = 이번 이후 */
+    recurrenceEditScope?: "series" | "this" | "following";
     status?: "active" | "completed" | "cancelled";
     workflowStatus?: TaskWorkflowStatus;
     useDefaultReminders?: boolean;
@@ -257,6 +354,86 @@ tasksRoute.patch("/:id", async (c) => {
   let user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
 
+  const scope = body.recurrenceEditScope ?? "series";
+
+  // 이번만 완료/취소/수정
+  if (existing.recurrenceRule && occurrenceStartsAt && scope === "this") {
+    if (body.status === "completed") {
+      await app.recurrenceExceptions.upsert({
+        taskId,
+        occurrenceStartsAt,
+        action: "completed",
+      });
+      const item = await serializeTaskById(app, userId, taskId, occurrenceStartsAt);
+      return c.json({ item });
+    }
+    if (body.status === "cancelled") {
+      await app.recurrenceExceptions.upsert({
+        taskId,
+        occurrenceStartsAt,
+        action: "cancelled",
+      });
+      return c.json({ item: await serializeTaskById(app, userId, taskId, occurrenceStartsAt) });
+    }
+    await app.recurrenceExceptions.upsert({
+      taskId,
+      occurrenceStartsAt,
+      action: "modified",
+      title: body.title?.trim(),
+      startsAt: body.startsAt === null ? null : body.startsAt ? new Date(body.startsAt) : undefined,
+      dueAt: body.dueAt ? new Date(body.dueAt) : undefined,
+      allDay: body.allDay,
+    });
+    const item = await serializeTaskById(app, userId, taskId, occurrenceStartsAt);
+    return c.json({ item });
+  }
+
+  // 이번 이후: 기존 시리즈 UNTIL을 이 발생 전날로 끊고, 새 시리즈 생성
+  if (existing.recurrenceRule && occurrenceStartsAt && scope === "following") {
+    const until = new Date(occurrenceStartsAt.getTime() - 86_400_000);
+    await app.tasks.update(userId, taskId, {
+      recurrenceUntil: until,
+    });
+    const newTask = await app.tasks.create({
+      userId,
+      title: body.title?.trim() || existing.title,
+      description:
+        body.description !== undefined
+          ? body.description ?? undefined
+          : existing.description ?? undefined,
+      priority: body.priority ?? existing.priority,
+      dueAt: body.dueAt ? new Date(body.dueAt) : existing.dueAt ?? undefined,
+      startsAt: body.startsAt
+        ? new Date(body.startsAt)
+        : body.startsAt === null
+          ? null
+          : existing.startsAt,
+      allDay: body.allDay ?? existing.allDay,
+      recurrenceRule:
+        body.recurrenceRule !== undefined
+          ? body.recurrenceRule
+          : existing.recurrenceRule,
+      recurrenceUntil:
+        body.recurrenceUntil !== undefined
+          ? body.recurrenceUntil
+            ? new Date(body.recurrenceUntil)
+            : null
+          : existing.recurrenceUntil,
+      recurrenceCount:
+        body.recurrenceCount !== undefined ? body.recurrenceCount : existing.recurrenceCount,
+      recurrenceTimezone: existing.recurrenceTimezone,
+    });
+    if (newTask.dueAt && newTask.recurrenceRule) {
+      await app.reminderService.scheduleRecurringWindow(
+        newTask,
+        user.telegramUserId ?? null,
+        user,
+      );
+    }
+    const item = await serializeTaskById(app, userId, newTask.id);
+    return c.json({ item });
+  }
+
   if (body.workflowStatus) {
     const prefs = (user.preferences ?? {}) as UserPreferences;
     const taskWorkflow = { ...(prefs.taskWorkflow ?? {}), [taskId]: body.workflowStatus };
@@ -276,7 +453,17 @@ tasksRoute.patch("/:id", async (c) => {
       : new Date(body.startsAt).getTime() !== existing.startsAt?.getTime());
   const allDayChanged =
     body.allDay !== undefined && body.allDay !== existing.allDay;
-  const scheduleChanged = dueAtChanged || startsAtChanged || allDayChanged;
+  const recurrenceChanged =
+    (body.recurrenceRule !== undefined &&
+      (body.recurrenceRule || null) !== (existing.recurrenceRule || null)) ||
+    (body.recurrenceUntil !== undefined &&
+      (body.recurrenceUntil
+        ? new Date(body.recurrenceUntil).getTime()
+        : null) !== (existing.recurrenceUntil?.getTime() ?? null)) ||
+    (body.recurrenceCount !== undefined &&
+      body.recurrenceCount !== existing.recurrenceCount);
+  const scheduleChanged =
+    dueAtChanged || startsAtChanged || allDayChanged || recurrenceChanged;
 
   const existingReminderConfig = getTaskReminderConfig(user, taskId);
   const extraRules =
@@ -303,6 +490,11 @@ tasksRoute.patch("/:id", async (c) => {
     );
   }
 
+  // 시리즈 전체 완료
+  if (body.status === "completed" && existing.recurrenceRule && !occurrenceStartsAt) {
+    // keep series complete
+  }
+
   const task = await app.tasks.update(userId, taskId, {
     title: body.title?.trim(),
     description: body.description,
@@ -311,6 +503,18 @@ tasksRoute.patch("/:id", async (c) => {
     startsAt:
       body.startsAt === null ? null : body.startsAt ? new Date(body.startsAt) : undefined,
     allDay: body.allDay,
+    recurrenceRule:
+      body.recurrenceRule !== undefined ? body.recurrenceRule || null : undefined,
+    recurrenceUntil:
+      body.recurrenceUntil !== undefined
+        ? body.recurrenceUntil
+          ? new Date(body.recurrenceUntil)
+          : null
+        : undefined,
+    recurrenceCount:
+      body.recurrenceCount !== undefined ? body.recurrenceCount : undefined,
+    recurrenceTimezone:
+      body.recurrenceTimezone !== undefined ? body.recurrenceTimezone : undefined,
     status: body.status,
   });
 
@@ -331,17 +535,28 @@ tasksRoute.patch("/:id", async (c) => {
     (scheduleChanged || reminderConfigChanged || body.rescheduleReminders)
   ) {
     const config = getTaskReminderConfig(user, taskId);
-    await app.reminderService.syncRemindersForTask(task, user.telegramUserId ?? null, user, {
-      useDefaults: config.useDefaultReminders,
-      extraRules: config.extraRules,
-    });
+    if (task.recurrenceRule) {
+      await app.reminderService.cancelForTask(taskId);
+      await app.reminderService.scheduleRecurringWindow(
+        task,
+        user.telegramUserId ?? null,
+        user,
+        {
+          useDefaults: config.useDefaultReminders,
+          extraRules: config.extraRules,
+        },
+      );
+    } else {
+      await app.reminderService.syncRemindersForTask(task, user.telegramUserId ?? null, user, {
+        useDefaults: config.useDefaultReminders,
+        extraRules: config.extraRules,
+      });
+    }
   } else if (dueAtChanged && !task.dueAt) {
     await app.reminderService.cancelForTask(taskId);
   }
 
-  const item = await serializeTaskById(app, userId, taskId);
-  if (!item) return c.json({ error: "Task not found" }, 404);
-
+  const item = await serializeTaskById(app, userId, task.id);
   return c.json({ item });
 });
 
@@ -349,7 +564,7 @@ tasksRoute.delete("/:id", async (c) => {
   const userId = requireLinkedUser(c);
   if (userId instanceof Response) return userId;
   const app = c.get("app");
-  const taskId = c.req.param("id");
+  const { taskId } = resolveTaskIdParam(c.req.param("id"));
 
   const task = await app.tasks.findById(userId, taskId);
   if (!task) return c.json({ error: "Task not found" }, 404);

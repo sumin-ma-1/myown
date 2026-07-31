@@ -197,7 +197,12 @@ export function TaskTable({
                       {formatDateTime(task.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {formatTaskScheduleLabel(task) ?? "-"}
+                      <div>{formatTaskScheduleLabel(task) ?? "-"}</div>
+                      {task.recurrenceLabel && (
+                        <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {task.recurrenceLabel}
+                        </div>
+                      )}
                     </td>
                     {showCompletedAt && (
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">

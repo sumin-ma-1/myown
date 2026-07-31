@@ -57,7 +57,9 @@ export const api = {
   listTodayTasks: () => request<{ items: TaskDto[] }>("/api/tasks/today"),
 
   getTask: (id: string) =>
-    request<{ item: TaskDto; reminderConfig: TaskReminderConfigDto }>(`/api/tasks/${id}`),
+    request<{ item: TaskDto; reminderConfig: TaskReminderConfigDto }>(
+      `/api/tasks/${encodeURIComponent(id)}`,
+    ),
 
   listCalendarTasks: (from: string, to: string, options?: { includeCompleted?: boolean }) => {
     const params = new URLSearchParams({ from, to });
@@ -72,6 +74,9 @@ export const api = {
     dueAt?: string;
     startsAt?: string | null;
     allDay?: boolean;
+    recurrenceRule?: string | null;
+    recurrenceUntil?: string | null;
+    recurrenceCount?: number | null;
     workflowStatus?: TaskDto["workflowStatus"];
     useDefaultReminders?: boolean;
     extraReminders?: ExtraReminderRule[];
@@ -90,6 +95,10 @@ export const api = {
       dueAt: string | null;
       startsAt: string | null;
       allDay: boolean;
+      recurrenceRule: string | null;
+      recurrenceUntil: string | null;
+      recurrenceCount: number | null;
+      recurrenceEditScope: "series" | "this" | "following";
       workflowStatus: TaskDto["workflowStatus"];
       status: TaskDto["status"];
       useDefaultReminders: boolean;
@@ -97,13 +106,13 @@ export const api = {
       rescheduleReminders: boolean;
     }>,
   ) =>
-    request<{ item: TaskDto }>(`/api/tasks/${id}`, {
+    request<{ item: TaskDto }>(`/api/tasks/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
 
   deleteTask: (id: string) =>
-    request<{ ok: boolean }>(`/api/tasks/${id}`, { method: "DELETE" }),
+    request<{ ok: boolean }>(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   uploadAttachment: (taskId: string, files: File | File[]) => {
     const list = Array.isArray(files) ? files : [files];

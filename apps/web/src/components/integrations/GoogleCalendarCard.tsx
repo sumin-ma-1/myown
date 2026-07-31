@@ -484,18 +484,24 @@ export function GoogleCalendarCard() {
               </div>
               <button
                 type="button"
-                className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                 disabled={sync.isPending}
                 onClick={() => sync.mutate()}
               >
+                <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden>
+                  chip_extraction
+                </span>
                 {sync.isPending ? "가져오는 중…" : "일정 가져오기"}
               </button>
               <button
                 type="button"
-                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
                 disabled={disconnect.isPending}
                 onClick={() => disconnect.mutate()}
               >
+                <span className="material-icons text-[16px] leading-none" aria-hidden>
+                  link_off
+                </span>
                 연결 해제
               </button>
             </>
@@ -506,7 +512,10 @@ export function GoogleCalendarCard() {
           <div className="flex items-start justify-between gap-3 rounded-xl border border-surface-border bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-slate-800 dark:text-slate-100">
+                  <span className="material-symbols-outlined text-[16px] leading-none text-slate-500 dark:text-slate-400" aria-hidden>
+                    automation
+                  </span>
                   자동 일정 가져오기
                 </p>
                 <button

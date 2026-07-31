@@ -73,6 +73,32 @@ export const agentTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
             type: "boolean",
             description: "종일 여부. 날짜만·종일 기간이면 true, 시작/종료 시각이 있으면 false",
           },
+          recurrence_freq: {
+            type: "string",
+            enum: ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"],
+            description: "반복 주기. 매주/매월 등이면 설정. 단건이면 생략",
+          },
+          recurrence_interval: {
+            type: "number",
+            description: "반복 간격 (기본 1). 예: 2주마다=2",
+          },
+          recurrence_by_day: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: ["SU", "MO", "TU", "WE", "TH", "FR", "SA"],
+            },
+            description:
+              "보통 생략. 매주이면 due_date(기간이면 start) 요일로 반복. 여러 요일만 필요할 때",
+          },
+          recurrence_until: {
+            type: "string",
+            description: "반복 종료일 YYYY-MM-DD. count와 둘 중 하나 또는 생략(무기한)",
+          },
+          recurrence_count: {
+            type: "number",
+            description: "반복 횟수. until과 둘 중 하나 또는 생략",
+          },
           priority: {
             type: "string",
             enum: ["urgent", "high", "medium"],
@@ -198,6 +224,11 @@ export interface CreateTaskArgs {
   start_date?: string;
   start_time?: string;
   all_day?: boolean;
+  recurrence_freq?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+  recurrence_interval?: number;
+  recurrence_by_day?: string[];
+  recurrence_until?: string;
+  recurrence_count?: number;
   priority?: TaskPriority;
   reminder_config?: DraftReminderConfig | Record<string, unknown>;
   reminderConfig?: DraftReminderConfig | Record<string, unknown>;

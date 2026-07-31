@@ -11,6 +11,12 @@ import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
 import { ACTIVE_WORKFLOW_OPTIONS, WORKFLOW_STATUS_OPTIONS, type WorkflowUiStatus } from "@/lib/status";
 import { Switch } from "@/components/ui/Switch";
+import {
+  buildRRule,
+  parseOccurrenceTaskId,
+  parseRRule,
+  type RecurrenceFreq,
+} from "@/lib/recurrence";
 
 function dueAtEqual(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a && !b) return true;
@@ -144,6 +150,14 @@ export function TaskFormModal({
   const [dueTime, setDueTime] = useState("");
   const [allDay, setAllDay] = useState(false);
   const [dateRange, setDateRange] = useState(false);
+  const [recurEnabled, setRecurEnabled] = useState(false);
+  const [recurFreq, setRecurFreq] = useState<RecurrenceFreq>("WEEKLY");
+  const [recurInterval, setRecurInterval] = useState(1);
+  const [recurEndMode, setRecurEndMode] = useState<"none" | "until" | "count">("none");
+  const [recurUntil, setRecurUntil] = useState("");
+  const [recurCount, setRecurCount] = useState(10);
+  const [recurScopeConfirmOpen, setRecurScopeConfirmOpen] = useState(false);
+  const pendingSaveScopeRef = useRef<"series" | "this" | "following" | null>(null);
   const [priority, setPriority] = useState<TaskDto["priority"]>("medium");
   const [uiWorkflowStatus, setUiWorkflowStatus] = useState<WorkflowUiStatus>("planned");
   const [useDefaultReminders, setUseDefaultReminders] = useState(true);
@@ -195,6 +209,7 @@ export function TaskFormModal({
     if (!open) {
       setDeleteConfirmOpen(false);
       setCompleteConfirmOpen(false);
+      setRecurScopeConfirmOpen(false);
     }
   }, [open]);
 
@@ -214,6 +229,12 @@ export function TaskFormModal({
       setDueTime("");
       setAllDay(false);
       setDateRange(false);
+      setRecurEnabled(false);
+      setRecurFreq("WEEKLY");
+      setRecurInterval(1);
+      setRecurEndMode("none");
+      setRecurUntil("");
+      setRecurCount(10);
       setPriority("medium");
       setUiWorkflowStatus("planned");
       setUseDefaultReminders(true);
@@ -238,6 +259,26 @@ export function TaskFormModal({
     setDueTime(t.allDay ? "" : time);
     setAllDay(t.allDay);
     setDateRange(Boolean(start.date));
+    const parsedRecur = parseRRule(t.recurrenceRule);
+    if (parsedRecur) {
+      setRecurEnabled(true);
+      setRecurFreq(parsedRecur.freq);
+      setRecurInterval(parsedRecur.interval);
+      if (parsedRecur.count) {
+        setRecurEndMode("count");
+        setRecurCount(parsedRecur.count);
+      } else if (parsedRecur.until || t.recurrenceUntil) {
+        setRecurEndMode("until");
+        setRecurUntil(
+          parsedRecur.until ??
+            (t.recurrenceUntil ? splitDueAt(t.recurrenceUntil).date : ""),
+        );
+      } else {
+        setRecurEndMode("none");
+      }
+    } else {
+      setRecurEnabled(false);
+    }
     setPriority(t.priority);
     setUiWorkflowStatus(t.status === "completed" ? "completed" : t.workflowStatus);
     setUseDefaultReminders(taskData.reminderConfig.useDefaultReminders);
@@ -279,6 +320,21 @@ export function TaskFormModal({
         }
       }
       const extraReminders = rowsToRules(extraRows);
+      const recurrenceRule = recurEnabled
+        ? buildRRule({
+            freq: recurFreq,
+            interval: recurInterval,
+            until: recurEndMode === "until" ? recurUntil : null,
+            count: recurEndMode === "count" ? recurCount : null,
+          })
+        : null;
+      const recurrenceUntil =
+        recurEnabled && recurEndMode === "until" && recurUntil.trim()
+          ? toDueAtIso(recurUntil, "")
+          : null;
+      const recurrenceCount =
+        recurEnabled && recurEndMode === "count" ? recurCount : null;
+
       const payload: Parameters<typeof api.createTask>[0] = {
         title: title.trim(),
         description: description.trim() || undefined,
@@ -286,6 +342,9 @@ export function TaskFormModal({
         dueAt,
         startsAt,
         allDay: resolvedAllDay,
+        recurrenceRule,
+        recurrenceUntil: recurrenceUntil ?? null,
+        recurrenceCount,
       };
 
       if (mode === "create") {
@@ -325,7 +384,18 @@ export function TaskFormModal({
           dueAt: dueAt ?? null,
           startsAt,
           allDay: resolvedAllDay,
+          recurrenceRule,
+          recurrenceUntil: recurrenceUntil ?? null,
+          recurrenceCount,
         };
+
+        const scope =
+          pendingSaveScopeRef.current ??
+          (existing.recurrenceRule || existing.occurrenceKey ? "series" : "series");
+        if (existing.recurrenceRule || existing.occurrenceKey) {
+          updateBody.recurrenceEditScope = scope;
+        }
+        pendingSaveScopeRef.current = null;
 
         if (uiWorkflowStatus === "completed") {
           updateBody.status = "completed";
@@ -347,14 +417,15 @@ export function TaskFormModal({
         saved = res.item;
       }
 
+      const attachId = parseOccurrenceTaskId(saved.id).seriesId;
       if (pendingFiles.length > 0) {
         await api.uploadAttachment(
-          saved.id,
+          attachId,
           pendingFiles.map((p) => p.file),
         );
       }
       for (const attachmentId of removedAttachmentIds) {
-        await api.removeAttachment(saved.id, attachmentId);
+        await api.removeAttachment(attachId, attachmentId);
       }
       return saved;
     },
@@ -540,6 +611,17 @@ export function TaskFormModal({
       task.allDay
     )
       return true;
+
+    const nextRule = recurEnabled
+      ? buildRRule({
+          freq: recurFreq,
+          interval: recurInterval,
+          until: recurEndMode === "until" ? recurUntil : null,
+          count: recurEndMode === "count" ? recurCount : null,
+        })
+      : null;
+    if ((nextRule || null) !== (task.recurrenceRule || null)) return true;
+
     if (pendingFiles.length > 0) return true;
     if (removedAttachmentIds.length > 0) return true;
 
@@ -589,6 +671,14 @@ export function TaskFormModal({
               onClose();
               return;
             }
+            const isOccurrence =
+              mode === "edit" &&
+              Boolean(taskData?.item.occurrenceKey || taskData?.item.recurrenceRule);
+            if (isOccurrence && taskData?.item.occurrenceKey) {
+              setRecurScopeConfirmOpen(true);
+              return;
+            }
+            pendingSaveScopeRef.current = "series";
             saveMutation.mutate();
           }}
         >
@@ -619,7 +709,7 @@ export function TaskFormModal({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
                   <div>
                     <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
                       <span className="material-icons text-[14px] leading-none text-amber-500" aria-hidden>
@@ -641,10 +731,10 @@ export function TaskFormModal({
                     }}
                   />
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-sky-200/80 bg-sky-50/70 px-3 py-2 dark:border-sky-800/50 dark:bg-sky-950/30">
                   <div>
                     <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
-                      <span className="material-icons text-[14px] leading-none text-slate-500 dark:text-slate-400" aria-hidden>
+                      <span className="material-icons text-[14px] leading-none text-sky-500 dark:text-sky-400" aria-hidden>
                         date_range
                       </span>
                       기간
@@ -855,6 +945,84 @@ export function TaskFormModal({
                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   여러 파일 선택 가능 (HWP, PDF, DOCX, TXT, 이미지 등 지원)
                 </p>
+              </div>
+
+              <div className="rounded-lg border border-teal-200/80 bg-teal-50/70 px-3 py-2 dark:border-teal-800/50 dark:bg-teal-950/30">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+                      <span className="material-symbols-outlined text-[14px] leading-none text-teal-600 dark:text-teal-400" aria-hidden>
+                        rotate_right
+                      </span>
+                      반복
+                    </p>
+                  </div>
+                  <Switch
+                    checked={recurEnabled}
+                    aria-label="반복"
+                    onCheckedChange={setRecurEnabled}
+                  />
+                </div>
+                {recurEnabled && (
+                  <div className="mt-3 space-y-3 border-t border-slate-100 pt-3 dark:border-slate-700">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs text-slate-600 dark:text-slate-300">주기</label>
+                        <select
+                          className="mt-1 w-full rounded-lg border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+                          value={recurFreq}
+                          onChange={(e) => setRecurFreq(e.target.value as RecurrenceFreq)}
+                        >
+                          <option value="DAILY">매일</option>
+                          <option value="WEEKLY">매주</option>
+                          <option value="MONTHLY">매월</option>
+                          <option value="YEARLY">매년</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-600 dark:text-slate-300">간격</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="mt-1 w-full rounded-lg border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+                          value={recurInterval}
+                          onChange={(e) => setRecurInterval(Math.max(1, Number(e.target.value) || 1))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 dark:text-slate-300">종료</label>
+                      <select
+                        className="mt-1 w-full rounded-lg border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+                        value={recurEndMode}
+                        onChange={(e) =>
+                          setRecurEndMode(e.target.value as "none" | "until" | "count")
+                        }
+                      >
+                        <option value="none">없음 (계속)</option>
+                        <option value="until">특정 날짜까지</option>
+                        <option value="count">횟수</option>
+                      </select>
+                      {recurEndMode === "until" && (
+                        <input
+                          type="date"
+                          className="mt-2 w-full rounded-lg border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+                          value={recurUntil}
+                          onChange={(e) => setRecurUntil(e.target.value)}
+                        />
+                      )}
+                      {recurEndMode === "count" && (
+                        <input
+                          type="number"
+                          min={1}
+                          className="mt-2 w-full rounded-lg border border-surface-border bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+                          value={recurCount}
+                          onChange={(e) => setRecurCount(Math.max(1, Number(e.target.value) || 1))}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1073,7 +1241,42 @@ export function TaskFormModal({
       onCancel={() => setCompleteConfirmOpen(false)}
       onConfirm={() => {
         setCompleteConfirmOpen(false);
+        if (taskData?.item.occurrenceKey) {
+          void api
+            .updateTask(taskId!, {
+              status: "completed",
+              recurrenceEditScope: "this",
+            })
+            .then(() => {
+              void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+              void queryClient.invalidateQueries({ queryKey: ["tasks-today"] });
+              void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+              onSaved?.("이 회차를 완료 처리했습니다.");
+              onClose();
+            })
+            .catch((err) => {
+              setError(err instanceof Error ? err.message : "완료 처리에 실패했습니다.");
+            });
+          return;
+        }
         completeTaskMutation.mutate();
+      }}
+    />
+    <ConfirmToast
+      open={recurScopeConfirmOpen}
+      icon="repeat"
+      message={"반복 일정입니다. 이번 회차만 바꿀까요?\n(확인=이번만 / 취소 후 저장은 전체)"}
+      confirmLabel="이번만"
+      cancelLabel="전체 시리즈"
+      onCancel={() => {
+        setRecurScopeConfirmOpen(false);
+        pendingSaveScopeRef.current = "series";
+        saveMutation.mutate();
+      }}
+      onConfirm={() => {
+        setRecurScopeConfirmOpen(false);
+        pendingSaveScopeRef.current = "this";
+        saveMutation.mutate();
       }}
     />
     </>

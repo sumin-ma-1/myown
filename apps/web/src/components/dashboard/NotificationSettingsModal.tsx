@@ -137,7 +137,12 @@ export function NotificationSettingsModal({
       <section>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">D-DAY 알림</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              <span className="material-symbols-outlined text-[18px] leading-none text-amber-600 dark:text-amber-400" aria-hidden>
+                emergency
+              </span>
+              D-DAY 알림
+            </h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               마감일이 있는 새 업무 등록 시에 자동으로 예약해요.
             </p>
@@ -170,7 +175,12 @@ export function NotificationSettingsModal({
       <section className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-700">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">아침 브리핑</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              <span className="material-symbols-outlined text-[18px] leading-none text-lime-600 dark:text-lime-400" aria-hidden>
+                raven
+              </span>
+              아침 브리핑
+            </h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               오늘 일정이 있는 날, 아침 브리핑을 보내요.
             </p>

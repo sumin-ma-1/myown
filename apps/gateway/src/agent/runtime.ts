@@ -10,6 +10,7 @@ import {
   parseDraftReminderConfig,
 } from "../services/draft-reminder.js";
 import { formatTaskScheduleLabel } from "../utils/schedule-label.js";
+import { buildRRule, formatRecurrenceLabel, type RRuleFreq } from "../utils/recurrence.js";
 import { formatDateTime, formatDueDate, formatDueDateTime, llmDueDateContextLines } from "../utils/date.js";
 import { displayOrderOf, formatActiveTasksHint } from "../utils/task-display-order.js";
 import {
@@ -523,6 +524,7 @@ export class AgentRuntime {
           "업무 등록 시 due_date(YYYY-MM-DD)는 필수입니다. due_time(HH:MM), 여러 날 기간이면 start_date, 시작 시각이면 start_time, 종일이면 all_day=true를 사용하세요.",
           "마감일(due_date)이 없으면 create_task를 호출하지 말고 날짜를 한 번만 물으세요.",
           "같은 날 시작~끝이면 due_date+start_time+due_time+all_day=false (start_date 생략).",
+          "매주·매월 등 반복이면 recurrence_freq(+ 필요 시 until/count). due_date는 첫 발생일·요일이 매주 기준. recurrence_by_day는 보통 생략.",
           "마감만이면 due_date+due_time만 (start_time 생략).",
           "종일 연속일이면 start_date+due_date+all_day=true.",
           "여러 날에 시각이 있으면 start_date+start_time+due_date+due_time+all_day=false.",
@@ -663,6 +665,37 @@ export class AgentRuntime {
           }
         }
         const reminderConfig = parseDraftReminderConfig(args);
+        let recurrenceRule: string | null = null;
+        let recurrenceUntil: Date | null = null;
+        let recurrenceCount: number | null = null;
+        if (a.recurrence_freq) {
+          const byDayMap: Record<string, number> = {
+            SU: 0,
+            MO: 1,
+            TU: 2,
+            WE: 3,
+            TH: 4,
+            FR: 5,
+            SA: 6,
+          };
+          const byDay = (a.recurrence_by_day ?? [])
+            .map((d) => byDayMap[d.toUpperCase()])
+            .filter((n): n is number => n !== undefined);
+          if (a.recurrence_until?.trim()) {
+            recurrenceUntil =
+              resolveDueAt(a.recurrence_until.trim()) ?? null;
+          }
+          if (a.recurrence_count && a.recurrence_count > 0) {
+            recurrenceCount = a.recurrence_count;
+          }
+          recurrenceRule = buildRRule({
+            freq: a.recurrence_freq as RRuleFreq,
+            interval: a.recurrence_interval,
+            byDay,
+            until: recurrenceCount ? null : recurrenceUntil,
+            count: recurrenceCount,
+          });
+        }
         const task = await this.taskService.create({
           userId,
           telegramUserId,
@@ -672,6 +705,9 @@ export class AgentRuntime {
           dueAt,
           startsAt,
           allDay: Boolean(allDay && dueAt),
+          recurrenceRule,
+          recurrenceUntil,
+          recurrenceCount,
           skipReminders: true,
         });
         if (reminderConfig) {
@@ -685,9 +721,11 @@ export class AgentRuntime {
           allDay: task.allDay,
         });
         const schedulePart = schedule ? `, ${schedule}` : "";
+        const recur = formatRecurrenceLabel(task.recurrenceRule);
+        const recurPart = recur ? `, ${recur}` : "";
         const remind = formatReminderConfigLabel(reminderConfig);
         const remindPart = remind ? `, 알림 ${remind}` : "";
-        return `초안 준비됨(미등록): ${task.title}${schedulePart}${remindPart}. [등록 완료] 전이면 일정에 반영되지 않습니다.`;
+        return `초안 준비됨(미등록): ${task.title}${schedulePart}${recurPart}${remindPart}. [등록 완료] 전이면 일정에 반영되지 않습니다.`;
       }
       case "create_reminder": {
         const a = args as unknown as CreateReminderArgs;

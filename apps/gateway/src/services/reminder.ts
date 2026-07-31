@@ -16,12 +16,74 @@ import {
   cancelReminderJob,
   scheduleReminderJob,
 } from "./reminder-queue.js";
+import { expandRecurrence } from "../utils/recurrence.js";
+
+const RECURRING_REMINDER_DAYS = 30;
 
 export class ReminderService {
   constructor(
     private readonly reminders: ReminderRepository,
     private readonly queue: Queue<ReminderJobData>,
   ) {}
+
+  /** Schedule reminders for occurrences in the next N days */
+  async scheduleRecurringWindow(
+    task: Task,
+    telegramUserId: number | null,
+    user?: User,
+    options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[]; windowDays?: number },
+  ): Promise<void> {
+    if (!task.dueAt || !task.recurrenceRule || task.status !== "active") return;
+
+    const windowDays = options?.windowDays ?? RECURRING_REMINDER_DAYS;
+    const from = new Date();
+    const to = new Date(Date.now() + windowDays * 86_400_000);
+    const occs = expandRecurrence(
+      {
+        recurrenceRule: task.recurrenceRule,
+        recurrenceUntil: task.recurrenceUntil,
+        recurrenceCount: task.recurrenceCount,
+        startsAt: task.startsAt,
+        dueAt: task.dueAt,
+        allDay: task.allDay,
+      },
+      from,
+      to,
+    );
+
+    const prefs = (user?.preferences ?? {}) as UserPreferences;
+    const useDefaults = options?.useDefaults ?? true;
+    const storedExtras = prefs.taskReminderRules?.[task.id] ?? [];
+    const extraRules = options?.extraRules ?? storedExtras;
+    const ddayOffsets = useDefaults ? ddayOffsetsForUser(prefs) : [];
+    const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
+    const suppressed = getSuppressedFireTimes(user, task.id);
+
+    const pending = await this.reminders.listPendingForTask(task.id);
+    const existingFire = new Set(pending.map((r) => r.fireAt.getTime()));
+
+    for (const occ of occs) {
+      const schedules = filterSuppressedFireTimes(
+        buildReminderFireTimes(occ.dueAt, {
+          ddayOffsets,
+          reminderHour,
+          extraRules,
+          includeDueProximity: useDefaults,
+        }),
+        suppressed,
+      );
+      for (const fireAt of schedules) {
+        if (existingFire.has(fireAt.getTime())) continue;
+        if (fireAt.getTime() <= Date.now()) continue;
+        try {
+          await this.scheduleAt(task, telegramUserId, fireAt);
+          existingFire.add(fireAt.getTime());
+        } catch {
+          // skip
+        }
+      }
+    }
+  }
 
   async scheduleForTask(
     task: Task,

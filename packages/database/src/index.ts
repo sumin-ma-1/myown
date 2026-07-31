@@ -4,6 +4,7 @@ export * from "./connection-privacy.js";
 export * from "./priority.js";
 export * from "./repositories/user.js";
 export * from "./repositories/task.js";
+export * from "./repositories/task-recurrence-exception.js";
 export * from "./repositories/reminder.js";
 export * from "./repositories/attachment.js";
 export * from "./repositories/task-attachment.js";

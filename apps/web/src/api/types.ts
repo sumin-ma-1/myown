@@ -19,6 +19,13 @@ export interface TaskDto {
   dueAt: string | null;
   startsAt: string | null;
   allDay: boolean;
+  recurrenceRule?: string | null;
+  recurrenceUntil?: string | null;
+  recurrenceCount?: number | null;
+  recurrenceTimezone?: string | null;
+  recurrenceLabel?: string | null;
+  occurrenceKey?: string | null;
+  seriesId?: string | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;

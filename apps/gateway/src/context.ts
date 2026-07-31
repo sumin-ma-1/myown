@@ -8,6 +8,7 @@ import {
   ReminderRepository,
   SessionRepository,
   TaskAttachmentRepository,
+  TaskRecurrenceExceptionRepository,
   TaskRepository,
   UserNotificationRepository,
   UserRepository,
@@ -38,6 +39,7 @@ export interface AppContext {
   sessions: SessionRepository;
   loginEvents: LoginEventRepository;
   tasks: TaskRepository;
+  recurrenceExceptions: TaskRecurrenceExceptionRepository;
   reminders: ReminderRepository;
   attachments: AttachmentRepository;
   taskAttachments: TaskAttachmentRepository;
@@ -69,6 +71,7 @@ export function createContext(redis: Redis): AppContext {
   const sessions = new SessionRepository(db);
   const loginEvents = new LoginEventRepository(db);
   const tasks = new TaskRepository(db);
+  const recurrenceExceptions = new TaskRecurrenceExceptionRepository(db);
   const reminders = new ReminderRepository(db);
   const attachments = new AttachmentRepository(db);
   const taskAttachments = new TaskAttachmentRepository(db);
@@ -117,6 +120,7 @@ export function createContext(redis: Redis): AppContext {
     sessions,
     loginEvents,
     tasks,
+    recurrenceExceptions,
     reminders,
     attachments,
     taskAttachments,
