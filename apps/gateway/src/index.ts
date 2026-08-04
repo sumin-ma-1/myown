@@ -3,24 +3,39 @@ import { createRedisConnection, createReminderWorker } from "./services/reminder
 import { createApiApp } from "./api/index.js";
 import { createContext } from "./context.js";
 import { config } from "./config.js";
+import { InlineKeyboard } from "grammy";
 import { createBot } from "./telegram/bot.js";
 import { setupTelegramMenuButton } from "./telegram/menu-button.js";
 import { handleReminderJob } from "./workers/reminder-worker.js";
 import { startGoogleCalendarAutoSyncWorker } from "./workers/google-calendar-auto-sync-worker.js";
 import { startMorningBriefingWorker } from "./workers/morning-briefing-worker.js";
 import { startRecurringReminderWorker } from "./workers/recurring-reminder-worker.js";
+import type { TelegramSendOptions } from "./services/notification.js";
 
 async function main() {
   const redis = createRedisConnection();
   const app = createContext(redis);
   const bot = createBot(app);
   await setupTelegramMenuButton(bot);
-  app.notifications.setTelegramSender(async (telegramUserId, text) => {
-    await bot.api.sendMessage(telegramUserId, text);
-  });
-  app.morningBriefing.setTelegramSender(async (telegramUserId, text) => {
-    await bot.api.sendMessage(telegramUserId, text);
-  });
+  const sendTelegram = async (
+    telegramUserId: number,
+    text: string,
+    options?: TelegramSendOptions,
+  ) => {
+    const keyboard = options?.urlButton
+      ? new InlineKeyboard().url(options.urlButton.text, options.urlButton.url)
+      : undefined;
+    await bot.api.sendMessage(telegramUserId, text, {
+      ...(keyboard
+        ? {
+            reply_markup: keyboard,
+            link_preview_options: { is_disabled: true },
+          }
+        : {}),
+    });
+  };
+  app.notifications.setTelegramSender(sendTelegram);
+  app.morningBriefing.setTelegramSender(sendTelegram);
 
   const worker = createReminderWorker(async (job) => {
     await handleReminderJob(bot, app, job);

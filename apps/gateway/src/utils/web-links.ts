@@ -19,3 +19,10 @@ export function taskWebLink(taskId: string): string | null {
   if (!base.startsWith("https://")) return null;
   return `${base}/tasks?open=${encodeURIComponent(taskId)}`;
 }
+
+/** 연동 APP → Google Calendar (텔레그램 URL 버튼용, HTTPS만) */
+export function googleCalendarIntegrationsWebLink(): string | null {
+  const base = config.webAppUrl.trim().replace(/\/$/, "");
+  if (!base.startsWith("https://")) return null;
+  return `${base}/integrations#google-calendar`;
+}
