@@ -91,8 +91,9 @@ export class GoogleCalendarService {
   }
 
   calendarRedirectUri(): string {
+    const fromEnv = process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim();
     return (
-      process.env.GOOGLE_CALENDAR_REDIRECT_URI ??
+      fromEnv ||
       `${config.webAppUrl}/api/integrations/google-calendar/callback`
     );
   }

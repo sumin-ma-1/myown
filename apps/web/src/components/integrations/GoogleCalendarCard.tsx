@@ -666,9 +666,9 @@ export function GoogleCalendarCard() {
                           />
                         )}
                       </th>
-                      <th className="px-3 py-2">활성</th>
+                      <th className="w-14 min-w-[3.5rem] whitespace-nowrap px-3 py-2">활성</th>
                       <th className="px-3 py-2">일정</th>
-                      <th className="px-3 py-2">시작</th>
+                      <th className="whitespace-nowrap px-3 py-2">시작</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -689,7 +689,7 @@ export function GoogleCalendarCard() {
                             />
                           )}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="w-14 min-w-[3.5rem] px-3 py-2">
                           <input
                             type="checkbox"
                             checked={item.enabled}
