@@ -39,10 +39,10 @@ export function Card({
       <div
         id={id}
         onClick={onClick}
-        className={`min-w-0 rounded-xl bg-gradient-to-br from-white/95 via-white/55 to-slate-200/55 p-px shadow-[0_10px_40px_-12px_rgba(15,23,42,0.12)] dark:from-white/45 dark:via-slate-300/20 dark:to-slate-500/35 dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.55)] ${className}`}
+        className={`min-w-0 rounded-xl bg-gradient-to-br from-white/95 via-white/55 to-slate-200/55 p-px shadow-[0_10px_40px_-12px_rgba(15,23,42,0.12)] dark:from-white/[0.06] dark:via-white/[0.04] dark:to-white/[0.03] dark:shadow-[0_8px_28px_-12px_rgba(0,0,0,0.55)] ${className}`}
       >
         <section
-          className="h-full rounded-[11px] border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-1px_0_0_rgba(148,163,184,0.12)] backdrop-blur-md dark:border-white/15 dark:bg-slate-900/45 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),inset_0_-1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl"
+          className="h-full rounded-[11px] border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-1px_0_0_rgba(148,163,184,0.12)] backdrop-blur-md dark:border-white/[0.05] dark:bg-slate-950/55 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl"
         >
           {header}
           {children}
