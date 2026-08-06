@@ -13,9 +13,9 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
     <li>
       <button
         type="button"
-        className={`flex w-full items-start justify-between gap-2 rounded-2xl border border-white/55 bg-white/50 px-3 py-2.5 text-left shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow,transform] dark:border-white/15 dark:bg-white/[0.09] dark:shadow-[0_1px_3px_rgba(0,0,0,0.28)] ${
+        className={`flex w-full items-start justify-between gap-2 rounded-2xl border border-white/55 bg-white/50 px-3 py-2.5 text-left shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-[background-color,border-color,box-shadow,transform] dark:border-white/[0.06] dark:bg-white/[0.03] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] ${
           onClick
-            ? "cursor-pointer hover:bg-white/75 hover:shadow-[0_2px_6px_rgba(15,23,42,0.08)] active:scale-[0.99] dark:hover:bg-white/[0.14] dark:hover:shadow-[0_2px_6px_rgba(0,0,0,0.32)]"
+            ? "cursor-pointer hover:bg-white/75 hover:shadow-[0_2px_6px_rgba(15,23,42,0.08)] active:scale-[0.99] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055] dark:hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
             : ""
         }`}
         onClick={(event) => {
