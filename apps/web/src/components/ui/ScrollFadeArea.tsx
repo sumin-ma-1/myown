@@ -4,10 +4,13 @@ export function ScrollFadeArea({
   children,
   className = "",
   wrapperClassName = "",
+  hideScrollbar = false,
 }: {
   children: ReactNode;
   className?: string;
   wrapperClassName?: string;
+  /** 스크롤은 가능하되 스크롤바는 숨김 (하단 fade만 표시) */
+  hideScrollbar?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showBottomFade, setShowBottomFade] = useState(false);
@@ -40,7 +43,7 @@ export function ScrollFadeArea({
       <div
         ref={scrollRef}
         onScroll={updateBottomFade}
-        className={`scrollbar-subtle overflow-y-auto ${className} ${
+        className={`${hideScrollbar ? "scrollbar-none" : "scrollbar-subtle"} overflow-y-auto ${className} ${
           showBottomFade ? "scroll-fade-mask-bottom" : ""
         }`}
       >

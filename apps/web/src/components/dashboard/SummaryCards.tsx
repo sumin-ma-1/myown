@@ -62,7 +62,7 @@ function SummaryTaskList({
   }
 
   return (
-    <ScrollFadeArea className={SUMMARY_LIST_MAX_HEIGHT}>
+    <ScrollFadeArea className={SUMMARY_LIST_MAX_HEIGHT} hideScrollbar>
       <ul className="space-y-2">
         {tasks.map((task) => (
           <TaskRow key={task.id} task={task} onClick={onTaskClick} />
