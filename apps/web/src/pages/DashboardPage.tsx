@@ -15,6 +15,7 @@ export function DashboardPage() {
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | undefined>();
   const [createDueDate, setCreateDueDate] = useState<string | undefined>();
+  const [createDueTime, setCreateDueTime] = useState<string | undefined>();
 
   const { data: todayData, isLoading: todayLoading } = useQuery({
     queryKey: ["tasks-today"],
@@ -26,21 +27,24 @@ export function DashboardPage() {
     queryFn: () => api.listTasks({ status: "active", sort: "priority" }),
   });
 
-  const openCreate = (dueDate?: string) => {
+  const openCreate = (dueDate?: string, dueTime?: string) => {
     setEditingTaskId(undefined);
     setCreateDueDate(dueDate);
+    setCreateDueTime(dueTime);
     setModalOpen(true);
   };
 
   const openEdit = (task: TaskDto) => {
     setEditingTaskId(task.id);
     setCreateDueDate(undefined);
+    setCreateDueTime(undefined);
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setCreateDueDate(undefined);
+    setCreateDueTime(undefined);
   };
 
   if (todayLoading || activeLoading) {
@@ -89,7 +93,7 @@ export function DashboardPage() {
 
       <CalendarPanel
         onTaskClick={openEdit}
-        onEmptyDayClick={(dateKey) => openCreate(dateKey)}
+        onEmptyDayClick={(dateKey, dueTime) => openCreate(dateKey, dueTime)}
       />
 
       <TaskFormModal
@@ -97,6 +101,7 @@ export function DashboardPage() {
         mode={editingTaskId ? "edit" : "create"}
         taskId={editingTaskId}
         initialDueDate={createDueDate}
+        initialDueTime={createDueTime}
         onClose={closeModal}
         onSaved={setFlashMessage}
       />

@@ -128,6 +128,8 @@ interface TaskFormModalProps {
   taskId?: string;
   /** 생성 모드에서 미리 채울 마감일 (YYYY-MM-DD) */
   initialDueDate?: string;
+  /** 생성 모드에서 미리 채울 마감 시각 (HH:mm) */
+  initialDueTime?: string;
   onClose: () => void;
   /** 저장 성공 시 부모 페이지에 표시할 안내 (모달 닫힌 뒤) */
   onSaved?: (message: string) => void;
@@ -138,6 +140,7 @@ export function TaskFormModal({
   mode,
   taskId,
   initialDueDate,
+  initialDueTime,
   onClose,
   onSaved,
 }: TaskFormModalProps) {
@@ -226,7 +229,7 @@ export function TaskFormModal({
       setStartDate("");
       setStartTime("");
       setDueDate(initialDueDate ?? "");
-      setDueTime("");
+      setDueTime(initialDueTime ?? "");
       setAllDay(false);
       setDateRange(false);
       setRecurEnabled(false);
@@ -287,7 +290,7 @@ export function TaskFormModal({
       useDefaultReminders: taskData.reminderConfig.useDefaultReminders,
       extraRules: taskData.reminderConfig.extraRules,
     };
-  }, [open, mode, taskData, taskId, initialDueDate]);
+  }, [open, mode, taskData, taskId, initialDueDate, initialDueTime]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

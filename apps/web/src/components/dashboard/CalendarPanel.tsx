@@ -4,12 +4,13 @@ import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
 import { CardTitle } from "@/components/ui/CardTitle";
+import { DayTimeline } from "@/components/dashboard/DayTimeline";
 import {
   addMonths,
   addWeeks,
   buildWeekDays,
+  dateFromLocalKey,
   endOfDay,
-  endOfMonth,
   formatLocalDateKey,
   sameDay,
   startOfDay,
@@ -27,6 +28,8 @@ type SpanRole = "single" | "start" | "middle" | "end";
 
 /** Max task chips shown per day in month view before "+N more". */
 const MONTH_DAY_TASK_PREVIEW = 3;
+/** 월별 6주 그리드와 주별 뷰를 같은 높이로 맞춤 */
+const CALENDAR_BODY_MIN_H = "min-h-[33rem]";
 const CALENDAR_TASK_TEXT_CLASS = "text-xs";
 const DAY_CELL_HOVER_CLASS =
   "relative transition-transform duration-200 ease-out hover:z-10 hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20";
@@ -168,15 +171,12 @@ function sortTasksForCalendar(tasks: TaskDto[]): TaskDto[] {
 }
 
 function buildMonthGrid(cursor: Date): Date[] {
-  const start = startOfMonth(cursor);
-  const end = endOfMonth(cursor);
-  const gridStart = startOfWeek(start);
+  const gridStart = startOfWeek(startOfMonth(cursor));
   const days: Date[] = [];
   const d = new Date(gridStart);
-  while (d <= end || days.length % 7 !== 0) {
+  while (days.length < 42) {
     days.push(new Date(d));
     d.setDate(d.getDate() + 1);
-    if (days.length > 42) break;
   }
   return days;
 }
@@ -186,15 +186,39 @@ function formatWeekLabel(days: Date[]): string {
   return `${fmt.format(days[0]!)} ~ ${fmt.format(days[6]!)}`;
 }
 
+function dayCellToneClass({
+  isToday,
+  isSelected,
+  inMonth,
+}: {
+  isToday: boolean;
+  isSelected: boolean;
+  inMonth: boolean;
+}): string {
+  const selected = isSelected
+    ? "border-[#dbeafe] ring-2 ring-[#dbeafe]/80 dark:border-[#dbeafe]/70 dark:ring-[#dbeafe]/25"
+    : "";
+  if (isToday) {
+    return `border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70 ${
+      isSelected ? "border-[#dbeafe] dark:border-[#dbeafe]/70" : ""
+    }`;
+  }
+  if (inMonth) {
+    return `${selected} border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60`;
+  }
+  return `${selected} border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500`;
+}
+
 export function CalendarPanel({
   onTaskClick,
   onEmptyDayClick,
 }: {
   onTaskClick?: (task: TaskDto) => void;
-  /** 날짜 칸 빈 곳 클릭 시 (YYYY-MM-DD) */
-  onEmptyDayClick?: (dateKey: string) => void;
+  /** 날짜 더블클릭 또는 타임라인 시간대 클릭 (YYYY-MM-DD, 선택적 HH:mm) */
+  onEmptyDayClick?: (dateKey: string, dueTime?: string) => void;
 }) {
   const [cursor, setCursor] = useState(() => new Date());
+  const [selectedKey, setSelectedKey] = useState(() => formatLocalDateKey(new Date()));
   const [view, setView] = useState<CalendarView>("month");
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -210,18 +234,31 @@ export function CalendarPanel({
     return { from: startOfDay(weekDays[0]!), to: endOfDay(weekDays[6]!) };
   }, [view, monthDays, weekDays]);
 
+  const queryRange = useMemo(() => {
+    const selected = dateFromLocalKey(selectedKey);
+    const from =
+      visibleRange.from.getTime() < startOfDay(selected).getTime()
+        ? visibleRange.from
+        : startOfDay(selected);
+    const to =
+      visibleRange.to.getTime() > endOfDay(selected).getTime()
+        ? visibleRange.to
+        : endOfDay(selected);
+    return { from, to };
+  }, [visibleRange, selectedKey]);
+
   const { data: calendarData } = useQuery({
     queryKey: [
       "calendar",
       view,
       showCompleted,
-      formatLocalDateKey(visibleRange.from),
-      formatLocalDateKey(visibleRange.to),
+      formatLocalDateKey(queryRange.from),
+      formatLocalDateKey(queryRange.to),
     ],
     queryFn: () =>
       api.listCalendarTasks(
-        visibleRange.from.toISOString(),
-        visibleRange.to.toISOString(),
+        queryRange.from.toISOString(),
+        queryRange.to.toISOString(),
         { includeCompleted: showCompleted },
       ),
   });
@@ -257,7 +294,13 @@ export function CalendarPanel({
     setCursor((current) => (view === "month" ? addMonths(current, 1) : addWeeks(current, 1)));
   };
 
-  const goToday = () => setCursor(new Date());
+  const goToday = () => {
+    const today = new Date();
+    setCursor(today);
+    setSelectedKey(formatLocalDateKey(today));
+  };
+
+  const selectDay = (key: string) => setSelectedKey(key);
 
   const scrollCalendarIntoView = () => {
     document.getElementById("schedule-calendar")?.scrollIntoView({
@@ -339,141 +382,154 @@ export function CalendarPanel({
       }
       className="col-span-full scroll-mt-6"
     >
-      {view === "month" ? (
-        <div className="grid grid-cols-7 gap-1 text-center text-xs">
-          {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-            <div key={d} className="py-1 font-semibold text-slate-500 dark:text-slate-400">
-              {d}
-            </div>
-          ))}
-          {monthDays.map((day) => {
-            const key = formatLocalDateKey(day);
-            const dayTasks = tasksByDay.get(key) ?? [];
-            const inMonth = day.getMonth() === cursor.getMonth();
-            const isToday = sameDay(day, new Date());
-            return (
-              <div
-                key={key}
-                role={onEmptyDayClick ? "button" : undefined}
-                tabIndex={onEmptyDayClick ? 0 : undefined}
-                className={`min-h-20 rounded-lg border p-1 text-left ${DAY_CELL_HOVER_CLASS} ${
-                  onEmptyDayClick ? "cursor-pointer" : ""
-                } ${
-                  isToday
-                    ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
-                    : inMonth
-                      ? "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
-                      : "border-transparent bg-slate-50 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500"
-                }`}
-                onClick={(event) => {
-                  if (!onEmptyDayClick) return;
-                  event.stopPropagation();
-                  onEmptyDayClick(key);
-                }}
-                onKeyDown={(event) => {
-                  if (!onEmptyDayClick) return;
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onEmptyDayClick(key);
-                  }
-                }}
-              >
-                <div
-                  className={`mb-1 text-[11px] font-semibold ${
-                    isToday
-                      ? "text-brand dark:text-blue-300"
-                      : inMonth
-                        ? "font-medium text-slate-700 dark:text-slate-200"
-                        : "font-medium"
-                  }`}
-                >
-                  {day.getDate()}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className={`min-w-0 ${CALENDAR_BODY_MIN_H}`}>
+          {view === "month" ? (
+            <div className="grid h-full grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] gap-1 text-center text-xs">
+              {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
+                <div key={d} className="py-1 font-semibold text-slate-500 dark:text-slate-400">
+                  {d}
                 </div>
-                <ul className="space-y-1">
-                  {dayTasks.slice(0, MONTH_DAY_TASK_PREVIEW).map((t) => (
-                    <li key={t.id}>
-                      <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
-                    </li>
-                  ))}
-                  {dayTasks.length > MONTH_DAY_TASK_PREVIEW && (
-                    <li
-                      className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-500 dark:text-slate-400`}
-                      title={dayTasks
-                        .slice(MONTH_DAY_TASK_PREVIEW)
-                        .map((t) => t.title)
-                        .join(", ")}
-                      onClick={(event) => event.stopPropagation()}
+              ))}
+              {monthDays.map((day) => {
+                const key = formatLocalDateKey(day);
+                const dayTasks = tasksByDay.get(key) ?? [];
+                const inMonth = day.getMonth() === cursor.getMonth();
+                const isToday = sameDay(day, new Date());
+                const isSelected = key === selectedKey;
+                return (
+                  <div
+                    key={key}
+                    role="button"
+                    tabIndex={0}
+                    className={`min-h-0 cursor-pointer rounded-lg border p-1 text-left ${DAY_CELL_HOVER_CLASS} ${dayCellToneClass(
+                      { isToday, isSelected, inMonth },
+                    )}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      selectDay(key);
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      onEmptyDayClick?.(key);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        selectDay(key);
+                      }
+                    }}
+                  >
+                    <div
+                      className={`mb-1 text-[11px] font-semibold ${
+                        isToday
+                          ? "text-brand dark:text-blue-300"
+                          : inMonth
+                            ? "font-medium text-slate-700 dark:text-slate-200"
+                            : "font-medium"
+                      }`}
                     >
-                      +{dayTasks.length - MONTH_DAY_TASK_PREVIEW}
-                    </li>
-                  )}
-                </ul>
-              </div>
-            );
-          })}
+                      {day.getDate()}
+                    </div>
+                    <ul className="space-y-1">
+                      {dayTasks.slice(0, MONTH_DAY_TASK_PREVIEW).map((t) => (
+                        <li key={t.id}>
+                          <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
+                        </li>
+                      ))}
+                      {dayTasks.length > MONTH_DAY_TASK_PREVIEW && (
+                        <li
+                          className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-500 dark:text-slate-400`}
+                          title={dayTasks
+                            .slice(MONTH_DAY_TASK_PREVIEW)
+                            .map((t) => t.title)
+                            .join(", ")}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          +{dayTasks.length - MONTH_DAY_TASK_PREVIEW}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid h-full grid-cols-7 gap-2 text-xs">
+              {weekDays.map((day) => {
+                const key = formatLocalDateKey(day);
+                const dayTasks = tasksByDay.get(key) ?? [];
+                const isToday = sameDay(day, new Date());
+                const isSelected = key === selectedKey;
+                return (
+                  <div
+                    key={key}
+                    role="button"
+                    tabIndex={0}
+                    className={`min-h-0 cursor-pointer rounded-lg border p-2 text-left ${DAY_CELL_HOVER_CLASS} ${dayCellToneClass(
+                      { isToday, isSelected, inMonth: true },
+                    )}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      selectDay(key);
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      onEmptyDayClick?.(key);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        selectDay(key);
+                      }
+                    }}
+                  >
+                    <p
+                      className={`mb-2 text-[11px] font-semibold ${
+                        isToday
+                          ? "text-brand dark:text-blue-300"
+                          : "text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      {new Intl.DateTimeFormat("ko-KR", {
+                        weekday: "short",
+                        month: "numeric",
+                        day: "numeric",
+                      }).format(day)}
+                    </p>
+                    {dayTasks.length === 0 ? (
+                      <p className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-400 dark:text-slate-500`}>
+                        일정 없음
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {dayTasks.map((t) => (
+                          <li key={t.id}>
+                            <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-7 gap-2 text-xs">
-          {weekDays.map((day) => {
-            const key = formatLocalDateKey(day);
-            const dayTasks = tasksByDay.get(key) ?? [];
-            const isToday = sameDay(day, new Date());
-            return (
-              <div
-                key={key}
-                role={onEmptyDayClick ? "button" : undefined}
-                tabIndex={onEmptyDayClick ? 0 : undefined}
-                className={`min-h-32 rounded-lg border p-2 text-left ${DAY_CELL_HOVER_CLASS} ${
-                  onEmptyDayClick ? "cursor-pointer" : ""
-                } ${
-                  isToday
-                    ? "border-brand/50 bg-brand-muted/40 ring-2 ring-brand/40 dark:border-blue-400 dark:bg-blue-950/55 dark:ring-blue-400/70"
-                    : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800/60"
-                }`}
-                onClick={(event) => {
-                  if (!onEmptyDayClick) return;
-                  event.stopPropagation();
-                  onEmptyDayClick(key);
-                }}
-                onKeyDown={(event) => {
-                  if (!onEmptyDayClick) return;
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onEmptyDayClick(key);
-                  }
-                }}
-              >
-                <p
-                  className={`mb-2 text-[11px] font-semibold ${
-                    isToday
-                      ? "text-brand dark:text-blue-300"
-                      : "text-slate-600 dark:text-slate-300"
-                  }`}
-                >
-                  {new Intl.DateTimeFormat("ko-KR", {
-                    weekday: "short",
-                    month: "numeric",
-                    day: "numeric",
-                  }).format(day)}
-                </p>
-                {dayTasks.length === 0 ? (
-                  <p className={`${CALENDAR_TASK_TEXT_CLASS} text-slate-400 dark:text-slate-500`}>일정 없음</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {dayTasks.map((t) => (
-                      <li key={t.id}>
-                        <CalendarTaskChip task={t} dayKey={key} onClick={onTaskClick} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+
+        <div className={`relative ${CALENDAR_BODY_MIN_H} lg:min-h-0`}>
+          <div className={`flex h-full ${CALENDAR_BODY_MIN_H} flex-col lg:absolute lg:inset-0 lg:min-h-0`}>
+            <DayTimeline
+              dayKey={selectedKey}
+              tasks={tasksByDay.get(selectedKey) ?? []}
+              onTaskClick={onTaskClick}
+              onSlotClick={onEmptyDayClick}
+            />
+          </div>
         </div>
-      )}
+      </div>
     </Card>
   );
 }

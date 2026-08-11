@@ -148,6 +148,12 @@ export function localDateKeyFromIso(iso: string): string {
   return formatLocalDateKey(new Date(iso));
 }
 
+/** YYYY-MM-DD → 로컬 Date (정오, DST 경계 회피) */
+export function dateFromLocalKey(dayKey: string): Date {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  return new Date(y!, m! - 1, d!, 12, 0, 0, 0);
+}
+
 export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
 }
