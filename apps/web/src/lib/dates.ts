@@ -8,6 +8,30 @@ export function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+/** 페이지 제목용 날짜 조각 (서울) */
+export function seoulDateParts(date = new Date()): {
+  year: string;
+  month: string;
+  day: string;
+  weekday: string;
+} {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "long",
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    weekday: get("weekday"),
+  };
+}
+
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "-";
   return new Intl.DateTimeFormat("ko-KR", {

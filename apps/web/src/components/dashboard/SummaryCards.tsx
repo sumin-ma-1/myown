@@ -1,9 +1,11 @@
+import { useState, type ReactNode } from "react";
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
 import { CardTitle } from "@/components/ui/CardTitle";
+import { DayTimeline } from "@/components/dashboard/DayTimeline";
 import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
-import { formatDateTime, formatDday, dueDateToneClass } from "@/lib/dates";
+import { formatDateTime, formatDday, dueDateToneClass, formatLocalDateKey } from "@/lib/dates";
 
 /** Roughly eight task rows visible before the list scrolls. */
 const SUMMARY_LIST_MAX_HEIGHT = "max-h-[28rem]";
@@ -110,6 +112,8 @@ function SummaryCard({
   tasks,
   emptyMessage,
   onTaskClick,
+  action,
+  children,
 }: {
   id: string;
   icon: string;
@@ -118,13 +122,15 @@ function SummaryCard({
   tasks: TaskDto[];
   emptyMessage: string;
   onTaskClick?: (task: TaskDto) => void;
+  action?: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <Card
       id={id}
       variant="glass"
       onClick={() => scrollCardIntoView(id)}
-      className="min-w-0 scroll-mt-6"
+      className="h-full min-w-0 scroll-mt-6"
       title={
         <SummaryCardTitle
           icon={icon}
@@ -133,8 +139,11 @@ function SummaryCard({
           count={tasks.length}
         />
       }
+      action={action}
     >
-      <SummaryTaskList tasks={tasks} emptyMessage={emptyMessage} onTaskClick={onTaskClick} />
+      {children ?? (
+        <SummaryTaskList tasks={tasks} emptyMessage={emptyMessage} onTaskClick={onTaskClick} />
+      )}
     </Card>
   );
 }
@@ -142,10 +151,14 @@ function SummaryCard({
 export function DueTodayCard({
   tasks,
   onTaskClick,
+  onSlotClick,
 }: {
   tasks: TaskDto[];
   onTaskClick?: (task: TaskDto) => void;
+  onSlotClick?: (dateKey: string, dueTime: string) => void;
 }) {
+  const [showTimeline, setShowTimeline] = useState(false);
+
   return (
     <SummaryCard
       id="summary-due-today"
@@ -155,7 +168,44 @@ export function DueTodayCard({
       tasks={tasks}
       emptyMessage="오늘 마감 업무가 없어요."
       onTaskClick={onTaskClick}
-    />
+      action={
+        <button
+          type="button"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+          aria-pressed={showTimeline}
+          aria-label={showTimeline ? "목록으로 보기" : "타임라인으로 보기"}
+          title={showTimeline ? "목록으로 보기" : "타임라인으로 보기"}
+          onClick={(event) => {
+            event.stopPropagation();
+            setShowTimeline((value) => !value);
+          }}
+        >
+          <span className="material-symbols-outlined text-[18px] leading-none" aria-hidden>
+            {showTimeline ? "visibility_off" : "visibility"}
+          </span>
+        </button>
+      }
+    >
+      {showTimeline ? (
+        <div className="relative min-h-[28rem] flex-1">
+          <div className="absolute inset-0">
+            <DayTimeline
+              hideHeader
+              dayKey={formatLocalDateKey(new Date())}
+              tasks={tasks}
+              onTaskClick={onTaskClick}
+              onSlotClick={onSlotClick}
+            />
+          </div>
+        </div>
+      ) : (
+        <SummaryTaskList
+          tasks={tasks}
+          emptyMessage="오늘 마감 업무가 없어요."
+          onTaskClick={onTaskClick}
+        />
+      )}
+    </SummaryCard>
   );
 }
 

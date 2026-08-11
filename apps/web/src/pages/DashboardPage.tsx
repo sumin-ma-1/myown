@@ -8,6 +8,7 @@ import { FlashMessage } from "@/components/ui/FlashMessage";
 import { RotatingSubtitle, DASHBOARD_SUBTITLE_MESSAGES } from "@/components/ui/RotatingSubtitle";
 import { DueTodayCard, InProgressCard, PlannedCard } from "@/components/dashboard/SummaryCards";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
+import { seoulDateParts } from "@/lib/dates";
 
 export function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,12 +54,18 @@ export function DashboardPage() {
 
   const today = todayData?.items ?? [];
   const active = activeData?.items ?? [];
+  const todayParts = seoulDateParts();
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">나의 일정</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {todayParts.month}월 {todayParts.day}일
+            <span className="ml-2 text-base font-medium text-slate-400 dark:text-slate-500">
+              {todayParts.weekday} {todayParts.year}
+            </span>
+          </h1>
           <RotatingSubtitle messages={DASHBOARD_SUBTITLE_MESSAGES} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -86,7 +93,11 @@ export function DashboardPage() {
       </header>
 
       <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
-        <DueTodayCard tasks={today} onTaskClick={openEdit} />
+        <DueTodayCard
+          tasks={today}
+          onTaskClick={openEdit}
+          onSlotClick={(dateKey, dueTime) => openCreate(dateKey, dueTime)}
+        />
         <InProgressCard tasks={active} onTaskClick={openEdit} />
         <PlannedCard tasks={active} onTaskClick={openEdit} />
       </div>

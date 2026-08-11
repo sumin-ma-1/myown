@@ -136,8 +136,8 @@ export function Sidebar({
             <NavLink to="/dashboard" title={expanded ? undefined : "업무 현황"} className="block w-full">
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
-                  <span className={navIconClass} aria-hidden>
-                    visibility
+                  <span className="material-symbols-outlined shrink-0 text-[18px] leading-none" aria-hidden>
+                    workspaces
                   </span>
                   {expanded && "업무 현황"}
                 </span>

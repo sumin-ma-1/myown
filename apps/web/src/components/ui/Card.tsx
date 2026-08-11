@@ -22,7 +22,7 @@ export function Card({
 }: CardProps) {
   const header =
     title || action ? (
-      <header className="mb-3 flex min-w-0 items-center justify-between gap-2">
+      <header className="mb-3 flex min-w-0 shrink-0 items-center justify-between gap-2">
         {title ? (
           <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
             {title}
@@ -42,7 +42,7 @@ export function Card({
         className={`min-w-0 rounded-xl bg-gradient-to-br from-white/95 via-white/55 to-slate-200/55 p-px shadow-[0_10px_40px_-12px_rgba(15,23,42,0.12)] dark:from-white/[0.06] dark:via-white/[0.04] dark:to-white/[0.03] dark:shadow-[0_8px_28px_-12px_rgba(0,0,0,0.55)] ${className}`}
       >
         <section
-          className="h-full rounded-[11px] border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-1px_0_0_rgba(148,163,184,0.12)] backdrop-blur-md dark:border-white/[0.05] dark:bg-slate-950/55 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl"
+          className="flex h-full min-h-0 flex-col rounded-[11px] border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-1px_0_0_rgba(148,163,184,0.12)] backdrop-blur-md dark:border-white/[0.05] dark:bg-slate-950/55 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl"
         >
           {header}
           {children}
