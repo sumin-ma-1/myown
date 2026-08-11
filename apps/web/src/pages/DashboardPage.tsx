@@ -60,11 +60,8 @@ export function DashboardPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {todayParts.month}월 {todayParts.day}일
-            <span className="ml-2 text-base font-medium text-slate-400 dark:text-slate-500">
-              {todayParts.weekday} {todayParts.year}
-            </span>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            {todayParts.year}년 {todayParts.month}월 {todayParts.day}일 {todayParts.weekday}
           </h1>
           <RotatingSubtitle messages={DASHBOARD_SUBTITLE_MESSAGES} />
         </div>
