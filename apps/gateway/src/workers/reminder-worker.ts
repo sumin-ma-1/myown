@@ -30,16 +30,23 @@ export async function handleReminderJob(
     return;
   }
 
-  const dueLabel = task.dueAt
-    ? `📅 마감: ${isDateOnlyDue(task.dueAt) ? formatDate(task.dueAt) : formatDateTime(task.dueAt)}`
-    : "📅 마감: 없음";
-  const ddayLabel = task.dueAt ? formatDday(daysUntil(task.dueAt)) : null;
+  const anchor = task.startsAt ?? task.dueAt;
+  const scheduleLabel = task.startsAt
+    ? `📅 시작: ${
+        task.allDay || (task.dueAt && isDateOnlyDue(task.dueAt))
+          ? formatDate(task.startsAt)
+          : formatDateTime(task.startsAt)
+      }`
+    : task.dueAt
+      ? `📅 마감: ${isDateOnlyDue(task.dueAt) ? formatDate(task.dueAt) : formatDateTime(task.dueAt)}`
+      : "📅 마감: 없음";
+  const ddayLabel = anchor ? formatDday(daysUntil(anchor)) : null;
   const hasDescription = Boolean(task.description?.trim());
 
   await sendReminderMessage(bot, telegramUserId, {
     taskId: task.id,
     title: task.title,
-    dueLabel,
+    dueLabel: scheduleLabel,
     ddayLabel,
     priorityLabel: PRIORITY_LABEL[task.priority] ?? "일반",
     showDetail: hasDescription,

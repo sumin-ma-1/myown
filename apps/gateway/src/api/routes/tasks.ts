@@ -3,7 +3,12 @@ import type { TaskPriority } from "@myown/database";
 import { TASK_PRIORITIES } from "@myown/database";
 import { endOfDayInTimezone, startOfDayInTimezone } from "../../utils/date.js";
 import { ddayOffsetsForUser } from "../../utils/notification-prefs.js";
-import { buildReminderFireTimes, extraRuleFireTime } from "../../services/reminder-schedule.js";
+import {
+  buildReminderFireTimes,
+  extraRuleFireTime,
+  isReminderDateOnly,
+  reminderAnchorAt,
+} from "../../services/reminder-schedule.js";
 import {
   clearSuppressedFireTimes,
   extraRulesEqual,
@@ -203,12 +208,23 @@ tasksRoute.get("/:id", async (c) => {
   const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
   let defaultPreview: string[] = [];
-  if (item.dueAt && reminderConfig.useDefaultReminders) {
+  const previewAnchor = item.dueAt
+    ? reminderAnchorAt({
+        dueAt: new Date(item.dueAt),
+        startsAt: item.startsAt ? new Date(item.startsAt) : null,
+      })
+    : null;
+  if (previewAnchor && reminderConfig.useDefaultReminders) {
     const fireTimes = filterSuppressedFireTimes(
-      buildReminderFireTimes(new Date(item.dueAt), {
+      buildReminderFireTimes(previewAnchor, {
         ddayOffsets,
         reminderHour,
         extraRules: [],
+        dateOnly: isReminderDateOnly({
+          dueAt: new Date(item.dueAt!),
+          startsAt: item.startsAt ? new Date(item.startsAt) : null,
+          allDay: item.allDay,
+        }),
       }),
       getSuppressedFireTimes(user, taskId),
     );
@@ -642,7 +658,8 @@ tasksRoute.post("/:id/reminders", async (c) => {
 
   const task = await app.tasks.findById(userId, taskId);
   if (!task) return c.json({ error: "Task not found" }, 404);
-  if (!task.dueAt) return c.json({ error: "Task has no due date" }, 400);
+  const anchorAt = reminderAnchorAt(task);
+  if (!anchorAt) return c.json({ error: "Task has no due date" }, 400);
 
   const user = await app.users.findById(userId);
   if (!user) return c.json({ error: "User not found" }, 404);
@@ -651,11 +668,11 @@ tasksRoute.post("/:id/reminders", async (c) => {
   if (body.fireAt) {
     fireAt = new Date(body.fireAt);
   } else {
-    const computed = extraRuleFireTime(task.dueAt, {
+    const computed = extraRuleFireTime(anchorAt, {
       daysBefore: body.daysBefore,
       hoursBefore: body.hoursBefore,
       minutesBefore: body.minutesBefore,
-    });
+    }, isReminderDateOnly(task));
     if (!computed) {
       return c.json({ error: "fireAt, daysBefore, hoursBefore, or minutesBefore required" }, 400);
     }

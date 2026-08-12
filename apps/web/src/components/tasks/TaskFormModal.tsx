@@ -7,7 +7,7 @@ import { ConfirmToast } from "@/components/ui/ConfirmToast";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
 import { extraRulesEqual } from "@/lib/reminder-rules";
-import { describeExtraRuleSchedule } from "@/lib/reminder-preview";
+import { describeExtraRuleSchedule, isReminderDateOnlyIso, reminderAnchorIso } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
 import { ACTIVE_WORKFLOW_OPTIONS, WORKFLOW_STATUS_OPTIONS, type WorkflowUiStatus } from "@/lib/status";
 import { Switch } from "@/components/ui/Switch";
@@ -567,13 +567,44 @@ export function TaskFormModal({
   const offsetLabel = offsetsForPreview.map((d) => (d === 0 ? "당일" : `D-${d}`)).join(", ");
   const reminderHour = settings?.notification.reminderHour ?? 9;
   const dueAtIso = toDueAtIso(dueDate, allDay ? "" : dueTime);
+  const startsAtIsoForPreview = (() => {
+    if (!dateRange || !startDate.trim() || !dueAtIso) return null;
+    const effectiveStartTime = allDay ? "" : startTime;
+    const resolvedAllDay =
+      allDay ||
+      (Boolean(dueDate.trim()) && !dueTime.trim() && !effectiveStartTime.trim());
+    const sameDay = startDate === dueDate;
+    if (sameDay && (resolvedAllDay || !effectiveStartTime.trim())) return null;
+    const startIso = resolvedAllDay
+      ? (() => {
+          const parsed = new Date(`${startDate}T00:00:00+09:00`);
+          return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+        })()
+      : toDueAtIso(startDate, effectiveStartTime.trim() ? effectiveStartTime : "00:00") ?? null;
+    if (!startIso || startIso === dueAtIso) return null;
+    return startIso;
+  })();
+  const reminderAnchor = reminderAnchorIso(dueAtIso, startsAtIsoForPreview);
+  const reminderDateOnly = dueAtIso
+    ? isReminderDateOnlyIso({
+        dueAtIso,
+        startsAtIso: startsAtIsoForPreview,
+        allDay:
+          allDay ||
+          (Boolean(dueDate.trim()) && !dueTime.trim() && !(dateRange && startTime.trim())),
+      })
+    : false;
   const extraApplying = applyExtraRemindersMutation.isPending;
 
   const existingAttachments =
     taskData?.item.attachments.filter((a) => !removedAttachmentIds.includes(a.id)) ?? [];
   const scheduledReminders =
     remindersData?.items.filter((r) => r.status !== "cancelled") ?? [];
-  const extraScheduleOptions = { useDefaultReminders, ddayOffsets: offsetsForPreview };
+  const extraScheduleOptions = {
+    useDefaultReminders,
+    ddayOffsets: offsetsForPreview,
+    dateOnly: reminderDateOnly,
+  };
   const isLoading = mode === "edit" && taskLoading;
   const canComplete = mode === "edit" && taskData?.item.status === "active";
   const footerBusy =
@@ -1049,7 +1080,7 @@ export function TaskFormModal({
 
                   {useDefaultReminders && (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      마감일만 있으면 매 오전 7시에 알립니다.
+                      시작이 있으면 시작 기준, 없으면 마감 기준으로 매 오전 7시에 알립니다.
                     </p>
                   )}
 
@@ -1060,7 +1091,7 @@ export function TaskFormModal({
                       const scheduleHint =
                         rule &&
                         describeExtraRuleSchedule(
-                          dueAtIso,
+                          reminderAnchor,
                           reminderHour,
                           rule,
                           formatDateTime,

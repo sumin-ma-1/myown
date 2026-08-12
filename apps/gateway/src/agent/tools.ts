@@ -6,7 +6,7 @@ import type { DraftReminderConfig } from "../services/draft-reminder.js";
 const reminderConfigProperties = {
   type: "object",
   description:
-    "이 업무 알림 의도. 없으면 사용자 기본 D-DAY. 알림 없음: use_default_reminders=false. 특정 시각만: use_default_reminders=false + absolute_times. 마감 기준 하나만: use_default_reminders=false + extra_rules(예 days_before:0)",
+    "이 업무 알림 의도. 없으면 사용자 기본 D-DAY. 알림 없음: use_default_reminders=false. 특정 시각만: use_default_reminders=false + absolute_times. 시작(있으면)·마감 기준 하나만: use_default_reminders=false + extra_rules(예 days_before:0)",
   properties: {
     use_default_reminders: {
       type: "boolean",
@@ -14,13 +14,13 @@ const reminderConfigProperties = {
     },
     extra_rules: {
       type: "array",
-      description: "마감 기준 상대 알림",
+      description: "시작이 있으면 시작, 없으면 마감 기준 상대 알림",
       items: {
         type: "object",
         properties: {
-          days_before: { type: "number", description: "마감 N일 전 (0=당일)" },
-          hours_before: { type: "number", description: "마감 N시간 전" },
-          minutes_before: { type: "number", description: "마감 N분 전" },
+          days_before: { type: "number", description: "기준 시각 N일 전 (0=당일)" },
+          hours_before: { type: "number", description: "기준 시각 N시간 전" },
+          minutes_before: { type: "number", description: "기준 시각 N분 전" },
         },
       },
     },

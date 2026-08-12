@@ -10,6 +10,8 @@ import {
 import {
   type ExtraReminderRule,
   buildReminderFireTimes,
+  isReminderDateOnly,
+  reminderAnchorAt,
 } from "./reminder-schedule.js";
 import {
   type ReminderJobData,
@@ -63,12 +65,19 @@ export class ReminderService {
     const existingFire = new Set(pending.map((r) => r.fireAt.getTime()));
 
     for (const occ of occs) {
+      const anchorAt = reminderAnchorAt({ dueAt: occ.dueAt, startsAt: occ.startsAt });
+      if (!anchorAt) continue;
       const schedules = filterSuppressedFireTimes(
-        buildReminderFireTimes(occ.dueAt, {
+        buildReminderFireTimes(anchorAt, {
           ddayOffsets,
           reminderHour,
           extraRules,
           includeDueProximity: useDefaults,
+          dateOnly: isReminderDateOnly({
+            dueAt: occ.dueAt,
+            startsAt: occ.startsAt,
+            allDay: task.allDay,
+          }),
         }),
         suppressed,
       );
@@ -91,7 +100,8 @@ export class ReminderService {
     user?: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
-    if (!task.dueAt) return;
+    const anchorAt = reminderAnchorAt(task);
+    if (!anchorAt) return;
 
     const prefs = (user?.preferences ?? {}) as UserPreferences;
     const useDefaults = options?.useDefaults ?? true;
@@ -103,11 +113,12 @@ export class ReminderService {
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
     const schedules = filterSuppressedFireTimes(
-      buildReminderFireTimes(task.dueAt, {
+      buildReminderFireTimes(anchorAt, {
         ddayOffsets,
         reminderHour,
         extraRules,
         includeDueProximity: useDefaults,
+        dateOnly: isReminderDateOnly(task),
       }),
       getSuppressedFireTimes(user, task.id),
     );
@@ -128,7 +139,8 @@ export class ReminderService {
     user: User,
     options?: { useDefaults?: boolean; extraRules?: ExtraReminderRule[] },
   ): Promise<void> {
-    if (task.status !== "active" || !task.dueAt) {
+    const anchorAt = reminderAnchorAt(task);
+    if (task.status !== "active" || !anchorAt) {
       await this.cancelForTask(task.id);
       return;
     }
@@ -142,11 +154,12 @@ export class ReminderService {
     const reminderHour = prefs.notification?.reminderHour ?? config.reminderHour;
 
     const desired = filterSuppressedFireTimes(
-      buildReminderFireTimes(task.dueAt, {
+      buildReminderFireTimes(anchorAt, {
         ddayOffsets,
         reminderHour,
         extraRules,
         includeDueProximity: useDefaults,
+        dateOnly: isReminderDateOnly(task),
       }),
       getSuppressedFireTimes(user, task.id),
     );

@@ -48,18 +48,39 @@ function isDateOnlyDue(dueAt: Date): boolean {
   return hour === 23 && minute === 59;
 }
 
-function ddayOffsetFireTime(dueAt: Date, offset: number): Date {
-  if (offset === 0) {
-    return atHourOnDate(dueAt, DDAY_TODAY_HOUR);
-  }
-  const anchor = isDateOnlyDue(dueAt)
-    ? atHourOnDate(dueAt, DATE_ONLY_ANCHOR_HOUR)
-    : dueAt;
-  return shiftDaysKeepingLocalTime(anchor, -offset);
+/** 시작·종료가 있으면 시작, 아니면 마감 */
+export function reminderAnchorIso(
+  dueAtIso: string | undefined | null,
+  startsAtIso?: string | null,
+): string | undefined {
+  if (!dueAtIso) return undefined;
+  return startsAtIso || dueAtIso;
 }
 
-/** 추가 알림 규칙 — 일·시간·분을 합쳐 마감 전 한 시각으로 계산 */
-function extraRuleFireTime(dueAt: Date, rule: ExtraReminderRule): Date | null {
+export function isReminderDateOnlyIso(options: {
+  dueAtIso: string;
+  startsAtIso?: string | null;
+  allDay?: boolean | null;
+}): boolean {
+  if (options.allDay) return true;
+  if (options.startsAtIso) return false;
+  return isDateOnlyDue(new Date(options.dueAtIso));
+}
+
+function ddayOffsetFireTime(anchorAt: Date, offset: number, dateOnly: boolean): Date {
+  if (offset === 0) {
+    return atHourOnDate(anchorAt, DDAY_TODAY_HOUR);
+  }
+  const base = dateOnly ? atHourOnDate(anchorAt, DATE_ONLY_ANCHOR_HOUR) : anchorAt;
+  return shiftDaysKeepingLocalTime(base, -offset);
+}
+
+/** 추가 알림 규칙 — 일·시간·분을 합쳐 앵커 전 한 시각으로 계산 */
+function extraRuleFireTime(
+  anchorAt: Date,
+  rule: ExtraReminderRule,
+  dateOnly: boolean,
+): Date | null {
   const days = rule.daysBefore;
   const hours = rule.hoursBefore ?? 0;
   const minutes = rule.minutesBefore ?? 0;
@@ -71,12 +92,12 @@ function extraRuleFireTime(dueAt: Date, rule: ExtraReminderRule): Date | null {
 
   let base: Date;
   if (hasDays && days! > 0) {
-    base = ddayOffsetFireTime(dueAt, days!);
+    base = ddayOffsetFireTime(anchorAt, days!, dateOnly);
     if (!hasSubDayTime) return base;
   } else if (hasDays && days === 0 && !hasSubDayTime) {
-    return ddayOffsetFireTime(dueAt, 0);
+    return ddayOffsetFireTime(anchorAt, 0, dateOnly);
   } else {
-    base = dueAt;
+    base = anchorAt;
   }
 
   const offsetMs = (hours * 60 * 60 + minutes * 60) * 1000;
@@ -84,14 +105,15 @@ function extraRuleFireTime(dueAt: Date, rule: ExtraReminderRule): Date | null {
 }
 
 export function previewSingleExtraRule(
-  dueAtIso: string | undefined,
+  anchorIso: string | undefined,
   _reminderHour: number,
   rule: ExtraReminderRule,
+  dateOnly = false,
 ): Date[] {
-  if (!dueAtIso) return [];
+  if (!anchorIso) return [];
 
-  const dueAt = new Date(dueAtIso);
-  const fireAt = extraRuleFireTime(dueAt, rule);
+  const anchorAt = new Date(anchorIso);
+  const fireAt = extraRuleFireTime(anchorAt, rule, dateOnly);
   return fireAt ? [fireAt] : [];
 }
 
@@ -100,34 +122,36 @@ export function timesMatch(a: Date, b: Date, toleranceMs = MATCH_TOLERANCE_MS): 
 }
 
 export function previewDefaultReminderTimes(
-  dueAtIso: string | undefined,
+  anchorIso: string | undefined,
   _reminderHour: number,
   ddayOffsets: number[],
+  dateOnly = false,
 ): Date[] {
-  if (!dueAtIso) return [];
+  if (!anchorIso) return [];
 
-  const dueAt = new Date(dueAtIso);
+  const anchorAt = new Date(anchorIso);
   const times = new Set<number>();
 
   for (const offset of ddayOffsets) {
-    times.add(ddayOffsetFireTime(dueAt, offset).getTime());
+    times.add(ddayOffsetFireTime(anchorAt, offset, dateOnly).getTime());
   }
 
-  if (!isDateOnlyDue(dueAt)) {
-    times.add(dueAt.getTime() - 60 * 60 * 1000);
+  if (!dateOnly) {
+    times.add(anchorAt.getTime() - 60 * 60 * 1000);
   }
 
   return [...times].map((t) => new Date(t));
 }
 
 export function previewAllExtraRules(
-  dueAtIso: string | undefined,
+  anchorIso: string | undefined,
   reminderHour: number,
   rules: ExtraReminderRule[],
+  dateOnly = false,
 ): Date[] {
   const times = new Set<number>();
   for (const rule of rules) {
-    for (const fireAt of previewSingleExtraRule(dueAtIso, reminderHour, rule)) {
+    for (const fireAt of previewSingleExtraRule(anchorIso, reminderHour, rule, dateOnly)) {
       times.add(fireAt.getTime());
     }
   }
@@ -137,18 +161,20 @@ export function previewAllExtraRules(
 }
 
 export function getExtraOnlyFireTimes(
-  dueAtIso: string | undefined,
+  anchorIso: string | undefined,
   reminderHour: number,
   extraRules: ExtraReminderRule[],
-  options: { useDefaultReminders: boolean; ddayOffsets: number[] },
+  options: { useDefaultReminders: boolean; ddayOffsets: number[]; dateOnly?: boolean },
 ): Date[] {
-  const extraTimes = previewAllExtraRules(dueAtIso, reminderHour, extraRules);
+  const dateOnly = options.dateOnly ?? false;
+  const extraTimes = previewAllExtraRules(anchorIso, reminderHour, extraRules, dateOnly);
   if (!options.useDefaultReminders) return extraTimes;
 
   const defaultTimes = previewDefaultReminderTimes(
-    dueAtIso,
+    anchorIso,
     reminderHour,
     options.ddayOffsets,
+    dateOnly,
   );
   return extraTimes.filter(
     (extra) => !defaultTimes.some((def) => timesMatch(extra, def)),
@@ -156,25 +182,26 @@ export function getExtraOnlyFireTimes(
 }
 
 export function describeExtraRuleSchedule(
-  dueAtIso: string | undefined,
+  anchorIso: string | undefined,
   reminderHour: number,
   rule: ExtraReminderRule,
   formatDateTime: (iso: string) => string,
-  options: { useDefaultReminders: boolean; ddayOffsets: number[] },
+  options: { useDefaultReminders: boolean; ddayOffsets: number[]; dateOnly?: boolean },
 ): string | null {
   const hasInput =
     (rule.daysBefore !== undefined && rule.daysBefore >= 0) ||
     (rule.hoursBefore !== undefined && rule.hoursBefore > 0) ||
     (rule.minutesBefore !== undefined && rule.minutesBefore > 0);
   if (!hasInput) return null;
-  if (!dueAtIso) return "마감일을 설정하면 예정 시각이 표시됩니다.";
+  if (!anchorIso) return "일정을 설정하면 예정 시각이 표시됩니다.";
 
-  const allExtraTimes = previewSingleExtraRule(dueAtIso, reminderHour, rule);
+  const dateOnly = options.dateOnly ?? false;
+  const allExtraTimes = previewSingleExtraRule(anchorIso, reminderHour, rule, dateOnly);
   if (allExtraTimes.length === 0) return "예약 가능한 시각이 없습니다.";
 
   const now = Date.now();
   const defaultTimes = options.useDefaultReminders
-    ? previewDefaultReminderTimes(dueAtIso, reminderHour, options.ddayOffsets)
+    ? previewDefaultReminderTimes(anchorIso, reminderHour, options.ddayOffsets, dateOnly)
     : [];
 
   const bookable = allExtraTimes.filter(
