@@ -1,11 +1,21 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/client";
 import type { TaskDto } from "@/api/types";
 import { Card } from "@/components/ui/Card";
 import { CardTitle } from "@/components/ui/CardTitle";
 import { DayTimeline } from "@/components/dashboard/DayTimeline";
 import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { PriorityBadge } from "@/components/tasks/PriorityBadge";
-import { formatDateTime, formatDday, dueDateToneClass, formatLocalDateKey } from "@/lib/dates";
+import {
+  endOfDay,
+  formatDateTime,
+  formatDday,
+  dueDateToneClass,
+  formatLocalDateKey,
+  startOfDay,
+  taskSpanDayKeys,
+} from "@/lib/dates";
 
 /** Roughly eight task rows visible before the list scrolls. */
 const SUMMARY_LIST_MAX_HEIGHT = "max-h-[28rem]";
@@ -158,6 +168,25 @@ export function DueTodayCard({
   onSlotClick?: (dateKey: string, dueTime: string) => void;
 }) {
   const [showTimeline, setShowTimeline] = useState(false);
+  const dayKey = formatLocalDateKey(new Date());
+  const range = useMemo(() => {
+    const now = new Date();
+    return { from: startOfDay(now), to: endOfDay(now) };
+  }, [dayKey]);
+
+  const { data: timelineData } = useQuery({
+    queryKey: ["calendar", "due-today-timeline", dayKey],
+    queryFn: () =>
+      api.listCalendarTasks(range.from.toISOString(), range.to.toISOString(), {
+        includeCompleted: true,
+      }),
+    enabled: showTimeline,
+  });
+
+  const timelineTasks = useMemo(() => {
+    const items = timelineData?.items ?? [];
+    return items.filter((task) => task.dueAt && taskSpanDayKeys(task).includes(dayKey));
+  }, [timelineData, dayKey]);
 
   return (
     <SummaryCard
@@ -165,7 +194,7 @@ export function DueTodayCard({
       icon="emergency"
       iconClassName="text-amber-600 dark:text-amber-400"
       label="금일 종료"
-      tasks={tasks}
+      tasks={showTimeline && timelineData ? timelineTasks : tasks}
       emptyMessage="오늘 마감 업무가 없어요."
       onTaskClick={onTaskClick}
       action={
@@ -191,8 +220,8 @@ export function DueTodayCard({
           <div className="absolute inset-0">
             <DayTimeline
               hideHeader
-              dayKey={formatLocalDateKey(new Date())}
-              tasks={tasks}
+              dayKey={dayKey}
+              tasks={timelineData ? timelineTasks : tasks}
               onTaskClick={onTaskClick}
               onSlotClick={onSlotClick}
             />
