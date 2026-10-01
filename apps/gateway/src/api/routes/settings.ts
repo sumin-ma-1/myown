@@ -161,7 +161,7 @@ settingsRoute.patch("/", async (c) => {
 
   notifyToggleChanges(app, userId, prefs, nextPrefs);
 
-  await app.users.updatePreferences(userId, nextPrefs);
+  await app.users.updatePreferences(userId, nextPrefs as Record<string, unknown>);
 
   return c.json({
     timezone: user.timezone,

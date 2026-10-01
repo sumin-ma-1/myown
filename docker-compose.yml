@@ -1,3 +1,9 @@
+name: myown
+
+# 외부 공유: http://bigsoft.iptime.org:51110
+# 호스트 192.168.0.51, 공유기 포트 범위 51000-51500
+# 사용 중: 51000 (LiteLLM), 51080 (Open WebUI), 51100 (research-platform)
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -5,37 +11,118 @@ services:
       POSTGRES_USER: myown
       POSTGRES_PASSWORD: myown
       POSTGRES_DB: myown
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myown -d myown"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
 
   hwp-parser:
     build: ./services/hwp-parser
-    ports:
-      - "8100:8100"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gateway
+    working_dir: /app/packages/database
+    command: ["node_modules/.bin/drizzle-kit", "push", "--force"]
+    environment:
+      DATABASE_URL: postgresql://myown:myown@postgres:5432/myown
+      CI: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gateway
+    environment:
+      DATABASE_URL: postgresql://myown:myown@postgres:5432/myown
+      REDIS_URL: redis://redis:6379
+      HWP_PARSER_URL: http://hwp-parser:8100
+      ATTACHMENT_STORAGE_DIR: /app/data/attachments
+      WEB_API_PORT: "4000"
+      WEB_APP_URL: http://bigsoft.iptime.org:51110
+      WEB_CORS_ORIGIN: http://bigsoft.iptime.org:51110
+      GOOGLE_REDIRECT_URI: http://bigsoft.iptime.org:51110/api/auth/google/callback
+      GOOGLE_CALENDAR_REDIRECT_URI: http://bigsoft.iptime.org:51110/api/integrations/google-calendar/callback
+      TIMEZONE: Asia/Seoul
+      NODE_ENV: production
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+      LLM_MODEL: gemma4:e4b
+      OPENAI_API_KEY: ollama
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      KAKAO_CHANNEL_URL: ${KAKAO_CHANNEL_URL:-}
+      KAKAO_BOT_NAME: ${KAKAO_BOT_NAME:-MyOwn}
+    volumes:
+      - ./data/attachments:/app/data/attachments
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      hwp-parser:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    ports:
+      - "51110:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

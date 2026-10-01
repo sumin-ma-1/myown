@@ -19,11 +19,11 @@ export function decodeLlmUtf8Escapes(text: string): string {
 }
 
 export function decodeLlmStringFields<T extends object>(args: T): T {
-  const next = { ...args } as T & Record<string, unknown>;
+  const next = { ...args } as Record<string, unknown>;
   for (const [key, value] of Object.entries(next)) {
     if (typeof value === "string") {
       next[key] = decodeLlmUtf8Escapes(value);
     }
   }
-  return next;
+  return next as T;
 }

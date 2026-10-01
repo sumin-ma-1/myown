@@ -37,8 +37,10 @@ if (process.env.ALLOWED_TELEGRAM_USER_IDS?.trim() === "") {
   );
 }
 
+const telegramBotToken = (process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
+
 export const config = {
-  telegramBotToken: required("TELEGRAM_BOT_TOKEN"),
+  telegramBotToken,
   /** @username 없이. 미니앱 로그인 후 돌아오기용 (미설정 시 getMe로 조회) */
   telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME ?? "",
   /** BotFather Mini App short name (있으면 t.me/bot/shortname?startapp= 사용) */
@@ -96,6 +98,10 @@ export const config = {
   ),
   kakaoBotName: process.env.KAKAO_BOT_NAME ?? "MyOwn",
 };
+
+export function isTelegramEnabled(): boolean {
+  return Boolean(config.telegramBotToken) && config.telegramBotToken !== "your_bot_token_from_botfather";
+}
 
 export function isKakaoEnabled(): boolean {
   return Boolean(config.kakaoChannelUrl.trim());

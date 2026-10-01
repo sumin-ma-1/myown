@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { createRedisConnection, createReminderWorker } from "./services/reminder-queue.js";
 import { createApiApp } from "./api/index.js";
 import { createContext } from "./context.js";
-import { config } from "./config.js";
+import { config, isTelegramEnabled } from "./config.js";
 import { InlineKeyboard } from "grammy";
 import { createBot } from "./telegram/bot.js";
 import { setupTelegramMenuButton } from "./telegram/menu-button.js";
@@ -15,29 +15,34 @@ import type { TelegramSendOptions } from "./services/notification.js";
 async function main() {
   const redis = createRedisConnection();
   const app = createContext(redis);
-  const bot = createBot(app);
-  await setupTelegramMenuButton(bot);
-  const sendTelegram = async (
-    telegramUserId: number,
-    text: string,
-    options?: TelegramSendOptions,
-  ) => {
-    const keyboard = options?.urlButton
-      ? new InlineKeyboard().url(options.urlButton.text, options.urlButton.url)
-      : undefined;
-    await bot.api.sendMessage(telegramUserId, text, {
-      ...(keyboard
-        ? {
-            reply_markup: keyboard,
-            link_preview_options: { is_disabled: true },
-          }
-        : {}),
-    });
-  };
-  app.notifications.setTelegramSender(sendTelegram);
-  app.morningBriefing.setTelegramSender(sendTelegram);
+  const bot = isTelegramEnabled() ? createBot(app) : null;
+  if (bot) {
+    await setupTelegramMenuButton(bot);
+    const sendTelegram = async (
+      telegramUserId: number,
+      text: string,
+      options?: TelegramSendOptions,
+    ) => {
+      const keyboard = options?.urlButton
+        ? new InlineKeyboard().url(options.urlButton.text, options.urlButton.url)
+        : undefined;
+      await bot.api.sendMessage(telegramUserId, text, {
+        ...(keyboard
+          ? {
+              reply_markup: keyboard,
+              link_preview_options: { is_disabled: true },
+            }
+          : {}),
+      });
+    };
+    app.notifications.setTelegramSender(sendTelegram);
+    app.morningBriefing.setTelegramSender(sendTelegram);
+  } else {
+    console.info("INFO: TELEGRAM_BOT_TOKEN unset — Telegram bot disabled");
+  }
 
   const worker = createReminderWorker(async (job) => {
+    if (!bot) return;
     await handleReminderJob(bot, app, job);
   });
 
@@ -50,8 +55,8 @@ async function main() {
   const stopRecurringReminders = startRecurringReminderWorker(app);
 
   const api = createApiApp(app);
-  serve({ fetch: api.fetch, port: config.webApiPort }, () => {
-    console.log(`Web API: http://localhost:${config.webApiPort}`);
+  serve({ fetch: api.fetch, port: config.webApiPort, hostname: "0.0.0.0" }, () => {
+    console.log(`Web API: http://0.0.0.0:${config.webApiPort}`);
   });
 
   const shutdown = async () => {
@@ -62,12 +67,14 @@ async function main() {
     await worker.close();
     await app.reminderQueue.close();
     await redis.quit();
-    await bot.stop();
+    if (bot) await bot.stop();
     process.exit(0);
   };
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+
+  if (!bot) return;
 
   if (config.webhookUrl) {
     const path = `/telegram/${config.telegramBotToken}`;
