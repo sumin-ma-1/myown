@@ -11,8 +11,6 @@
 
 <p align="center">
   <a href="http://bigsoft.iptime.org:51110"><strong>Try MyOwn →</strong></a>
-  &nbsp;·&nbsp;
-  <a href="./docs/FEATURES.md">Feature docs</a>
 </p>
 
 <p align="center">
@@ -111,7 +109,7 @@ Bot only: `pnpm dev:bot` · Web only: `pnpm dev:web`
 
 ### Optional
 
-- **KakaoTalk** — set `KAKAO_CHANNEL_URL` and wire the Open Builder skill to `{WEB_APP_URL}/api/kakao/skill` (details in [docs/FEATURES.md](./docs/FEATURES.md))
+- **KakaoTalk** — set `KAKAO_CHANNEL_URL` and wire the Open Builder skill to `{WEB_APP_URL}/api/kakao/skill`
 - **Google Calendar** — enable Calendar API, add `{WEB_APP_URL}/api/integrations/google-calendar/callback`, then connect under Integrations
 - **Public HTTPS tunnel** — `pnpm tunnel` (Cloudflare) and point `WEB_APP_URL` / OAuth redirects at the tunnel URL
 
@@ -141,7 +139,6 @@ myown/
 ├── apps/web/              # React dashboard (Vite + Tailwind)
 ├── packages/database/     # Drizzle schema & repositories
 ├── services/hwp-parser/   # HWP sidecar
-├── docs/FEATURES.md       # Deeper product / ops notes
 └── docker-compose.yml
 ```
 
