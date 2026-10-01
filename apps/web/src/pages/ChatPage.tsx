@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import type { ComposeDraftDto } from "@/api/types";
 import { formatDueDateTime } from "@/lib/dates";
+import { createId } from "@/lib/id";
 import { priorityLabel } from "@/lib/priority";
 import { ScrollFadeArea } from "@/components/ui/ScrollFadeArea";
 import { CHAT_HINT_MESSAGES, RotatingSubtitle } from "@/components/ui/RotatingSubtitle";
@@ -19,8 +20,7 @@ interface PendingFile {
 }
 
 const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";
-/** main p-6 하단 패딩까지 쓰며 입력창을 페이지 바닥 쪽에 고정 */
-const CHAT_PAGE_CLASS = "-mb-6 flex h-[calc(100vh-1.5rem)] flex-col";
+const CHAT_PAGE_CLASS = "flex h-screen min-h-screen flex-col p-6";
 
 const TYPING_DOT_SIZE_PX = 7;
 const TYPING_DOT_GAP_PX = 4;
@@ -309,7 +309,7 @@ export function ChatPage() {
   const appendAssistantMessage = (reply: string, nextCompose: ComposeDraftDto | null) => {
     setMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: "assistant", text: reply },
+      { id: createId(), role: "assistant", text: reply },
     ]);
     setCompose(nextCompose);
   };
@@ -325,7 +325,7 @@ export function ChatPage() {
       setError(null);
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "user", text },
+        { id: createId(), role: "user", text },
       ]);
     },
     onSuccess: (data) => {
@@ -371,7 +371,7 @@ export function ChatPage() {
       const userText = text ? (files.length > 0 ? `${text}\n${fileLine}` : text) : fileLine;
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "user", text: userText },
+        { id: createId(), role: "user", text: userText },
       ]);
     },
     onSuccess: ({ last }) => {
@@ -390,7 +390,7 @@ export function ChatPage() {
       setError(null);
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", text: data.reply },
+        { id: createId(), role: "assistant", text: data.reply },
       ]);
       setCompose(null);
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -409,7 +409,7 @@ export function ChatPage() {
       setError(null);
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", text: data.reply },
+        { id: createId(), role: "assistant", text: data.reply },
       ]);
       setCompose(null);
       void queryClient.invalidateQueries({ queryKey: ["chat-compose"] });
@@ -437,7 +437,7 @@ export function ChatPage() {
   const addPendingFiles = (files: File[]) => {
     setPendingFiles((prev) => [
       ...prev,
-      ...files.map((file) => ({ id: crypto.randomUUID(), file })),
+      ...files.map((file) => ({ id: createId(), file })),
     ]);
   };
 
@@ -512,10 +512,10 @@ export function ChatPage() {
   return (
     <div className={CHAT_PAGE_CLASS}>
       <ScrollFadeArea
-        wrapperClassName="-mr-6 flex-1"
+        wrapperClassName="min-h-0 flex-1"
         className="h-full"
       >
-        <div className={`${CHAT_COLUMN_CLASS} space-y-3 py-4 pr-6`}>
+        <div className={`${CHAT_COLUMN_CLASS} space-y-3 py-4`}>
           {messages.map((msg) => (
             <ChatMessageBubble key={msg.id} role={msg.role} text={msg.text} />
           ))}

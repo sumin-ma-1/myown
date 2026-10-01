@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmToast } from "@/components/ui/ConfirmToast";
 import { AttachmentDownload } from "@/components/tasks/AttachmentDownload";
 import { formatDateTime, isValidTimeInput, normalizeTimeInput, splitDueAt, toDueAtIso } from "@/lib/dates";
+import { createId } from "@/lib/id";
 import { extraRulesEqual } from "@/lib/reminder-rules";
 import { describeExtraRuleSchedule, isReminderDateOnlyIso, reminderAnchorIso } from "@/lib/reminder-preview";
 import { PRIORITY_OPTIONS } from "@/lib/priority";
@@ -32,13 +33,13 @@ interface ExtraRuleRow {
 }
 
 function emptyRule(): ExtraRuleRow {
-  return { key: crypto.randomUUID(), daysBefore: "", hoursBefore: "", minutesBefore: "" };
+  return { key: createId(), daysBefore: "", hoursBefore: "", minutesBefore: "" };
 }
 
 function rulesToRows(rules: ExtraReminderRule[]): ExtraRuleRow[] {
   if (rules.length === 0) return [emptyRule()];
   return rules.map((r) => ({
-    key: crypto.randomUUID(),
+    key: createId(),
     daysBefore: r.daysBefore !== undefined ? String(r.daysBefore) : "",
     hoursBefore: r.hoursBefore !== undefined ? String(r.hoursBefore) : "",
     minutesBefore: r.minutesBefore !== undefined ? String(r.minutesBefore) : "",
@@ -181,7 +182,7 @@ export function TaskFormModal({
     if (list.length === 0) return;
     setPendingFiles((prev) => [
       ...prev,
-      ...list.map((file) => ({ key: crypto.randomUUID(), file })),
+      ...list.map((file) => ({ key: createId(), file })),
     ]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

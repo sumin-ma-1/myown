@@ -1,6 +1,6 @@
 import type { Bot } from "grammy";
 import type { BotContext } from "./bot.js";
-import { dashboardLinkLabel, dashboardWebLink } from "../utils/web-links.js";
+import { dashboardLinkLabel, dashboardMiniAppUrl } from "../utils/web-links.js";
 
 const MENU_BUTTON_LABEL = dashboardLinkLabel();
 
@@ -13,13 +13,13 @@ export async function setupTelegramMenuButton(bot: Bot<BotContext>): Promise<voi
       { command: "today", description: "오늘 마감 업무" },
     ]);
 
-    const url = dashboardWebLink();
+    const url = dashboardMiniAppUrl();
     if (!url) {
       await bot.api.setChatMenuButton({
         menu_button: { type: "commands" },
       });
       console.info(
-        "INFO: WEB_APP_URL is not a public HTTPS URL — side menu button skipped. Use /web.",
+        "INFO: WEB_APP_URL is not HTTPS — Mini App menu skipped. URL buttons (/web) still work over HTTP.",
       );
       return;
     }

@@ -23,11 +23,11 @@ export function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
-            <Route index element={<Navigate to="/chat" replace />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="tasks" element={<TaskListPage />} />
-            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/tasks" element={<TaskListPage />} />
+            <Route path="/integrations" element={<IntegrationsPage />} />
           </Route>
         </Route>
 
@@ -39,8 +39,6 @@ export function App() {
             <Route path="activity" element={<AdminActivityPage />} />
           </Route>
         </Route>
-
-        <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </BrowserRouter>
   );

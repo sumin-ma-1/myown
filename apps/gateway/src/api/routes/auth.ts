@@ -92,7 +92,7 @@ authRoute.get("/google/callback", async (c) => {
       );
     }
 
-    return c.redirect(`${config.webAppUrl}/?welcome=1`);
+    return c.redirect(`${config.webAppUrl}/chat?welcome=1`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Google 로그인에 실패했습니다.";
     return c.redirect(`${config.webAppUrl}/login?error=${encodeURIComponent(message)}`);

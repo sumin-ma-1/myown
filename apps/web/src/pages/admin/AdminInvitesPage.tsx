@@ -62,11 +62,6 @@ export function AdminInvitesPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">초대코드</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">이메일 전용 1회용 가입 코드</p>
-      </div>
-
       <Card className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">새 초대코드</h2>
         <div>

@@ -19,10 +19,6 @@ export function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">사용자</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">가입한 계정과 Telegram 연동 상태</p>
-      </div>
       <Card className="overflow-hidden p-0">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-surface-border bg-slate-50 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">

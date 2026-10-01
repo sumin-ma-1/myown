@@ -63,14 +63,30 @@ function TaskRow({ task, onClick }: { task: TaskDto; onClick?: (task: TaskDto) =
 function SummaryTaskList({
   tasks,
   emptyMessage,
+  emptyImage,
   onTaskClick,
 }: {
   tasks: TaskDto[];
   emptyMessage: string;
+  emptyImage?: string;
   onTaskClick?: (task: TaskDto) => void;
 }) {
   if (tasks.length === 0) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">{emptyMessage}</p>;
+    return (
+      <div className="flex min-h-[9rem] flex-col items-center justify-center gap-3 px-2 text-center">
+        {emptyImage ? (
+          <img
+            src={emptyImage}
+            alt=""
+            className="h-16 w-16 object-contain opacity-90"
+            width={64}
+            height={64}
+            draggable={false}
+          />
+        ) : null}
+        <p className="text-sm text-slate-500 dark:text-slate-400">{emptyMessage}</p>
+      </div>
+    );
   }
 
   return (
@@ -96,7 +112,11 @@ function SummaryCardTitle({
   count: number;
 }) {
   return (
-    <CardTitle icon={icon} iconClassName={`${iconClassName} shrink-0`}>
+    <CardTitle
+      icon={icon}
+      iconClassName={`${iconClassName} shrink-0`}
+      iconFontClass="material-symbols-outlined"
+    >
       <span className="min-w-0 truncate">
         {label}
         {count > 0 && (
@@ -121,6 +141,7 @@ function SummaryCard({
   label,
   tasks,
   emptyMessage,
+  emptyImage,
   onTaskClick,
   action,
   children,
@@ -131,6 +152,7 @@ function SummaryCard({
   label: string;
   tasks: TaskDto[];
   emptyMessage: string;
+  emptyImage?: string;
   onTaskClick?: (task: TaskDto) => void;
   action?: ReactNode;
   children?: ReactNode;
@@ -152,7 +174,12 @@ function SummaryCard({
       action={action}
     >
       {children ?? (
-        <SummaryTaskList tasks={tasks} emptyMessage={emptyMessage} onTaskClick={onTaskClick} />
+        <SummaryTaskList
+          tasks={tasks}
+          emptyMessage={emptyMessage}
+          emptyImage={emptyImage}
+          onTaskClick={onTaskClick}
+        />
       )}
     </Card>
   );
@@ -191,7 +218,7 @@ export function DueTodayCard({
   return (
     <SummaryCard
       id="summary-due-today"
-      icon="emergency"
+      icon="sprint"
       iconClassName="text-amber-600 dark:text-amber-400"
       label="금일 종료"
       tasks={showTimeline && timelineData ? timelineTasks : tasks}
@@ -231,6 +258,7 @@ export function DueTodayCard({
         <SummaryTaskList
           tasks={tasks}
           emptyMessage="오늘 마감 업무가 없어요."
+          emptyImage="/assets/img/calendar-1.png"
           onTaskClick={onTaskClick}
         />
       )}
@@ -252,11 +280,12 @@ export function InProgressCard({
   return (
     <SummaryCard
       id="summary-in-progress"
-      icon="code"
+      icon="directions_run"
       iconClassName="text-emerald-600 dark:text-emerald-400"
       label="진행 중"
       tasks={items}
       emptyMessage="진행 중인 업무가 없어요."
+      emptyImage="/assets/img/badge-2.png"
       onTaskClick={onTaskClick}
     />
   );
@@ -276,11 +305,12 @@ export function PlannedCard({
   return (
     <SummaryCard
       id="summary-planned"
-      icon="timeline"
+      icon="directions_walk"
       iconClassName="text-slate-500 dark:text-slate-400"
       label="계획"
       tasks={items}
       emptyMessage="계획 중인 업무가 없어요."
+      emptyImage="/assets/img/pencil-3.png"
       onTaskClick={onTaskClick}
     />
   );

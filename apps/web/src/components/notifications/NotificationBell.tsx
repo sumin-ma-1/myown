@@ -150,7 +150,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
       <button
         ref={buttonRef}
         type="button"
-        className={`relative rounded-lg p-1.5 transition-colors ${
+        className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
           open
             ? "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300"
             : "text-amber-500/80 hover:bg-amber-50 hover:text-amber-600 dark:text-amber-400/70 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
@@ -245,7 +245,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-blue-300"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-brand dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-blue-300"
                   aria-label="연동 APP으로 이동"
                   title="연동 APP"
                   onClick={() => {

@@ -40,7 +40,7 @@ export function Sidebar({
   return (
     <aside
       style={{ width: expanded ? width : 56 }}
-      className={`relative flex h-full shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white dark:border-slate-800 dark:bg-slate-900 ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-surface-border bg-white dark:border-slate-800 dark:bg-slate-900 ${
         resizing ? "" : "transition-[width] duration-300 ease-in-out"
       }`}
     >
@@ -68,7 +68,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={onToggle}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   aria-label="사이드바 접기"
                 >
                   <span className="material-icons text-[20px] leading-none" aria-hidden>
@@ -90,7 +90,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={onToggle}
-                  className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="absolute inset-0 flex items-center justify-center rounded-full text-slate-600 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-800"
                   aria-label="사이드바 펼치기"
                 >
                   <span className="material-icons text-[20px] leading-none" aria-hidden>
@@ -116,7 +116,7 @@ export function Sidebar({
         </div>
 
         <div
-          className={`min-h-0 flex-1 overflow-y-auto scrollbar-subtle ${
+          className={`min-h-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-subtle ${
             expanded ? "" : "w-full"
           }`}
         >
@@ -137,7 +137,7 @@ export function Sidebar({
               {({ isActive }) => (
                 <span className={navLinkClass(expanded, isActive)}>
                   <span className="material-symbols-outlined shrink-0 text-[18px] leading-none" aria-hidden>
-                    workspaces
+                    speed
                   </span>
                   {expanded && "업무 현황"}
                 </span>

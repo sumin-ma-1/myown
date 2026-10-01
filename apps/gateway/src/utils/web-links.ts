@@ -2,10 +2,36 @@ import { config } from "../config.js";
 
 const DASHBOARD_LINK_LABEL = "웹 바로가기";
 
-/** 공개 HTTPS 대시보드 URL (메뉴 버튼·바로가기용) */
-export function dashboardWebLink(): string | null {
+function publicWebBaseUrl(): string | null {
   const base = config.webAppUrl.trim().replace(/\/$/, "");
-  if (!base.startsWith("https://")) return null;
+  if (!base) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(base);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+
+  const host = parsed.hostname.toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return null;
+
+  return base;
+}
+
+/** 외부 브라우저로 여는 챗 URL (http/https 공개 주소) */
+export function dashboardWebLink(): string | null {
+  const base = publicWebBaseUrl();
+  if (!base) return null;
+  return `${base}/chat`;
+}
+
+/** Telegram Mini App 메뉴용 — HTTPS만 */
+export function dashboardMiniAppUrl(): string | null {
+  const base = publicWebBaseUrl();
+  if (!base?.startsWith("https://")) return null;
   return base;
 }
 
@@ -15,14 +41,14 @@ export function dashboardLinkLabel(): string {
 
 /** 텔레그램·카카오 알림 '웹에서 보기' 등 업무 상세 웹 URL */
 export function taskWebLink(taskId: string): string | null {
-  const base = config.webAppUrl.trim().replace(/\/$/, "");
-  if (!base.startsWith("https://")) return null;
+  const base = publicWebBaseUrl();
+  if (!base) return null;
   return `${base}/tasks?open=${encodeURIComponent(taskId)}`;
 }
 
-/** 연동 APP → Google Calendar (텔레그램 URL 버튼용, HTTPS만) */
+/** 연동 APP → Google Calendar (텔레그램 URL 버튼용) */
 export function googleCalendarIntegrationsWebLink(): string | null {
-  const base = config.webAppUrl.trim().replace(/\/$/, "");
-  if (!base.startsWith("https://")) return null;
+  const base = publicWebBaseUrl();
+  if (!base) return null;
   return `${base}/integrations#google-calendar`;
 }

@@ -14,10 +14,6 @@ export function AdminLayout() {
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r border-surface-border bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <div className="mb-6">
-          <p className="text-lg font-bold text-slate-900 dark:text-slate-100">관리자</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">베타 운영</p>
-        </div>
         <nav className="flex flex-1 flex-col gap-1">
           <NavLink to="/admin/users" className={linkClass}>
             사용자

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { ChatFab } from "./ChatFab";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { Sidebar } from "./Sidebar";
 
 const SIDEBAR_STORAGE_KEY = "myown.sidebar";
@@ -32,6 +33,8 @@ function loadSidebarPrefs(): SidebarPrefs {
 }
 
 export function AppShell() {
+  const { pathname } = useLocation();
+  const isChat = pathname === "/chat";
   const [prefs, setPrefs] = useState<SidebarPrefs>(() => loadSidebarPrefs());
   const [resizing, setResizing] = useState(false);
 
@@ -68,7 +71,7 @@ export function AppShell() {
   }, [resizing]);
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="flex min-h-screen">
       <Sidebar
         expanded={prefs.expanded}
         width={prefs.width}
@@ -78,8 +81,12 @@ export function AppShell() {
         }
         onResizeStart={() => setResizing(true)}
       />
-      <main className="relative min-h-0 min-w-0 flex-1 overflow-auto p-6">
-        <Outlet />
+      <main
+        className={`relative min-w-0 flex-1 ${isChat ? "p-0" : "p-6"}`}
+      >
+        <RouteErrorBoundary>
+          <Outlet />
+        </RouteErrorBoundary>
         <ChatFab />
       </main>
     </div>

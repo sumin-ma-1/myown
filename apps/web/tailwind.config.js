@@ -4,6 +4,9 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Pretendard", "Noto Sans KR", "Segoe UI", "sans-serif"],
+      },
       colors: {
         surface: {
           DEFAULT: "#f8fafc",

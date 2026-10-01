@@ -164,8 +164,6 @@ export class AuthService {
           };
         }
         inviteCodeId = invite.id;
-      } else if (!isAdminEmail(email)) {
-        return { ok: false, message: "가입하려면 초대코드가 필요합니다." };
       }
 
       const role = isAdminEmail(email) ? "admin" : "user";
@@ -191,7 +189,7 @@ export class AuthService {
       if (!account) {
         return {
           ok: false,
-          message: "가입되지 않은 계정입니다. 초대코드와 함께 가입해 주세요.",
+          message: "가입되지 않은 계정입니다. 먼저 가입해 주세요.",
         };
       }
 

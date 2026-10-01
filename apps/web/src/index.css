@@ -13,7 +13,7 @@ body,
 }
 
 body {
-  @apply text-slate-900 antialiased dark:text-slate-100;
+  @apply font-sans text-slate-900 antialiased dark:text-slate-100;
   background-color: #f8fafc;
   background-image:
     radial-gradient(ellipse 75% 55% at 0% 0%, rgba(191, 219, 254, 0.45), transparent 55%),
@@ -99,131 +99,11 @@ html.dark body {
   }
 }
 
-/* Soft expanding glow for CTA buttons (tightly around the button) */
-@keyframes button-glow-aura {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-  50% {
-    opacity: var(--btn-glow-peak, 0.4);
-    transform: scale(1.06);
-  }
-}
-
-@keyframes button-glow-aura-soft {
-  0%,
-  100% {
-    opacity: 0.22;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: var(--btn-glow-peak, 0.4);
-    transform: scale(0.905);
-  }
-}
-
 @layer utilities {
   .notification-bell-ring {
     display: inline-block;
     transform-origin: top center;
     animation: notification-bell-ring 4.5s ease-in-out infinite;
-  }
-
-  .btn-glow-wrap {
-    position: relative;
-    display: flex;
-    width: fit-content;
-    margin-top: 0.5rem;
-    margin-inline: auto;
-    /* room so glow around the button is not clipped by sidebar overflow */
-    padding: 0.85rem;
-    /* light mode: softer sky blue glow on white sidebar */
-    --btn-glow-peak: 0.38;
-    --btn-glow-color: 14 165 233;
-  }
-
-  html.dark .btn-glow-wrap {
-    /* dark mode: subtle cyan glow, similar strength to light mode */
-    --btn-glow-peak: 0.35;
-    --btn-glow-color: 34 211 238;
-  }
-
-  /* Mint → sky CTA: color-matched soft outer glow (reference neon look) */
-  .btn-glow-wrap--aurora {
-    padding: 1.1rem;
-    --btn-glow-peak: 0.42;
-  }
-
-  html.dark .btn-glow-wrap--aurora {
-    --btn-glow-peak: 0.48;
-  }
-
-  .btn-glow-wrap::before {
-    content: "";
-    position: absolute;
-    /* hug the button: same as padding so aura sits just outside button edges */
-    inset: 0.55rem;
-    z-index: 0;
-    border-radius: 9999px;
-    background: rgb(var(--btn-glow-color) / 0.5);
-    filter: blur(7px);
-    pointer-events: none;
-    animation: button-glow-aura 2.6s ease-in-out infinite;
-  }
-
-  html.dark .btn-glow-wrap::before {
-    background: rgb(var(--btn-glow-color) / 0.32);
-  }
-
-  .btn-glow-wrap--aurora::before {
-    inset: 0.45rem;
-    background: linear-gradient(
-      90deg,
-      rgb(110 231 183 / 0.9),
-      rgb(125 211 252 / 0.95)
-    );
-    filter: blur(14px);
-    animation-duration: 3.4s;
-    animation-name: button-glow-aura-soft;
-  }
-
-  html.dark .btn-glow-wrap--aurora::before {
-    background: linear-gradient(
-      90deg,
-      rgb(52 211 153 / 0.85),
-      rgb(56 189 248 / 0.9)
-    );
-  }
-
-  .btn-glow-wrap > * {
-    position: relative;
-    z-index: 1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .notification-bell-ring {
-      animation: none;
-    }
-
-    .btn-glow-wrap::before {
-      animation: none;
-      opacity: 0.22;
-      transform: none;
-    }
-
-    html.dark .btn-glow-wrap::before {
-      opacity: 0.2;
-    }
-
-    .btn-glow-wrap--aurora::before {
-      opacity: 0.55;
-    }
-
-    html.dark .btn-glow-wrap--aurora::before {
-      opacity: 0.65;
-    }
   }
 
   .page-gradient {
@@ -311,6 +191,10 @@ html.dark body {
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .notification-bell-ring {
+      animation: none;
+    }
+
     .chat-fab-float {
       animation: none;
     }

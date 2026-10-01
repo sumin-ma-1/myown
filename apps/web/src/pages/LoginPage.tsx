@@ -28,7 +28,7 @@ export function LoginPage() {
         <GoogleSignInButton purpose="login" label="Google로 로그인" />
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          초대코드가 있나요?{" "}
+          가입이 필요하신가요?{" "}
           <Link to="/signup" className="font-medium text-brand hover:underline">
             가입하기
           </Link>

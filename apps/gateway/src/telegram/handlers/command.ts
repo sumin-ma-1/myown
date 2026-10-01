@@ -50,7 +50,7 @@ export function registerCommandHandlers(bot: Bot<BotContext>, app: AppContext) {
     const keyboard = dashboardInlineKeyboard();
     if (!keyboard) {
       await ctx.reply(
-        "웹 대시보드 URL이 설정되지 않았습니다. WEB_APP_URL(HTTPS)을 확인해 주세요.",
+        "웹 대시보드 URL이 설정되지 않았습니다. WEB_APP_URL을 확인해 주세요.",
       );
       return;
     }

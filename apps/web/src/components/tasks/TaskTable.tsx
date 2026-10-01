@@ -138,10 +138,22 @@ export function TaskTable({
                 <tr>
                   <td
                     colSpan={colCount}
-                    className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
+                    className="px-4 py-10 text-center text-slate-500 dark:text-slate-400"
                   >
-                    등록된 업무가 없습니다. 여기서 새 업무를 등록하거나 연동된 APP에서 업무를
-                    추가하세요.
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <img
+                        src="/assets/img/empty-clipboard.png"
+                        alt=""
+                        className="h-20 w-20 object-contain"
+                        width={80}
+                        height={80}
+                        draggable={false}
+                      />
+                      <p className="text-sm">
+                        등록된 업무가 없습니다. 여기서 새 업무를 등록하거나 연동된 APP에서 업무를
+                        추가하세요.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : filteredTasks.length === 0 ? (

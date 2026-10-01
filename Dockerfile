@@ -11,8 +11,10 @@ FROM deps AS builder
 COPY apps apps
 COPY packages packages
 COPY assets assets
-RUN mkdir -p apps/web/public \
-    && cp assets/brand/favicon.png apps/web/public/favicon.png
+RUN mkdir -p apps/web/public/assets/img \
+    && cp assets/brand/favicon.png apps/web/public/favicon.png \
+    && cp assets/brand/bot-profile.png apps/web/public/bot-profile.png \
+    && cp assets/img/calendar-1.png assets/img/badge-2.png assets/img/pencil-3.png assets/img/empty-clipboard.png apps/web/public/assets/img/
 RUN pnpm --filter @myown/database build \
     && pnpm --filter @myown/gateway build \
     && pnpm --filter @myown/web build
