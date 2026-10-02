@@ -15,7 +15,7 @@
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/91bf5d7b-0403-42df-9636-f96349dc09f5"
+    src="https://github.com/user-attachments/assets/189559c2-7294-4f54-9e3d-55d079b62fc2"
     alt="MyOwn service preview"
     width="900"
   />
