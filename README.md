@@ -15,8 +15,8 @@
 
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/189559c2-7294-4f54-9e3d-55d079b62fc2"
-    alt="MyOwn service preview"
+    src="https://github.com/user-attachments/assets/1aef73b9-d635-44d0-bd5e-61599462fd91"
+    alt="MyOwn preview"
     width="900"
   />
 </p>
